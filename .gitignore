@@ -1,0 +1,21 @@
+# macOS
+.DS_Store
+
+# Xcode / SwiftPM — the project itself lands later; these never belong in git
+xcuserdata/
+*.xcuserstate
+DerivedData/
+build/
+.build/
+*.xcworkspace/xcuserdata/
+
+# Secrets. This repo is public: no credentials, team ids, or provisioning
+# profiles are ever committed. See CLAUDE.md.
+*.p8
+*.p12
+*.cer
+*.certSigningRequest
+*.mobileprovision
+.env
+.env.*
+Secrets.xcconfig

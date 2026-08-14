@@ -1,0 +1,133 @@
+# CLAUDE.md
+
+Guidance for AI agents working in this repository.
+
+## Project Overview
+
+A native iOS app for recording a breastfed infant's atopic eczema — meals eaten and per-region skin observations with photos. English-language, single child, one user (the mother), her phone plus her iCloud account.
+
+**Status: docs only.** No Xcode project, no Swift. The behavior spec is being authored in `docs/spec/` ahead of the Apple Developer Program enrolment, so the spec does not wait on a payment.
+
+**This is not a 1:1 port.** It is a new English-language product that uses a working Czech SvelteKit PWA as its behavior reference. "1:1" applies to **domain rules and invariants only** — never to code, strings, catalog, or UX. Do not port TypeScript idioms, Czech display text, or web layout.
+
+## The frozen reference repo
+
+The PWA lives at [`jirigrill/eczema-helper`](https://github.com/jirigrill/eczema-helper) and is **frozen** — stable history, no further commits. Do not open PRs against it (the research merge in [#695](https://github.com/jirigrill/eczema-helper/issues/695) is the exception, and it is nearly done).
+
+**Reference it by pointer; never copy from it.** A regulatory finding or invariant duplicated across two repos is a finding that goes stale in one of them.
+
+| What you need | Where it is |
+|---|---|
+| Domain invariants | `CONTEXT.md` in that repo — numbered `INV-1..14`, permanently stable ids with explicit HTML anchors. Cite as [`CONTEXT.md#inv-4`](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-4). Never restate an invariant's text. |
+| Invariant-shaped rules with no number | ~15 more live in `CONTEXT.md` glossary prose (the `MealEditor` trio, Copy Meal's merge rules, `SkinObservation` identity, the catalog Principles) — deliberately unnumbered. Cite those **by heading**. |
+| Live architecture decisions | `docs/adr/0001` (single-device), `0028` (food-level preparations), `0029` (no crypto / no backup) |
+| Meal-editor behavior | `docs/spec/meal-editor-state-machine.md` — already extracted; three cooperating state machines, not one |
+| Regulatory + platform research | `docs/research/` — App Review 5.1.3(ii), CloudKit photo limits, CloudKit-unavailable behavior, DPIA, Art. 9 lawful basis, insurance, English catalog sources |
+| Czech vocabulary | `UBIQUITOUS_LANGUAGE.md` — **not ported.** It freezes there. This repo gets a fresh short glossary seeded from `INV-1..14`. |
+
+**Planning happens on the map, not here:** [Map: PWA → native iOS](https://github.com/jirigrill/eczema-helper/issues/672). File new planning tickets there as children of that map. Read the map before working — it carries every settled decision and its reasoning.
+
+## Tech Stack
+
+SwiftUI · SwiftData · CloudKit private database · Swift Testing / XCTest · `just` as the sole command interface.
+
+**Xcode 27.0 (beta until ~2026-09-14 GM). Install exactly one Xcode** — with 26 and 27 co-installed, XcodeBuildMCP opens the beta-only Device Hub even when `DEVELOPER_DIR` selects stable.
+
+### iOS 26 is the floor, and the compiler is the only thing that catches a violation
+
+`IPHONEOS_DEPLOYMENT_TARGET = 26.0` from the first commit. iOS 26 is on 79% of all devices; an iOS 27 floor would ship to almost nobody.
+
+**The Xcode 27 SDK exposes iOS 27 APIs.** An unguarded iOS 27 call is a compile error, occasionally a runtime crash — and it is the single most likely mistake an agent will make here, because the owner cannot catch it in review. Never reach for an API newer than iOS 26 without an availability guard. Build before you claim a change works.
+
+## Project Structure
+
+A **thin committed `.xcodeproj` with filesystem-synchronized groups; all real code in local SwiftPM packages.** No project generator (XcodeGen cannot read Xcode 26+'s `objectVersion = 100`; Tuist is more apparatus than this needs).
+
+**Keep the app shell thin — permanently.** It is what makes both the editor path and the package test loop work; logic in a fat app target would make the effectively-unmaintained `xcode-build-server` a hard dependency.
+
+Two structural constraints: avoid per-file exclusions and multi-target folder sharing. Both re-introduce explicit file enumeration in the `pbxproj` and defeat the point of synchronized groups. One small static exception for `Config/*.xcconfig` is fine.
+
+## Commands
+
+```bash
+just build     # build for the iOS Simulator
+just check     # build + type check
+just test      # swift test on the packages
+```
+
+Run `just` for the full recipe list. (Recipes land with the Xcode project.)
+
+**Never pipe agent-facing build output through `xcbeautify`.** It is regex-based and fails *silently* — lines quietly stop being recognized, so you read a truncated failure as a pass and report success on a broken build. Read raw `xcodebuild` output or the `.xcresult`. `xcbeautify` is for human eyes only.
+
+## Verification
+
+The owner has **no iOS experience and cannot review Swift**. Nobody will catch a bug by reading your diff. That shapes everything:
+
+1. **Spec-derived tests are the durable layer.** Every spec rule should fall out as a test.
+2. **UI automation with per-step screenshots is the evidence layer** — for mechanical claims, e.g. a CTA label chain.
+3. **The simulator build is required for merge.** It is the only automated proof a change compiles against the real iOS SDK.
+4. **Owner review is behavioral, never code-level** — a manual acceptance pass judging feel.
+
+UI automation must never be the *only* gate: it leans on private frameworks and has broken across an Xcode major before. Losing it must degrade to unit tests, not to nothing.
+
+**Report honestly.** If a build fails, say so with the output. If you skipped a step, say that. A confident wrong "it works" is worse here than in a repo whose owner reads the code.
+
+## CI
+
+Two jobs on `pull_request`, `permissions: contents: read`, and **no secrets in the repo at all** (which structurally rules out fork-PR secret exposure):
+
+1. `packages` — `swift test` on the SwiftPM packages.
+2. `app` — build for the iOS Simulator with `CODE_SIGNING_ALLOWED=NO`. **Required for merge.**
+
+**Pin the runner image.** `macos-latest` currently maps to macOS 15, not 26 — start on `macos-26`. **Never use a `-large`/`-xlarge` runner:** standard runners are free and unlimited on public repos, larger ones are always billed, public repo or not.
+
+Assert the project format rather than assuming it:
+
+```bash
+grep -c 'in Sources' project.pbxproj    # must be 0
+grep -c fileSystemSynchronized          # must be > 0
+```
+
+## Agent Tooling
+
+**XcodeBuildMCP, pinned to `2.7.0`** — not `@latest`, which has shipped a breaking schema bump; unannounced breakage in a loop nobody can code-review is a bad failure mode. Upgrade deliberately.
+
+Enable exactly the `simulator` and `ui-automation` workflows (~6k context). Set `configuration: 'Debug'` explicitly. Telemetry is opted out in committed config as hygiene.
+
+## This repo is public
+
+- **No credentials, container identifiers, team ids, or provisioning profiles in committed files.** Ever.
+- The regulatory research is published verbatim by design — including a **known-open** compliance question (whether App Store 5.1.3(ii) reaches an app's own CloudKit private database; Apple has never answered it, see [#685](https://github.com/jirigrill/eczema-helper/issues/685)). Do not paper over it in docs; it is recorded as open on purpose.
+- The README is marketing surface for regulatory purposes. The recording-not-finding rule applies to it verbatim.
+
+## Data and Privacy
+
+The app handles an **infant's health data**. Everything below is a constraint, not a preference.
+
+- Records live in the mother's **CloudKit private database**. We have no backend and no access to her data.
+- **CloudKit is sync, not backup.** It delivers delete-and-reinstall; it has no rollback. A deletion by user or bug propagates everywhere.
+- **No export, no import, no PDF in v1** — decided knowingly, with the exposure accepted. Durability rests entirely on sync.
+- **iCloud gates writing, never reading.** No record is created that CloudKit has not seen, but records already on the phone stay readable in every degraded state. The gate fires only on `noAccount`/`restricted` — never on `temporarilyUnavailable`/`couldNotDetermine`, so airplane mode and basements still log and upload on reconnect.
+- Account state is **five-valued** (`CKAccountStatus`), not a boolean. Conflating the middle states is exactly what produces an airplane-mode wall.
+- **CloudKit cannot enforce `@Attribute(.unique)` or cascade-delete**, and an app cannot supply its own `CKRecord` name. Uniqueness and cascades are application-layer obligations; two devices writing one logical slot produce **two records**, and the visible failure is a duplicate.
+- **The schema is additive-only once the CloudKit schema is promoted.** A field never recorded cannot be backfilled. Weigh record shape carefully before the first release.
+- **Never write a destructive migration.** The PWA wiped rows in four separate upgrade hooks. That policy does not carry over.
+
+## The Food Catalog
+
+Bundled static data **outside** the SwiftData store — no `@Model` for foods, no seeding, no reconcile-on-launch. `MealItem.foodId` is the only catalog value the schema holds, and therefore the only part on the schema deadline; every other catalog field is revisable in any later release.
+
+Ids are **English kebab-case slugs** (`cow-milk`) because a human authors them and a reviewer must be able to check `cow-milk → [dairy]`. User records get UUIDs.
+
+**Catalog and regulatory claims require primary sources — cite or don't claim.** The Czech catalog's provenance cannot be inherited (32 free-text comments, one reading `// no source for shellfish - ai generated only?`, and the cited PDFs are absent from git). The English catalog is a **fresh derivation with citations attached at authoring time**, never a review pass over the existing mappings.
+
+## Conventions
+
+- **English only**, but structured — a string catalog from commit one.
+- **No UI display text on domain records.** The PWA persisted Czech labels onto records and fed them into a dirtiness key; do not repeat it.
+- Skin levels are `Calm` / `Mild` / `Moderate` / `Severe`. *Witnessed* is a spec-only term for "she looked" — not a UI string.
+- Human-only setup steps (accounts, payments, dashboards) get an **interactive wizard**, never prose instructions.
+
+## When Modifying This Repo
+
+Keep `docs/README.md` and this file accurate. When a decision is settled on the map, record it on its ticket — then reference it here by pointer if an agent needs it to work correctly.
