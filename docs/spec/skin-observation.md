@@ -85,7 +85,7 @@ This is not a 1:1 port. Per [#690](https://github.com/jirigrill/eczema-helper/is
 the port picks the coherent rule, and *keeping* a wart is what needs a named reason.
 
 Every divergence in this document is marked inline as **⚠ Divergence** with (a) what the PWA
-does, (b) what the iOS app does, and (c) why. There are eleven. They are the interesting part
+does, (b) what the iOS app does, and (c) why. There are thirteen. They are the interesting part
 of the document and are indexed in §10.
 
 ---
@@ -392,22 +392,38 @@ copy with a new id.
 captured photos to the OS share sheet so the mother can save them to her photo library with one
 tap. Best-effort: silently does nothing where unsupported, and silently absorbs a cancel.
 
-**`SKIN-PHOTO-18` (OPEN)** — Whether iOS does this at all. It is a genuine product question with
-a privacy edge, and it must not be ported by reflex:
+**`SKIN-PHOTO-18` (MUST)** — iOS keeps this. After a successful save, newly captured photos are
+offered to the system share sheet so the mother can save them to her photo library.
 
-- On the web it was a **workaround** — browser storage is opaque and fragile, so pushing a copy
-  into Photos gave the mother a durable artifact she could see. On iOS the app's own store is
-  durable and syncs, so the original motivation is much weaker.
-- Writing infant medical photographs into the general photo library moves them **out** of the
-  app's privacy boundary and into whatever else syncs, backs up, or shares that library —
-  including iCloud Photos and any third-party app with library access. That cuts against the
-  app's entire data-protection posture.
-- Against that: a mother showing a dermatologist a photo on her phone reaches for Photos, not
-  for this app, and [#683](https://github.com/jirigrill/eczema-helper/issues/683) removed
-  export entirely — so this is currently the only route by which an image can leave the app.
+**`SKIN-PHOTO-19` (MUST)** — The offer is **best-effort and never blocking**: a cancel, a refusal,
+or a denied Photos permission leaves the save already committed and the observation unchanged.
+Saving to the library is never a precondition for recording.
 
-Recorded as OPEN rather than decided because it trades durability against confidentiality and
-the owner has not been asked. → §12.6.
+**`SKIN-PHOTO-20` (MUST)** — The app requests Photos access only at the point the mother first
+takes this action, never at launch and never during first run, and the permission string names
+what is being saved.
+
+**`SKIN-PHOTO-21` (MUST NOT)** — Nothing is written to the photo library without the mother
+having asked for it in that moment. There is no setting that makes it automatic, and no silent
+background copy.
+
+> **⚠ Divergence 12.** *PWA:* offers newly captured photos to the share sheet as a **durability
+> workaround** — browser storage is opaque and fragile, so a copy in Photos was insurance against
+> losing the originals. *iOS:* the behavior is kept, but the reason is different — the app's own
+> store is durable and syncs, so this is now about the mother *reaching* her photos, not about not
+> losing them. *Why:* the owner's call. A mother showing a dermatologist reaches for Photos, not
+> for this app, and with export declined ([#683](https://github.com/jirigrill/eczema-helper/issues/683))
+> this is the only route an image can leave.
+
+Worth stating plainly, because it is the app's largest deliberate privacy concession: **this is
+the one path by which infant medical photographs leave the app's boundary.** The photo library
+syncs to iCloud Photos, is readable by any app the mother grants library access, and appears in
+shared albums and Memories — none of which this app controls or can revoke. The decision was made
+knowingly, on the grounds that an unreachable photo is not much use to a mother in a
+dermatologist's office. Three consequences follow and are not optional: the Photos usage
+description is user-facing text that must not overstate ([#709](https://github.com/jirigrill/eczema-helper/issues/709)),
+the App Store privacy labels must declare it, and `SKIN-PHOTO-21` is what keeps the concession
+narrow — a deliberate act each time, never a default. → §12.6
 
 ---
 ## 6. Interaction
@@ -675,19 +691,29 @@ all-calm observation (`SKIN-WIT-2`), in the interface and not merely in the data
 **`SKIN-VIEW-4` (MUST)** — Tapping an entry opens this screen in edit mode for that observation,
 returning to the day view on exit.
 
-**`SKIN-VIEW-5` (OPEN)** — Whether a single day-level severity is ever displayed.
+**`SKIN-VIEW-5` (MUST NOT)** — No single day-level severity is displayed anywhere. The day view
+shows per-region levels per observation and never collapses them into one figure.
 
 The reference implementation defines a day-overall severity as the maximum level across an
 observation's regions, and INV-6 records it as derived-never-stored. **Nothing calls it.** The
 function has no callers, no test, and no render site anywhere in the shipped app; the day view
-shows per-region chips instead. So the rule described in INV-6 is, in practice, unimplemented.
+shows per-region chips instead. So the rule described in INV-6 was, in practice, never
+implemented — and this document declines to implement it.
 
-That makes this a decision rather than a port, and it is not a cosmetic one:
+The reason is regulatory, not cosmetic:
 [#677](https://github.com/jirigrill/eczema-helper/issues/677) identified `max(regions)` as **the
 regulatory surface** — collapsing nine observations into one severity figure is closer to
 *assessing* the skin than to recording it, and the copy around such a figure is precisely where a
-diary starts to read like an assessment (§6.4, INV-11). Displaying nothing is the conservative
-option and is what ships today. → §12.2.
+diary starts to read like an assessment (§6.4, INV-11). #677 accepted the level *names* as
+clinically safe because the app records the mother's observation rather than asserting an
+assessment; a derived day figure is exactly the case where that defence weakens, because no
+observation the mother made says "today was Moderate".
+
+> **⚠ Divergence 13.** *PWA:* `INV-6` describes a derived day-overall severity, and the code to
+> compute it exists. *iOS:* the concept does not exist. *Why:* the owner's call. It was never
+> displayed, so nothing is lost; it is the app's sharpest regulatory edge per #677; and it is
+> free to reverse, since the value is derived and would need no stored field. INV-6 should stop
+> describing it at the source (→ §12.2).
 
 ---
 
@@ -709,11 +735,19 @@ reviewer reads to check the port did not drift by accident.
 | 9 | §8.4 | Undo writes the record back rather than restoring a draft | Defect fixed (undo could be impossible) |
 | 10 | §11 | Level labels `Calm`/`Mild`/`Moderate`/`Severe`; English throughout | Settled by [#677](https://github.com/jirigrill/eczema-helper/issues/677) |
 | 11 | §11 | No destructive migration, ever | Settled — the PWA wiped rows in four upgrade hooks |
+| 12 | §5.4 | Camera-roll sharing kept, but as reach rather than durability | Owner's call — privacy concession accepted |
+| 13 | §9.5 | No day-level severity exists at all | Owner's call — retires #677's regulatory surface |
 
-Nine of the eleven are the coherence default from
+Nine of the thirteen are the coherence default from
 [#690](https://github.com/jirigrill/eczema-helper/issues/690) doing its work: in each case the
 reference implementation did two different things and this document picks one. None of them was
 kept as a wart, so no named reasons are needed — which is itself the finding.
+
+Divergences 12 and 13 are different in kind: both are **owner decisions on questions this
+document originally recorded as OPEN**, and they go in opposite directions. 13 removes the app's
+sharpest regulatory edge; 12 knowingly accepts its largest privacy concession, against the
+recommendation, because an unreachable photo does not help a mother in a consulting room. Both
+were decided with the trade named.
 
 ---
 
@@ -775,6 +809,14 @@ of this screen. Each maps to rules above; each is a thing to *do* on a device, i
     `SKIN-SAVE-12`
 13. Sign out of iCloud. You can still read; the screen tells you why you cannot log. →
     `SKIN-SAVE-13`
+14. Attach a photo and save. You are offered the chance to save it to your photo library, and the
+    permission prompt appears **now** — not at launch. Decline it. The observation and its photo
+    are unaffected. → `SKIN-PHOTO-18`, `SKIN-PHOTO-19`, `SKIN-PHOTO-20`
+15. Save a further observation with a photo. Nothing reaches the photo library unless you ask for
+    it in that moment. → `SKIN-PHOTO-21`
+16. Look at any day with several observations. Nowhere is there a single severity figure for the
+    day. → `SKIN-VIEW-5` *(this is Divergence 13; the PWA also shows none, but its INV-6 says it
+    should)*
 
 ---
 ## 12. Open questions
@@ -782,20 +824,24 @@ of this screen. Each maps to rules above; each is a thing to *do* on a device, i
 Recorded rather than guessed, per the map's cite-or-don't-claim rule. Each is a candidate ticket;
 none blocks writing the remaining spec sections.
 
-**12.1 — The glossary contradicts itself about how many observations a day holds.**
-`CONTEXT.md` § _SkinObservation_ says "Multiple `SkinObservation` records may exist for the same
-day", while INV-6 describes the observation as "a per-region severity set" and INV-7 says "every
-save witnesses all nine regions" — phrasings that read naturally as one-per-day. This document
-resolves it in favour of **many** (§2.4), because the storage port returns a list, the day view
-renders each with its own time, and nothing anywhere upserts. Stated as an open question anyway
-because the *glossary* should be fixed at the source, and because a reader who takes INV-7 at face
-value will design a different schema.
+**12.1 — `CONTEXT.md` should stop contradicting itself about observations per day. (Resolved
+here; the source still needs fixing.)** The glossary § _SkinObservation_ says "Multiple
+`SkinObservation` records may exist for the same day", while INV-6 describes the observation as "a
+per-region severity set" and INV-7 says "every save witnesses all nine regions" — phrasings that
+read naturally as one-per-day. **The owner has confirmed *many*,** which is what this document
+already specifies (§2.4) on the evidence that the storage port returns a list, the day view
+renders each with its own time, and nothing anywhere upserts. It stays listed because the
+remaining work is on the *frozen repo*: INV-6 and INV-7 should be reworded so a reader who takes
+them at face value does not design a one-per-day schema. Worth doing before that repo freezes,
+since this document cites those anchors.
 
-**12.2 — Is a day-level severity ever displayed?** §9.5. The rule exists in INV-6, its
-implementation is dead code with zero callers, and
-[#677](https://github.com/jirigrill/eczema-helper/issues/677) flagged the derivation as the
-regulatory surface. Three options: display nothing (ships today), display a per-observation
-maximum, or remove the concept from INV-6. Nobody has decided.
+**12.2 — INV-6 should stop describing a day-level severity. (Decided: nothing is displayed.)**
+§9.5, `SKIN-VIEW-5`, Divergence 13. The owner has dropped the concept: no day-level figure is
+displayed anywhere, on the grounds that it was never implemented, that
+[#677](https://github.com/jirigrill/eczema-helper/issues/677) named the derivation the app's
+regulatory surface, and that it is free to reverse because the value is derived and needs no
+stored field. What remains is the same source-side fix as §12.1 — INV-6 still describes
+`max(regions)` as a rule of the domain, and on this decision it is not one.
 
 **12.3 — `SkinPhoto`'s record shape.** Whether size, format, and dimensions are recorded fields is
 a **schema-deadline** question: additive-only promotion means a field never recorded cannot be
@@ -812,9 +858,16 @@ severities — so it is the section that question is really about.
 implementation's 500 ms race can silently reject a valid id. Under SwiftData the read can likely be
 awaited, deleting the problem rather than tuning it. Small, but it is a decision.
 
-**12.6 — `SKIN-PHOTO-18`: does saving to the photo library survive the port?** A durability
-workaround on the web; on iOS it moves infant medical photographs outside the app's privacy
-boundary, and with export removed it is the only route out. Needs the owner.
+**12.6 — What the Photos permission string says, and how the privacy surfaces declare the camera
+roll. (The behavior is decided; its copy is not.)** §5.4, `SKIN-PHOTO-18`–`-21`, Divergence 12.
+The owner has kept camera-roll sharing, accepting that it is the one path by which infant medical
+photographs leave the app's boundary. That makes three pieces of *text* load-bearing, and none of
+them is written: the `NSPhotoLibraryAddUsageDescription` string, which is user-facing and must
+describe saving without implying the app manages her library; the Art. 13 privacy notice
+([#709](https://github.com/jirigrill/eczema-helper/issues/709)), which now has a disclosure it did
+not have before; and the App Store privacy labels, which must declare it. Copy, not behavior — but
+per the map's marketing-tripwire note, copy about medical photographs is exactly where this
+product's risk lives.
 
 **12.7 — Does anything on this screen need a *pending work* concept?**
 [#707](https://github.com/jirigrill/eczema-helper/issues/707) asks whether the term generalises,
