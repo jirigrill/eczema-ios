@@ -46,7 +46,7 @@ must do" are not the same thing:
 | **MUST NOT** | Prohibited behavior. Where practical, made unrepresentable rather than tested. |
 | **SHOULD** | Strong default. Departing needs a recorded reason, not a preference. |
 | **PWA** | Describes the reference implementation only — **does not** carry to iOS. Present so a reader who compares the two is not misled, and so the divergence is auditable. |
-| **OPEN** | Genuinely undecided. Blocks nothing yet; listed in §12 with its ticket. |
+| **OPEN** | Genuinely undecided. Blocks nothing yet; listed in §12 with its ticket. **This section has none left** — the four it shipped with were resolved by the owner (Divergences 12–15); the mark stays documented because later sections will use it. |
 
 An **OPEN** rule is never silently resolved by an implementer. If a rule you need is OPEN,
 that is a map ticket, not a judgement call.
@@ -85,7 +85,7 @@ This is not a 1:1 port. Per [#690](https://github.com/jirigrill/eczema-helper/is
 the port picks the coherent rule, and *keeping* a wart is what needs a named reason.
 
 Every divergence in this document is marked inline as **⚠ Divergence** with (a) what the PWA
-does, (b) what the iOS app does, and (c) why. There are thirteen. They are the interesting part
+does, (b) what the iOS app does, and (c) why. There are fifteen. They are the interesting part
 of the document and are indexed in §10.
 
 ---
@@ -127,11 +127,20 @@ carrying an uninterpretable date.
 returns the mother to the destination without opening the editor. She is never shown an empty
 form claiming to be editing something.
 
-**`SKIN-ENTRY-4` (OPEN)** — *How* the app decides an id is unknown. The reference
-implementation waits a fixed 500 ms for its reactive query to emit, then bounces — a race that
-can reject a **valid** id on a slow cold start, silently. Under SwiftData the read can be made
-awaitable or synchronous, which would remove the window entirely rather than tune it.
-→ §12.5.
+**`SKIN-ENTRY-4` (MUST)** — Existence is decided by **awaiting the read**, never by a timer. The
+app fetches the observation by id and waits for a definite answer; only a completed read that
+found nothing sends her back (`SKIN-ENTRY-3`). No elapsed-time threshold participates in the
+decision.
+
+**`SKIN-ENTRY-5` (MUST)** — While that read is in flight the screen shows a loading state, not an
+empty form. A pending read is never rendered as an observation with nine calm regions.
+
+> **⚠ Divergence 14.** *PWA:* waits a fixed **500 ms** for its reactive query to emit, then
+> bounces — so a slow cold start silently rejects a **valid** id and returns her to the day view
+> with no explanation. *iOS:* await the read; accept a brief loading state instead. *Why:* being
+> wrong about whether her record exists is far worse than a spinner, and this screen is opened
+> one-handed while holding a baby, so a spurious bounce costs a re-navigation. The timer is also
+> untestable as behavior — a test could only assert a timing threshold, never the rule.
 
 ---
 
@@ -336,10 +345,27 @@ is saved. Leaving without saving discards them, subject to §8.
 
 **`SKIN-PHOTO-6` (SHOULD)** — See `SKIN-REC-3` for `capturedAt`.
 
-**`SKIN-PHOTO-7` (OPEN)** — Capture source. The reference implementation deliberately offers
-the OS picker rather than forcing the camera, so an existing photo can be attached. Whether iOS
-offers camera, library, or both — and in what order — is a UX decision on the map's
-UI/UX fog, not settled here.
+**`SKIN-PHOTO-7` (MUST)** — Adding a photo offers **the camera first, with the photo library
+reachable in one further tap**. Both sources are available; neither is forced.
+
+> **⚠ Divergence 15.** *PWA:* opens the OS picker first, so reaching the camera costs an extra
+> tap. *iOS:* camera first, library one tap away. *Why:* the owner's call. The dominant case is
+> photographing the skin she is looking at as she logs it; the PWA's order inverts that for no
+> stated reason, and the web file input gave it little choice.
+
+**`SKIN-PHOTO-22` (MUST)** — A photo attached from the library is indistinguishable from a
+captured one once attached. The source is not recorded on the record and does not affect any
+later behavior.
+
+**`SKIN-PHOTO-23` (MUST NOT)** — `capturedAt` is never clamped or rewritten to fall inside the
+observation's day. A library photo taken three weeks ago keeps its own capture time on an
+observation created today; the two fields answer different questions (`SKIN-REC-3`, INV-8's
+witnessing-moment reasoning) and disagreeing is the correct outcome, not a bug to fix.
+
+Camera-first matches the dominant case — she is looking at the skin as she logs it. The library
+must stay reachable because attaching an earlier photo is a real need, not an edge case: the light
+was better an hour ago, or the baby was still. The reference implementation offers the OS picker
+first, which inverts the common case for no stated reason.
 
 ### 5.2 Atomicity
 
@@ -737,17 +763,20 @@ reviewer reads to check the port did not drift by accident.
 | 11 | §11 | No destructive migration, ever | Settled — the PWA wiped rows in four upgrade hooks |
 | 12 | §5.4 | Camera-roll sharing kept, but as reach rather than durability | Owner's call — privacy concession accepted |
 | 13 | §9.5 | No day-level severity exists at all | Owner's call — retires #677's regulatory surface |
+| 14 | §1.1 | Existence decided by awaiting the read, not a 500 ms timer | Defect fixed (silent false negative) |
+| 15 | §5.1 | Camera offered first; library one tap away | Owner's call — inverts the PWA's order |
 
-Nine of the thirteen are the coherence default from
+Nine of the fifteen are the coherence default from
 [#690](https://github.com/jirigrill/eczema-helper/issues/690) doing its work: in each case the
 reference implementation did two different things and this document picks one. None of them was
 kept as a wart, so no named reasons are needed — which is itself the finding.
 
-Divergences 12 and 13 are different in kind: both are **owner decisions on questions this
-document originally recorded as OPEN**, and they go in opposite directions. 13 removes the app's
+Divergences 12–15 are different in kind: all four are **owner decisions on questions this
+document originally recorded as OPEN**, and they do not pull the same way. 13 removes the app's
 sharpest regulatory edge; 12 knowingly accepts its largest privacy concession, against the
-recommendation, because an unreachable photo does not help a mother in a consulting room. Both
-were decided with the trade named.
+recommendation, because an unreachable photo does not help a mother in a consulting room; 14 trades
+a spinner for correctness about whether her record exists; 15 reorders a picker to match the case
+that actually happens. Each was decided with its trade named. **No OPEN rules remain.**
 
 ---
 
@@ -817,6 +846,14 @@ of this screen. Each maps to rules above; each is a thing to *do* on a device, i
 16. Look at any day with several observations. Nowhere is there a single severity figure for the
     day. → `SKIN-VIEW-5` *(this is Divergence 13; the PWA also shows none, but its INV-6 says it
     should)*
+17. Force-quit the app, then open a saved observation directly — cold start, slow first read. It
+    opens the right record. It must never bounce you back to the day view, and must never show an
+    empty all-calm form while loading. → `SKIN-ENTRY-4`, `SKIN-ENTRY-5` *(this can fail on the
+    PWA — Divergence 14)*
+18. Tap add-photo. The camera comes up first, and the photo library is one tap away. → `SKIN-PHOTO-7`
+19. Attach a photo from the library that was taken days ago, and save. It attaches like any other
+    photo, and its own capture time is kept rather than rewritten to today. → `SKIN-PHOTO-22`,
+    `SKIN-PHOTO-23`
 
 ---
 ## 12. Open questions
@@ -854,9 +891,14 @@ pixel and quality *targets*, not the shape.
 this screen holds the most sensitive data in the app — infant medical photographs and per-region
 severities — so it is the section that question is really about.
 
-**12.5 — `SKIN-ENTRY-4`: how an unknown observation id is detected.** The reference
-implementation's 500 ms race can silently reject a valid id. Under SwiftData the read can likely be
-awaited, deleting the problem rather than tuning it. Small, but it is a decision.
+**12.5 — How long may the edit-loading state last before it needs its own copy? (The mechanism
+is decided; the threshold is not.)** `SKIN-ENTRY-4`/`-5`, Divergence 14. The owner has chosen to
+**await the read** rather than keep the PWA's 500 ms timer, so a valid id can no longer be rejected
+silently. That moves the question rather than closing it: a read that takes unusually long now
+shows a loading state indefinitely instead of bouncing, and this document deliberately sets **no
+threshold** at which that state should say something more than "loading". Almost certainly a
+non-issue for a local SwiftData fetch by identifier, which is why no number is guessed here — but
+if one is ever needed it is copy plus a duration, not a change to the rule.
 
 **12.6 — What the Photos permission string says, and how the privacy surfaces declare the camera
 roll. (The behavior is decided; its copy is not.)** §5.4, `SKIN-PHOTO-18`–`-21`, Divergence 12.
@@ -876,8 +918,15 @@ premise: once compose drafts are buffered, this screen *does* need to answer "wo
 something she did?" — `SKIN-UNDO-6` states it locally. Whether that is the same concept as the meal
 editor's, and where it is defined, is #707's.
 
-**12.8 — Capture source and photo-picker UX.** `SKIN-PHOTO-7`. Belongs with the UI/UX rework fog,
-not here.
+**12.8 — Whether attaching an older library photo needs any visible signal. (Sources are
+decided; this consequence is not.)** `SKIN-PHOTO-7`, `-22`, `-23`, Divergence 15. The owner has
+settled **camera first, library one tap away**. `SKIN-PHOTO-23` then makes a deliberate choice
+visible: a photo taken three weeks ago keeps its own `capturedAt` on an observation created today,
+because the two fields answer different questions and clamping either would be a lie. What is not
+decided is whether the interface ever *says* so — a photo visibly older than the observation it
+sits on is either useful context or a confusing detail, and nothing in the data settles which. Pure
+presentation, so it belongs with the UI/UX rework rather than here; recorded because the rule that
+creates it is now a MUST NOT and a later reader will otherwise read the mismatch as a defect.
 
 ---
 
