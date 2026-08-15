@@ -1,11 +1,41 @@
 # Behavior spec
 
-The behavior spec for the iOS app: platform-neutral, owner-confirmed, and complete enough that a Swift developer or agent can build the port and derive tests from it without further discovery.
+The behavior spec for the iOS app: platform-neutral, owner-confirmed, and complete enough that a
+Swift developer or agent can build the port and derive tests from it without further discovery.
 
-**This directory is deliberately near-empty.** The section template — how a spec document is structured, and how a rule is phrased so a test falls out of it — is decided by [Behavior spec format and section template](https://github.com/jirigrill/eczema-helper/issues/682). Do not invent a format ahead of it; that ticket exists so every section shares one.
+## The format is settled
 
-Once the template exists, the spec sections graduate one at a time: skin observation, day view, first-run and feeding stage, settings, and the SwiftData model plus CloudKit schema.
+Read [`TEMPLATE.md`](TEMPLATE.md) before writing or extending a section. It states the conventions;
+[`skin-observation.md`](skin-observation.md) is the worked example that demonstrates them and was
+written as the template.
 
-## Already written, elsewhere
+In short: one file per behavior area, rules with permanent `<AREA>-<GROUP>-<n>` ids, an explicit
+strength mark on every rule (**MUST** / **MUST NOT** / **SHOULD** / **PWA** / **OPEN**), invariants
+cited by anchor and never restated but always given a **disposition**, divergences from the PWA
+marked inline *and* indexed, and every section ending in a verification table, an on-device
+acceptance pass, and its open questions.
 
-The meal editor is the one area already extracted, and it lives on the frozen PWA repo alongside the code it was read out of: [`docs/spec/meal-editor-state-machine.md`](https://github.com/jirigrill/eczema-helper/blob/main/docs/spec/meal-editor-state-machine.md). It documents three cooperating state machines (per-food, session, exit), maps every rule to its current TypeScript test, marks what translates to Swift, and lists its own open questions. Reference it; do not copy it here.
+## Sections
+
+| Section | Status |
+| --- | --- |
+| [`skin-observation.md`](skin-observation.md) | Written — the template section |
+| Day view | Not written |
+| First run and feeding stage | Not written; see [#712](https://github.com/jirigrill/eczema-helper/issues/712) |
+| Settings | Not written |
+| Persistence model (SwiftData + CloudKit) | Not written; carries the schema deadlines |
+
+The meal editor is the one area extracted **before** the template existed, and it lives on the
+frozen PWA repo beside the code it was read out of:
+[`docs/spec/meal-editor-state-machine.md`](https://github.com/jirigrill/eczema-helper/blob/main/docs/spec/meal-editor-state-machine.md).
+It documents three cooperating state machines, maps every rule to its current TypeScript test, and
+lists its own open questions. Reference it; do not copy it here. It predates this format — it has no
+rule ids, no strength marks and no disposition table, and five of its open questions were answered
+afterwards by [#690](https://github.com/jirigrill/eczema-helper/issues/690). Reformatting it is
+worthwhile but is nobody's task yet.
+
+## Open questions live on the map
+
+Anything undecided belongs on the [Wayfinder map](https://github.com/jirigrill/eczema-helper/issues/672),
+not here — except as an **OPEN** rule plus a paragraph in a section's own open-questions list, which
+is how a section records that it deliberately did not guess.
