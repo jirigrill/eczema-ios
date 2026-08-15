@@ -1,0 +1,846 @@
+# Skin observation — behavior specification
+
+**Status:** owner-confirmed template. This is the **first** spec section and doubles as the
+**format template** every later section follows — see
+[`TEMPLATE.md`](TEMPLATE.md) for the rules this document demonstrates.
+**Behavior reference:** `jirigrill/eczema-helper` @ `582f662` (frozen PWA), `src/routes/skin/`.
+**Resolves:** [#682](https://github.com/jirigrill/eczema-helper/issues/682) on the transition map
+[#672](https://github.com/jirigrill/eczema-helper/issues/672).
+
+## Overview
+
+The skin observation screen is where the mother records how the baby's skin looks: a severity
+level for each of nine body regions, an optional note, and any number of photos. It is the
+second of the app's two recording surfaces (the other is the meal editor) and the smaller one
+— but it carries the product's most distinctive rule, that **looking and finding nothing is
+itself a record worth keeping** ([INV-7](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-7)).
+
+This document states what the screen does, in English, without reference to Swift, SwiftUI,
+SwiftData, Svelte, Dexie, or the Czech interface. Swift tests are derived from the numbered
+rules; the owner's acceptance pass is derived from §11.
+
+Three things about this screen are worth knowing before reading the rules:
+
+1. **Every visit can save.** There is no "nothing to record" state in compose mode. A mother
+   who opens the screen, looks, sees calm skin and taps save has written a real observation —
+   nine regions, all `Calm`. Absence of a record means "didn't look", never "nothing wrong".
+2. **A day holds many observations, not one.** The screen writes a *new* record per visit;
+   morning and evening are two rows, each with its own timestamp. This is stated because it
+   is easy to assume otherwise (§2.4) and because the PWA's own glossary and invariant text
+   pull in opposite directions (§12.1).
+3. **Delete is a hard delete with a short undo.** There is no trash. The undo lives in memory
+   for one action and dies with the app (§8).
+
+### How to read this document
+
+Every rule has a **stable id** — `SKIN-<area>-<n>` — and is written as a single testable
+claim. Ids are permanent identity, never renumbered or reused; a new rule appends the next
+unused number in its area. Cite them from code comments, tests, and commit messages.
+
+**Rule strength** is marked on every rule, because "what the PWA does" and "what the iOS app
+must do" are not the same thing:
+
+| Mark | Meaning |
+| --- | --- |
+| **MUST** | Required behavior. A Swift test asserts it. |
+| **MUST NOT** | Prohibited behavior. Where practical, made unrepresentable rather than tested. |
+| **SHOULD** | Strong default. Departing needs a recorded reason, not a preference. |
+| **PWA** | Describes the reference implementation only — **does not** carry to iOS. Present so a reader who compares the two is not misled, and so the divergence is auditable. |
+| **OPEN** | Genuinely undecided. Blocks nothing yet; listed in §12 with its ticket. |
+
+An **OPEN** rule is never silently resolved by an implementer. If a rule you need is OPEN,
+that is a map ticket, not a judgement call.
+
+### Invariant dispositions
+
+Invariants are **cited, never restated** — the numbered `INV-n` list in the frozen repo's
+`CONTEXT.md` is the single home for their text, and duplicating it here would create two
+copies free to drift.
+
+But citation alone is not enough for this port, because **four invariants are deliberately
+false for iOS**. [#691](https://github.com/jirigrill/eczema-helper/issues/691) classified all
+fourteen; the ones this section touches carry an explicit **disposition** so a bare citation
+can never import a contradiction:
+
+| Ref | Leading phrase | Disposition here |
+| --- | --- | --- |
+| [INV-2](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-2) | _No backup mechanism exists_ | **Void for iOS.** Sync carries durability ([#683](https://github.com/jirigrill/eczema-helper/issues/683)); retirement is [#688](https://github.com/jirigrill/eczema-helper/issues/688)'s. Still true that there is no *rollback* — §8.5. |
+| [INV-6](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-6) | _Per-region severity set, atomically saved with photos_ | **Holds, with one loss.** The local write stays atomic; atomic *arrival* on another device does not survive mirroring. §5.2, §12.4. |
+| [INV-7](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-7) | _Calm regions persist as positive evidence_ | **Holds unchanged.** The defining rule of this screen. §3, §6.1. |
+| [INV-8](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-8) | _`id` and `createdAt` immutable across edit, delete, undo_ | **Holds unchanged**, and is load-bearing beyond this screen — [#687](https://github.com/jirigrill/eczema-helper/issues/687)'s forced re-save depends on it. §7.2, §8.4. |
+| [INV-9](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-9) | _Photos unencrypted at rest_ | **Void for iOS.** Superseded by [#693](https://github.com/jirigrill/eczema-helper/issues/693) / [#714](https://github.com/jirigrill/eczema-helper/issues/714). |
+| [INV-10](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-10) | _Dexie/IndexedDB, normalized tables_ | **Void for iOS.** Replaced wholesale by SwiftData. |
+| [INV-11](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-11) | _The app is a Logging Tool_ | **Holds**, and governs §6.4 and §12.2 — the regulatory framing. |
+| [INV-12](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-12) | _Records carry types, not display strings_ | **Holds**, and is tightened: §2.1 forbids the `MealItem.name` mistake reaching `SkinPhoto`. |
+
+`CONTEXT.md` also holds roughly fifteen invariant-shaped rules **unnumbered**, in glossary
+prose. Two bear on this screen and are cited by heading rather than id: _SkinObservation_ and
+_Active region_ (both under § _Assessment & Observation_). Where one of them is ambiguous, this
+document resolves it and says so (§12.1).
+
+### Divergences from the PWA
+
+This is not a 1:1 port. Per [#690](https://github.com/jirigrill/eczema-helper/issues/690),
+**coherence is presumed right**: where the reference implementation does two different things,
+the port picks the coherent rule, and *keeping* a wart is what needs a named reason.
+
+Every divergence in this document is marked inline as **⚠ Divergence** with (a) what the PWA
+does, (b) what the iOS app does, and (c) why. There are eleven. They are the interesting part
+of the document and are indexed in §10.
+
+---
+## 1. Vocabulary
+
+| Term | Meaning |
+| --- | --- |
+| **Observation** | One record of how the skin looked, at one moment. Holds all nine regions, an optional note, and zero or more photos. |
+| **Region** | One of nine fixed body areas (§2.2). The set is closed and ordered. |
+| **Level** | A region's severity on a four-step absolute scale: `Calm`, `Mild`, `Moderate`, `Severe` (§2.3). |
+| **Witnessed** | Spec-only term: the mother *looked*. Every save witnesses all nine regions, whether or not she touched them. Never a UI string ([#677](https://github.com/jirigrill/eczema-helper/issues/677)). |
+| **Active region** | The region currently selected for tap-to-cycle. Interface state only — never persisted. (`CONTEXT.md` § _Active region_.) |
+| **Compose** | A visit that will create a new observation. |
+| **Edit** | A visit that will modify an existing one, identified by its id. |
+| **Dirty** | An edit visit whose live state differs from what was loaded (§4.3). |
+| **Undoable action** | The application-wide, single-slot holder for "the thing that just happened and can be reversed" (§8). Shared with the meal editor; owned by neither. |
+
+### 1.1 Fixed at entry
+
+The **date** is bound when the screen opens and cannot change during the visit. The **mode**
+(compose or edit) is likewise fixed: it is compose when no observation id is supplied, edit
+when one is.
+
+**`SKIN-ENTRY-1` (MUST)** — The entry point supplies a date, an optional observation id, and a
+return destination. A missing date means today. A missing return destination means the day view
+for the resolved date.
+
+**`SKIN-ENTRY-2` (MUST)** — A supplied date that is not a valid calendar date is not honoured.
+The screen resolves to today and corrects the destination, rather than writing a record
+carrying an uninterpretable date.
+
+> **⚠ Divergence 1.** *PWA:* the date parameter is read raw and written straight onto the
+> record, so a malformed value produces a row invisible to every date query and to
+> date-ordering — while the day view, given the same malformed value, validates and redirects.
+> *iOS:* validate at both entry points identically. *Why:* two rules for one concept, and the
+> incoherent one silently corrupts data. Coherence default applies.
+
+**`SKIN-ENTRY-3` (MUST)** — In edit mode, an observation id that names no existing observation
+returns the mother to the destination without opening the editor. She is never shown an empty
+form claiming to be editing something.
+
+**`SKIN-ENTRY-4` (OPEN)** — *How* the app decides an id is unknown. The reference
+implementation waits a fixed 500 ms for its reactive query to emit, then bounces — a race that
+can reject a **valid** id on a slow cold start, silently. Under SwiftData the read can be made
+awaitable or synchronous, which would remove the window entirely rather than tune it.
+→ §12.5.
+
+---
+
+## 2. The record
+
+### 2.1 Shape
+
+An observation holds:
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| id | stable unique id | Immutable. Minted by the app, not derived from content (INV-8). |
+| date | calendar date | Day granularity, no time component. |
+| createdAt | timestamp | The **witnessing moment** — when she looked. See §7.2. |
+| regions | exactly nine region/level pairs | Never fewer (§3.1). |
+| notes | optional text | Absent, not empty, when she typed nothing (§6.3). |
+
+A photo holds:
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| id | stable unique id | Preserved verbatim across delete-and-undo (§8.4). |
+| observationId | reference to the parent | Required. A photo cannot exist without one. |
+| region | region id | Which region it depicts (§5.1). |
+| capturedAt | timestamp | See `SKIN-PHOTO-6`. |
+| image data | the bytes | Record shape is **OPEN** — [#684](https://github.com/jirigrill/eczema-helper/issues/684) deferred the pixel/quality targets; whether size, format or dimensions are *recorded fields* is a schema-deadline question on the map's SwiftData fog. |
+
+**`SKIN-REC-1` (MUST NOT)** — No field on either record holds display text. Region and level
+are stored as their identifiers; the human-readable label is resolved for presentation only
+(INV-12). The reference implementation violated this on the *meal* side, persisting Czech
+labels onto records and feeding them into a comparison key; that mistake must not reach here.
+
+**`SKIN-REC-2` (MUST)** — A photo carries no date of its own. Its day is its parent
+observation's date.
+
+**`SKIN-REC-3` (SHOULD)** — `capturedAt` records when the image was captured, per photo.
+
+> **⚠ Divergence 2.** *PWA:* every photo in one save shares an identical timestamp, computed
+> once at *write* time — so the field named "captured at" records when she tapped save, not
+> when the shutter fired, and a batch of five is indistinguishable in time. *iOS:* take the
+> capture time from the image's own metadata where available, falling back to write time.
+> *Why:* the field name states a promise the implementation does not keep, and on iOS the
+> metadata is available where the web file input gave nothing. Only the fallback is a
+> divergence in behavior; the rest is a capability the platform adds.
+
+### 2.2 The regions
+
+Nine, closed, ordered. The order is canonical and drives presentation order everywhere.
+
+| # | Id | English label |
+| --- | --- | --- |
+| 1 | `face` | Face |
+| 2 | `scalp` | Scalp |
+| 3 | `neck` | Neck |
+| 4 | `belly` | Belly |
+| 5 | `back` | Back |
+| 6 | `arms` | Arms |
+| 7 | `elbow-folds` | Elbow folds |
+| 8 | `knee-folds` | Knee folds |
+| 9 | `legs` | Legs |
+
+**`SKIN-REG-1` (MUST)** — The region set is fixed at nine. Adding a region is a schema change
+and a spec change, not configuration.
+
+**`SKIN-REG-2` (MUST)** — Region ids are the identifiers above, unchanged from the reference
+implementation. They were already English ([#677](https://github.com/jirigrill/eczema-helper/issues/677)),
+so nothing is renamed here.
+
+**`SKIN-REG-3` (MUST)** — Wherever regions are listed — the grid, saved records, chips on the
+day view — they appear in the canonical order above, regardless of the order the mother touched
+them or the order storage returns.
+
+### 2.3 The levels
+
+Four, absolute, ordered.
+
+| Value | Label | Meaning |
+| --- | --- | --- |
+| 0 | `Calm` | No visible problem. **The explicit default**, not "unknown". |
+| 1 | `Mild` | |
+| 2 | `Moderate` | |
+| 3 | `Severe` | |
+
+**`SKIN-LVL-1` (MUST)** — The scale is absolute, not relative to a previous observation. `Mild`
+means mild, not "milder than yesterday".
+
+**`SKIN-LVL-2` (MUST)** — There is no "unknown" or "not checked" level. A region the mother
+never touched is `Calm` (§3.1). This is the whole point of INV-7 and the reason the app can
+distinguish "checked, all calm" from "didn't check".
+
+**`SKIN-LVL-3` (MUST)** — Level labels are `Calm` / `Mild` / `Moderate` / `Severe`, settled by
+[#677](https://github.com/jirigrill/eczema-helper/issues/677). *Witnessed* is spec vocabulary
+and never appears in the interface.
+
+### 2.4 Many observations per day
+
+**`SKIN-REC-4` (MUST)** — A day may hold any number of observations. Each visit in compose mode
+creates a new one; morning and evening are two records, each with its own `createdAt`.
+
+**`SKIN-REC-5` (MUST)** — Observations are never merged, and a second observation on a day does
+not supersede the first. The day view lists each one as its own timestamped entry.
+
+**`SKIN-REC-6` (MUST NOT)** — There is no uniqueness constraint on (date) or on
+(date, anything). Unlike a meal — which occupies exactly one (date, meal type, actor) slot —
+an observation is a free-standing event.
+
+This last point matters for the port in a way it did not for the PWA: because observations
+have no natural key, the duplicate-record hazard that
+[#691](https://github.com/jirigrill/eczema-helper/issues/691) found for meals under sync
+**does not arise here**. Two devices creating two observations is not a conflict; it is two
+observations. There is nothing to deduplicate and no tiebreak attribute needed.
+
+---
+## 3. Witnessing all nine
+
+The rule that defines this screen.
+
+**`SKIN-WIT-1` (MUST)** — Every save writes **all nine** regions, each with an explicit level.
+A region the mother never touched is written at `Calm`. The record never holds a subset.
+
+**`SKIN-WIT-2` (MUST)** — The absence of any observation for a day means **"she did not look"**.
+An observation with all nine regions at `Calm` means **"she looked, and everything was calm"**.
+These are different facts and the app must be able to distinguish them.
+
+**`SKIN-WIT-3` (MUST)** — In compose mode the save action is **always available**, from the
+moment the screen opens, with nothing touched. Opening the screen and saving immediately is a
+legitimate, meaningful act — it records a witnessed all-calm day.
+
+**`SKIN-WIT-4` (MUST)** — Saving a freshly-opened compose screen writes nine regions at `Calm`,
+no note, and no photos.
+
+These four rules are the reason `Calm` is a level rather than the absence of one, and they are
+worth defending in review: a future contributor optimising away "pointless" all-calm saves would
+delete the app's ability to record the most common day.
+
+---
+
+## 4. Visit state
+
+### 4.1 Compose vs edit
+
+**`SKIN-VIS-1` (MUST)** — Mode is decided at entry by the presence of an observation id and
+never changes during the visit — with exactly one exception, the post-delete undo (§8.4), which
+re-enters edit mode from the undoable action rather than from storage.
+
+### 4.2 Loading an edit
+
+**`SKIN-VIS-2` (MUST)** — Opening an edit populates the nine levels, the note, and the gallery
+from the stored observation, then records a **load snapshot** of that state for the dirty
+comparison (§4.3).
+
+**`SKIN-VIS-3` (MUST)** — Edit-only controls (the overflow menu carrying delete) appear only
+once a load has completed. A still-loading edit, and an unknown id on its way to bouncing, show
+no delete affordance.
+
+**`SKIN-VIS-4` (MUST)** — If the stored photos cannot be read, the visit does not silently
+present the observation as photo-less.
+
+> **⚠ Divergence 3.** *PWA:* a failed photo read yields an empty gallery with no signal. Benign
+> on save (the photos survive, since only explicit removals are sent) but **destructive on
+> delete**: the undo snapshot captures the empty list, so undoing a delete permanently loses
+> photos that merely failed to load. *iOS:* surface the failure and disable delete while photo
+> state is unknown. *Why:* a silent read failure that becomes permanent data loss one tap later
+> is a defect, not a behavior.
+
+### 4.3 Dirtiness
+
+**`SKIN-VIS-5` (MUST)** — An edit visit is **dirty** when any of the following differs from the
+load snapshot: any region's level, the note (compared trimmed), the set of newly staged photos,
+or the set of photos marked for removal.
+
+**`SKIN-VIS-6` (MUST)** — In edit mode the save action is available only when dirty. A clean
+edit has nothing to write and the back affordance is the correct exit.
+
+**`SKIN-VIS-7` (MUST)** — Compose mode has no dirty gate. `SKIN-WIT-3` governs instead.
+
+Note the asymmetry is intentional and not a divergence: compose can always save because an
+all-calm save is meaningful; edit cannot save an unchanged record because re-writing it would
+be a no-op that touches the update timestamp.
+
+---
+
+## 5. Photos
+
+### 5.1 Attaching
+
+**`SKIN-PHOTO-1` (MUST)** — A photo is attached **to a region**, not to the observation at
+large. The region is whichever is active when the photo is added.
+
+**`SKIN-PHOTO-2` (MUST)** — Adding a photo requires an active region. With none selected, the
+add-photo affordance is present but inert, and states what is needed rather than simply being
+disabled.
+
+**`SKIN-PHOTO-3` (MUST)** — Any number of photos may be attached to any region, and to any
+number of regions, in one observation. There is no cap.
+
+**`SKIN-PHOTO-4` (MUST)** — A photo may be attached to a region at `Calm`. Photographing skin
+that looks fine is legitimate, and doing so does not change the region's level.
+
+**`SKIN-PHOTO-5` (MUST)** — Photos staged during a visit are not written until the observation
+is saved. Leaving without saving discards them, subject to §8.
+
+**`SKIN-PHOTO-6` (SHOULD)** — See `SKIN-REC-3` for `capturedAt`.
+
+**`SKIN-PHOTO-7` (OPEN)** — Capture source. The reference implementation deliberately offers
+the OS picker rather than forcing the camera, so an existing photo can be attached. Whether iOS
+offers camera, library, or both — and in what order — is a UX decision on the map's
+UI/UX fog, not settled here.
+
+### 5.2 Atomicity
+
+**`SKIN-PHOTO-8` (MUST)** — An observation and its photos are written **together**. A save
+either lands with all its photos or does not land at all. No observation is ever visible without
+the photos saved alongside it, and no photo exists without its parent.
+
+**`SKIN-PHOTO-9` (MUST)** — On another device, the same guarantee does **not** hold on arrival.
+Mirroring may deliver a parent without its children, or children before their parent, in
+indeterminate order. Both are legitimate transient states and the app must render them without
+error — an observation whose photos have not arrived shows as an observation with no photos yet,
+never as a failure.
+
+**`SKIN-PHOTO-10` (MUST)** — Orphan cleanup — a photo whose parent will never arrive because it
+was deleted elsewhere — runs as an idempotent, order-independent sweep, safe to re-run on every
+launch. It must not assume a transaction it does not have.
+
+> **⚠ Divergence 4.** *PWA:* atomicity is a storage guarantee — one multi-table transaction.
+> *iOS:* the local write stays atomic within a single save; cross-device atomic arrival is
+> **lost** and replaced by the sweep above. *Why:* not a choice — mirroring provides no batch
+> atomicity ([#679](https://github.com/jirigrill/eczema-helper/issues/679),
+> [#691](https://github.com/jirigrill/eczema-helper/issues/691)). This is the one place INV-6
+> genuinely weakens, and it is recorded rather than papered over.
+
+### 5.3 Removing
+
+**`SKIN-PHOTO-11` (MUST)** — Removing a *staged* photo — one added this visit, not yet saved —
+removes it immediately and completely. There is nothing to undo because nothing was written.
+
+**`SKIN-PHOTO-12` (MUST)** — Removing a *stored* photo during an edit marks it for removal and
+shows it as marked, with an undo affordance, rather than removing it from view. The removal
+takes effect on save.
+
+**`SKIN-PHOTO-13` (MUST)** — Un-marking a photo marked for removal restores it fully, and the
+observation is dirty or clean according to §4.3 as though it had never been marked.
+
+**`SKIN-PHOTO-14` (MUST)** — A save carries both additions and removals; either may be empty.
+
+**`SKIN-PHOTO-15` (MUST)** — Deleting an observation deletes all its photos. The cascade is the
+application's responsibility, not storage's — it always was, and under mirroring there is no
+transaction around it (`SKIN-PHOTO-10`).
+
+**`SKIN-PHOTO-16` (MUST)** — Photo identity is preserved across a marked-then-unmarked cycle and
+across delete-and-undo (§8.4). A photo that survives a round trip is the *same* photo, not a
+copy with a new id.
+
+### 5.4 Sharing to the camera roll
+
+**`SKIN-PHOTO-17` (PWA)** — After a successful save, the reference implementation offers newly
+captured photos to the OS share sheet so the mother can save them to her photo library with one
+tap. Best-effort: silently does nothing where unsupported, and silently absorbs a cancel.
+
+**`SKIN-PHOTO-18` (OPEN)** — Whether iOS does this at all. It is a genuine product question with
+a privacy edge, and it must not be ported by reflex:
+
+- On the web it was a **workaround** — browser storage is opaque and fragile, so pushing a copy
+  into Photos gave the mother a durable artifact she could see. On iOS the app's own store is
+  durable and syncs, so the original motivation is much weaker.
+- Writing infant medical photographs into the general photo library moves them **out** of the
+  app's privacy boundary and into whatever else syncs, backs up, or shares that library —
+  including iCloud Photos and any third-party app with library access. That cuts against the
+  app's entire data-protection posture.
+- Against that: a mother showing a dermatologist a photo on her phone reaches for Photos, not
+  for this app, and [#683](https://github.com/jirigrill/eczema-helper/issues/683) removed
+  export entirely — so this is currently the only route by which an image can leave the app.
+
+Recorded as OPEN rather than decided because it trades durability against confidentiality and
+the owner has not been asked. → §12.6.
+
+---
+## 6. Interaction
+
+### 6.1 The region grid
+
+**`SKIN-INT-1` (MUST)** — All nine regions are visible at once, in canonical order, each showing
+its current level.
+
+**`SKIN-INT-2` (MUST)** — Tapping an **inactive** region makes it active and **does not change
+its level**.
+
+**`SKIN-INT-3` (MUST)** — Tapping the **active** region advances its level by one, wrapping
+`Severe → Calm`. The full cycle is `Calm → Mild → Moderate → Severe → Calm`.
+
+**`SKIN-INT-4` (MUST)** — Activating a different region leaves the previous region's level
+exactly as it was. Levels are only ever changed by tapping an already-active region.
+
+`SKIN-INT-2` and `SKIN-INT-3` together are the "activate first, then cycle" rule, and it exists
+for a reason worth preserving: the screen is used one-handed while holding a baby, and a stray
+tap must not silently record a severity the mother did not mean. The cost is one extra tap on the
+first region she edits; the benefit is that no single mis-tap ever writes a wrong level.
+
+**`SKIN-INT-5` (MUST)** — Cycling past `Severe` back to `Calm` is a normal, supported way to
+retire a region. There is no separate "clear" action.
+
+**`SKIN-INT-6` (MUST)** — Exactly one region is active at a time, or none. Activation is
+interface state and is never saved.
+
+### 6.2 What the grid shows
+
+**`SKIN-INT-7` (MUST)** — Each region tile conveys its level non-verbally (the reference
+implementation uses a severity colour ramp) **and** carries the level as text or an accessible
+label. Colour is never the only channel.
+
+**`SKIN-INT-8` (MUST)** — The active region is visually distinguished from the inactive ones, and
+that distinction is independent of its level — an active `Calm` region and an active `Severe`
+region are both legible as active.
+
+**`SKIN-INT-9` (MUST)** — Active state is exposed to assistive technology as a selection state on
+the tile.
+
+> **⚠ Divergence 5.** *PWA:* the save button carries both a native disabled attribute and an
+> ARIA disabled attribute. The native one removes the control from the accessibility tree, so the
+> ARIA hint it was paired with can never be read — a screen-reader user hears nothing rather than
+> "unavailable". *iOS:* one mechanism, and the control stays discoverable with its reason.
+> *Why:* the pairing defeats its own purpose.
+
+### 6.3 The note
+
+**`SKIN-INT-10` (MUST)** — One free-text note per observation, optional, unstructured.
+
+**`SKIN-INT-11` (MUST)** — A note that is empty or only whitespace is stored as **absent**, not
+as an empty value. Trimmed before comparison and before storage.
+
+**`SKIN-INT-12` (MUST)** — Editing the note dirties an edit visit (§4.3).
+
+### 6.4 What the screen must not do
+
+**`SKIN-INT-13` (MUST NOT)** — The screen offers no interpretation of what was recorded. No
+guidance, no comparison to previous days, no suggestion of a cause, no summary judgement of the
+skin's state.
+
+**`SKIN-INT-14` (MUST NOT)** — No copy on this screen, or anywhere the observation is displayed,
+frames the record as evidence *about* a food, a trigger, or a cause. She records what she sees;
+reading the diary is her job and her doctor's (INV-11, and the map's recording-not-finding rule).
+
+This is the regulatory boundary and it is narrower than it looks: the difference between a diary
+and a regulated medical device is partly a matter of what the interface *claims*, and a
+well-meant "looking better than yesterday" is a clinical inference the app is not entitled to
+make.
+
+---
+
+## 7. Saving
+
+### 7.1 Compose
+
+**`SKIN-SAVE-1` (MUST)** — A compose save creates a new observation with a newly minted id, the
+resolved date, `createdAt` set to now, nine regions, the trimmed note if any, and all staged
+photos — written together (`SKIN-PHOTO-8`).
+
+**`SKIN-SAVE-2` (MUST)** — On success the mother returns to the destination she came from.
+
+### 7.2 Edit
+
+**`SKIN-SAVE-3` (MUST)** — An edit save preserves the observation's **id** and **`createdAt`**
+verbatim (INV-8). `createdAt` is the witnessing moment; correcting a typo or bumping a severity
+does not retroactively change when she looked at the skin.
+
+**`SKIN-SAVE-4` (MUST)** — An edit save replaces all nine region levels and the note, applies
+staged photo additions and removals, and leaves every other field untouched.
+
+**`SKIN-SAVE-5` (SHOULD)** — An edit records that it was updated, separately from `createdAt`, so
+the two facts — when she looked, and when the record last changed — are both available.
+
+**`SKIN-SAVE-6` (MUST)** — A restore following a delete-and-undo is **not** an edit. It
+reinstates the original record, its id, its `createdAt`, and its photos with their original ids
+(§8.4), and it does **not** record an update — nothing was updated; the record was put back.
+
+### 7.3 Failure and double submission
+
+**`SKIN-SAVE-7` (MUST)** — A failed save keeps the mother on the screen with her work intact,
+and tells her it failed. It never navigates away.
+
+**`SKIN-SAVE-8` (MUST)** — A failed save leaves storage unchanged — no partial observation, no
+orphaned photos.
+
+**`SKIN-SAVE-9` (MUST)** — The save action cannot be invoked twice concurrently. A second tap
+while a save is in flight does nothing.
+
+**`SKIN-SAVE-10` (MUST)** — Nothing that supersedes an undoable action is discarded until the
+write that supersedes it has actually landed. A failed save or a failed delete leaves any
+existing undo intact.
+
+> **⚠ Divergence 6.** *PWA:* on the meal side, invalidation runs *before* the write is attempted,
+> so a failed delete destroys a pre-existing undo. Stated here as a general rule because
+> [#690](https://github.com/jirigrill/eczema-helper/issues/690) made it one — it applies to both
+> the save and delete paths, on both screens.
+
+### 7.4 Writing while iCloud is unavailable
+
+**`SKIN-SAVE-11` (MUST)** — Saving is gated on the account states that make durability
+impossible, and only those, per [#687](https://github.com/jirigrill/eczema-helper/issues/687).
+Airplane mode, a basement, and a temporarily unreachable service are **not** gates: she logs
+normally and the record uploads on reconnect.
+
+**`SKIN-SAVE-12` (MUST)** — Existing observations remain **readable** in every degraded state.
+The gate is on writing, never on reading.
+
+**`SKIN-SAVE-13` (MUST)** — In a gated state the screen states the consequence concretely rather
+than failing at the moment she taps save. Discovering a save is impossible after composing one is
+the wrong order.
+
+The full account-state model, the banner, and the sign-in transition belong to
+[#687](https://github.com/jirigrill/eczema-helper/issues/687) and are not restated here.
+
+---
+## 8. Leaving, deleting, and undo
+
+The messiest area in the reference implementation, and where most of the divergences land.
+
+### 8.1 The undoable action
+
+**`SKIN-UNDO-1` (MUST)** — There is **one** undoable action at a time, application-wide, shared
+with the meal editor. Recording a new one destroys the previous.
+
+**`SKIN-UNDO-2` (MUST)** — An undoable action knows what it reverses and where reversing it lands.
+It is a single concept with a single implementation, not per-screen copies.
+
+> **⚠ Divergence 7.** *PWA:* the routing logic exists in four places — the app shell, the meal
+> screen, the meal editor overlay, and this screen's own copy — and they had already drifted apart
+> (the meal screen's ownership test compares one component of the key; the shell builds its
+> destination from three). *iOS:* one implementation. *Why:* per
+> [#690](https://github.com/jirigrill/eczema-helper/issues/690), the duplication is *what let the
+> rules drift*; fixing the rule without collapsing the sites leaves the mechanism in place. This
+> screen's own version is already correct — it matches on observation id — but it shares the
+> duplication.
+
+**`SKIN-UNDO-3` (MUST)** — An undoable action belongs to a screen only if it identifies the same
+record that screen is opening. A mismatched action is left alone, not adopted.
+
+### 8.2 Leaving with unsaved work
+
+**`SKIN-UNDO-4` (MUST)** — Leaving a **dirty edit** without saving records an undoable action
+carrying the live state, so returning restores exactly what she had — levels, note, staged
+additions, and pending removals — and the action is consumed on restoration.
+
+**`SKIN-UNDO-5` (MUST)** — Leaving a **clean edit** records nothing. There was nothing to lose.
+
+**`SKIN-UNDO-6` (MUST)** — Leaving a **compose visit with work in it** records an undoable action
+on the same terms as `SKIN-UNDO-4`. "Work in it" means any region above `Calm`, any note text, or
+any staged photo.
+
+> **⚠ Divergence 8.** *PWA:* compose drafts are **never** buffered — the snapshot path returns
+> early unless the visit is an edit. Backing out of a compose visit with nine bumped regions, a
+> note and staged photos discards all of it with no toast, no confirmation, and no undo, while the
+> identical loss during an *edit* is fully recoverable. The meal side has a compose descriptor; the
+> skin side has no counterpart. *iOS:* compose and edit behave identically. *Why:* the asymmetry is
+> undocumented, protects the cheaper case and abandons the expensive one, and is the same class of
+> defect [#690](https://github.com/jirigrill/eczema-helper/issues/690) fixed for the meal editor.
+> This is the largest behavioral divergence in this document.
+
+**`SKIN-UNDO-7` (MUST)** — Exactly one undoable action is recorded per departure, whichever way
+she leaves — an explicit back control or the system back gesture. Leaving must not record twice.
+
+**`SKIN-UNDO-8` (MUST NOT)** — Departing must never *overwrite* a post-delete undo with an edit
+snapshot. A record that no longer exists cannot be restored by an edit.
+
+### 8.3 Deleting
+
+**`SKIN-DEL-1` (MUST)** — Delete is available only in edit mode, only once loaded, and is not a
+primary action — it sits behind a secondary affordance.
+
+**`SKIN-DEL-2` (MUST)** — Delete requires an explicit confirmation, presented as destructive, and
+that confirmation **states that the photos go too**.
+
+**`SKIN-DEL-3` (MUST)** — Cancelling the confirmation changes nothing and navigates nowhere.
+
+**`SKIN-DEL-4` (MUST)** — Delete is a **hard delete**. The observation and all its photos are
+removed. There is no trash and no deleted-items view in v1
+([#687](https://github.com/jirigrill/eczema-helper/issues/687) declined one explicitly).
+
+**`SKIN-DEL-5` (MUST)** — The undoable action is captured **before** the delete is attempted, so
+it exists even if she leaves during the transition — and per `SKIN-SAVE-10`, a failed delete
+neither navigates nor destroys anything.
+
+**`SKIN-DEL-6` (MUST)** — A failed delete leaves her on the screen, with the confirmation closed
+and the record intact, and says so.
+
+**`SKIN-DEL-7` (MUST)** — Deleting while the edit is dirty captures the **stored** record, not the
+unsaved edits. Undo restores what was actually in storage; the pending edits are gone. This is
+deliberate — undo reverses the delete, it does not resurrect an unsaved draft — and it is stated
+because the reference implementation does it without saying so.
+
+### 8.4 Undoing a delete
+
+**`SKIN-DEL-8` (MUST)** — Undoing a delete restores the observation with its **original id and
+`createdAt`** (INV-8) and its photos with their **original ids** (`SKIN-PHOTO-16`). It lands back
+in its original position in the timeline, indistinguishable from never having been deleted.
+
+**`SKIN-DEL-9` (MUST)** — Undo restores it to storage directly. She is not required to save again
+for the record to survive.
+
+> **⚠ Divergence 9.** *PWA:* undo restores a **draft**, not a row — the record is genuinely gone
+> from storage and she must tap save again. Worse, the restored form is compared against an
+> all-`Calm` empty snapshot, so if the deleted observation happened to be all-calm with no note and
+> no photos, the form reads as *clean* and **save is disabled** — undo is impossible for exactly
+> the "checked, all calm" record INV-7 exists to make first-class. *iOS:* undo writes. *Why:* a
+> two-step undo that silently cannot complete for the app's most common record is a defect; and
+> "undo" that requires a save to take effect is not what the word means.
+
+**`SKIN-DEL-10` (MUST)** — After a successful restore, the undoable action is consumed.
+
+### 8.5 What undo does not cover
+
+**`SKIN-DEL-11` (PWA + iOS)** — The undoable action lives in memory only. It does not survive an
+app restart, a discard by the system, or backgrounding long enough to be reclaimed. Once it is
+gone, a hard-deleted observation is unrecoverable.
+
+**`SKIN-DEL-12` (MUST)** — Copy about undo promises no more than this. It is honest about being
+available *right after* deleting, and never implies a recoverable history.
+
+Worth stating plainly, because it is the sharpest edge in the product: **v1 has no rollback**.
+CloudKit is sync, not backup ([#683](https://github.com/jirigrill/eczema-helper/issues/683)) — a
+delete propagates to every device, and neither the mother nor the developer can retrieve it. The
+in-memory undo is the *only* recovery path for an accidental delete, and it is measured in
+seconds. This was decided knowingly, against the recommendation, and the exposure was accepted.
+
+---
+## 9. How the observation appears elsewhere
+
+Stated here only where it constrains this screen; the day view gets its own section.
+
+**`SKIN-VIEW-1` (MUST)** — The day view lists each observation for the day separately, ordered by
+`createdAt` ascending, each showing its time.
+
+**`SKIN-VIEW-2` (MUST)** — Each entry shows the regions **above** `Calm`, in canonical order
+(`SKIN-REG-3`). An observation with no bumped regions is shown as an explicit all-calm entry —
+never as an empty row, and never omitted.
+
+**`SKIN-VIEW-3` (MUST)** — A day with no observations is distinguishable from a day with an
+all-calm observation (`SKIN-WIT-2`), in the interface and not merely in the data.
+
+**`SKIN-VIEW-4` (MUST)** — Tapping an entry opens this screen in edit mode for that observation,
+returning to the day view on exit.
+
+**`SKIN-VIEW-5` (OPEN)** — Whether a single day-level severity is ever displayed.
+
+The reference implementation defines a day-overall severity as the maximum level across an
+observation's regions, and INV-6 records it as derived-never-stored. **Nothing calls it.** The
+function has no callers, no test, and no render site anywhere in the shipped app; the day view
+shows per-region chips instead. So the rule described in INV-6 is, in practice, unimplemented.
+
+That makes this a decision rather than a port, and it is not a cosmetic one:
+[#677](https://github.com/jirigrill/eczema-helper/issues/677) identified `max(regions)` as **the
+regulatory surface** — collapsing nine observations into one severity figure is closer to
+*assessing* the skin than to recording it, and the copy around such a figure is precisely where a
+diary starts to read like an assessment (§6.4, INV-11). Displaying nothing is the conservative
+option and is what ships today. → §12.2.
+
+---
+
+## 10. Divergence index
+
+Every intentional departure from the reference implementation, in one place. This is the table a
+reviewer reads to check the port did not drift by accident.
+
+| # | § | What changes | Class |
+| --- | --- | --- | --- |
+| 1 | §1.1 | Malformed date validated at both entry points, not just the day view | Defect fixed |
+| 2 | §2.1 | `capturedAt` per photo, from capture metadata where available | Promise kept + platform capability |
+| 3 | §4.2 | Photo-read failure surfaced; delete disabled while photo state unknown | Defect fixed (data loss) |
+| 4 | §5.2 | Cross-device atomic arrival lost; idempotent orphan sweep replaces it | Forced by platform |
+| 5 | §6.2 | One disabled mechanism, control stays discoverable | Accessibility defect fixed |
+| 6 | §7.3 | Nothing invalidates an undo until the superseding write lands | Defect fixed |
+| 7 | §8.1 | One undoable-action implementation, not four | Defect fixed (drift source) |
+| 8 | §8.2 | Compose drafts buffered exactly as edits are | Defect fixed (largest) |
+| 9 | §8.4 | Undo writes the record back rather than restoring a draft | Defect fixed (undo could be impossible) |
+| 10 | §11 | Level labels `Calm`/`Mild`/`Moderate`/`Severe`; English throughout | Settled by [#677](https://github.com/jirigrill/eczema-helper/issues/677) |
+| 11 | §11 | No destructive migration, ever | Settled — the PWA wiped rows in four upgrade hooks |
+
+Nine of the eleven are the coherence default from
+[#690](https://github.com/jirigrill/eczema-helper/issues/690) doing its work: in each case the
+reference implementation did two different things and this document picks one. None of them was
+kept as a wart, so no named reasons are needed — which is itself the finding.
+
+---
+
+## 11. Where each rule is verified today
+
+For a port translating the existing tests rather than writing fresh ones. Paths are in the frozen
+repo at `582f662`.
+
+| Area | Current verification | Translate? |
+| --- | --- | --- |
+| §2.2 regions, §2.3 levels | `src/lib/domain/models.ts` types + `strings/skin-regions.ts` `satisfies` clause | **Types, not tests.** Re-express as a Swift enum — the compiler carries it. |
+| §3 witnessing all nine | `src/routes/skin/page.test.ts:190`, `:215` | Yes — the two most important tests in the file. |
+| §6.1 activate-then-cycle | `page.test.ts:124`, `:140`, `:167` | Yes, directly. |
+| §4.3 dirtiness, §4.2 load | `page.test.ts:700`, `:725`, `:740` | Yes, with a storage double. |
+| §5 photos | `page.test.ts:528`–`:938` (14 tests) | Mostly — they are label-driven, so re-derive the assertions from this document. |
+| §7 saving | `page.test.ts:246`–`:413` | Yes, with a storage double. |
+| §8 delete + undo | `page.test.ts:1022`–`:1288` | **Re-derive.** Divergences 8 and 9 change what the answer should be. |
+| §5.2 atomicity | `dexie-skin-observation-repository` tests | **Do not translate** — asserts a transaction iOS does not have. Replace with `SKIN-PHOTO-9`/`-10` tests. |
+| §9 day view | `src/routes/day/[date]/page.test.ts`, `SkinObservationCard` | Partly; §9 gets its own section. |
+
+**Rules nothing verifies today.** Worth stating, because these are where a port inherits
+ambiguity if it assumes test coverage equals specification:
+
+- **`SKIN-UNDO-7`** — the system-back-gesture path has no test at all; the reference
+  implementation's "exactly one write per departure" claim rests on an untested assumption.
+- **`SKIN-DEL-7`** — delete-while-dirty is undocumented and untested.
+- **`SKIN-DEL-9`/`-11`** — no test covers losing the undo, and the all-calm undo-impossible case
+  (Divergence 9) is asserted nowhere.
+- **`SKIN-VIS-4`** — photo-read failure is unhandled and untested.
+- **`SKIN-PHOTO-16`** — one test acknowledges in a comment that it *cannot* verify the image
+  survives its round trip in the test environment, and checks only that a value is present. The
+  one property that matters is asserted nowhere.
+
+### 11.1 Acceptance pass
+
+The owner cannot review Swift, so these are the behavioral checks that stand in for a code review
+of this screen. Each maps to rules above; each is a thing to *do* on a device, in order.
+
+1. Open the screen on a fresh day, touch nothing, save. The day view shows an all-calm entry with
+   a time. → `SKIN-WIT-3`, `SKIN-WIT-4`, `SKIN-VIEW-2`
+2. Open it again the same day, bump one region, save. The day now shows **two** entries. →
+   `SKIN-REC-4`, `SKIN-REC-5`
+3. Tap a region once — nothing changes but selection. Tap it four more times — it walks through
+   the three severities and returns to calm. → `SKIN-INT-2`, `SKIN-INT-3`, `SKIN-INT-5`
+4. Bump one region, then tap a different region. The first keeps its level. → `SKIN-INT-4`
+5. With no region selected, the add-photo control tells you to pick a region. Select one; it
+   becomes usable and names the region. → `SKIN-PHOTO-2`
+6. Attach two photos to a calm region and save. Both are there; the region is still calm. →
+   `SKIN-PHOTO-4`
+7. Open a saved observation. Save is unavailable until you change something. → `SKIN-VIS-6`
+8. Change a note, leave without saving, come straight back. Your text is there. → `SKIN-UNDO-4`
+9. **Compose** a new observation with several regions bumped, leave without saving, come back.
+   Your work is there. → `SKIN-UNDO-6` *(this fails on the PWA — Divergence 8)*
+10. Edit an observation, delete it, undo. It is back, in its original timeline position, with its
+    photos. → `SKIN-DEL-8`, `SKIN-DEL-9`
+11. Do the same with an **all-calm** observation with no note and no photos. It comes back. →
+    Divergence 9 *(this fails on the PWA)*
+12. Turn on airplane mode. You can still log, and still read everything. → `SKIN-SAVE-11`,
+    `SKIN-SAVE-12`
+13. Sign out of iCloud. You can still read; the screen tells you why you cannot log. →
+    `SKIN-SAVE-13`
+
+---
+## 12. Open questions
+
+Recorded rather than guessed, per the map's cite-or-don't-claim rule. Each is a candidate ticket;
+none blocks writing the remaining spec sections.
+
+**12.1 — The glossary contradicts itself about how many observations a day holds.**
+`CONTEXT.md` § _SkinObservation_ says "Multiple `SkinObservation` records may exist for the same
+day", while INV-6 describes the observation as "a per-region severity set" and INV-7 says "every
+save witnesses all nine regions" — phrasings that read naturally as one-per-day. This document
+resolves it in favour of **many** (§2.4), because the storage port returns a list, the day view
+renders each with its own time, and nothing anywhere upserts. Stated as an open question anyway
+because the *glossary* should be fixed at the source, and because a reader who takes INV-7 at face
+value will design a different schema.
+
+**12.2 — Is a day-level severity ever displayed?** §9.5. The rule exists in INV-6, its
+implementation is dead code with zero callers, and
+[#677](https://github.com/jirigrill/eczema-helper/issues/677) flagged the derivation as the
+regulatory surface. Three options: display nothing (ships today), display a per-observation
+maximum, or remove the concept from INV-6. Nobody has decided.
+
+**12.3 — `SkinPhoto`'s record shape.** Whether size, format, and dimensions are recorded fields is
+a **schema-deadline** question: additive-only promotion means a field never recorded cannot be
+backfilled ([#679](https://github.com/jirigrill/eczema-helper/issues/679)). Lives on the map's
+SwiftData fog; [#684](https://github.com/jirigrill/eczema-helper/issues/684) deferred only the
+pixel and quality *targets*, not the shape.
+
+**12.4 — Which of these fields get CloudKit field-level encryption.**
+[#714](https://github.com/jirigrill/eczema-helper/issues/714) decides against the real schema. Note
+this screen holds the most sensitive data in the app — infant medical photographs and per-region
+severities — so it is the section that question is really about.
+
+**12.5 — `SKIN-ENTRY-4`: how an unknown observation id is detected.** The reference
+implementation's 500 ms race can silently reject a valid id. Under SwiftData the read can likely be
+awaited, deleting the problem rather than tuning it. Small, but it is a decision.
+
+**12.6 — `SKIN-PHOTO-18`: does saving to the photo library survive the port?** A durability
+workaround on the web; on iOS it moves infant medical photographs outside the app's privacy
+boundary, and with export removed it is the only route out. Needs the owner.
+
+**12.7 — Does anything on this screen need a *pending work* concept?**
+[#707](https://github.com/jirigrill/eczema-helper/issues/707) asks whether the term generalises,
+and notes this screen may not need it because every visit can save. Divergence 8 changes that
+premise: once compose drafts are buffered, this screen *does* need to answer "would leaving lose
+something she did?" — `SKIN-UNDO-6` states it locally. Whether that is the same concept as the meal
+editor's, and where it is defined, is #707's.
+
+**12.8 — Capture source and photo-picker UX.** `SKIN-PHOTO-7`. Belongs with the UI/UX rework fog,
+not here.
+
+---
+
+## Appendix: what this section deliberately does not contain
+
+Recorded so a reader does not mistake an omission for a gap:
+
+- **Swift, SwiftUI, or SwiftData types.** The spec is platform-neutral; the schema is its own
+  concern and its own section.
+- **Layout, spacing, colour values, or component structure.** iOS UI/UX is untouched fog. The
+  reference implementation's design prototype is a **Czech-web** artifact, and its skin screens are
+  additionally unusable as a reference: two of the three variants depict the parked
+  protocol engine (a reintroduction-test context pill, and an in-test escalation state), and its
+  photo section is labelled a historical placeholder in the prototype's own text. Only the
+  ordinary-day variant reflects what ships.
+- **Invariant text.** Cited, never copied.
+- **The day view, first-run, feeding stage, and settings.** Their own sections.
+- **Anything about meals.** The undoable action is shared and is specified in both places by
+  reference to one rule set, not duplicated.
