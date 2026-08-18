@@ -20,7 +20,7 @@ acceptance pass, and its open questions.
 | Section | Status |
 | --- | --- |
 | [`skin-observation.md`](skin-observation.md) | Written — the template section |
-| Day view | Not written |
+| [`day-view.md`](day-view.md) | Written; 2 **OPEN** rules ([#727](https://github.com/jirigrill/eczema-helper/issues/727), [#728](https://github.com/jirigrill/eczema-helper/issues/728)), both deferred to prototypes once the iOS app exists |
 | First run and feeding stage | Not written; see [#712](https://github.com/jirigrill/eczema-helper/issues/712) |
 | Settings | Not written |
 | Persistence model (SwiftData + CloudKit) | Not written; carries the schema deadlines |
