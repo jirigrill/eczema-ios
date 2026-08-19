@@ -22,7 +22,7 @@ acceptance pass, and its open questions.
 | [`skin-observation.md`](skin-observation.md) | Written — the template section |
 | [`day-view.md`](day-view.md) | Written; 2 **OPEN** rules ([#727](https://github.com/jirigrill/eczema-helper/issues/727), [#728](https://github.com/jirigrill/eczema-helper/issues/728)), both deferred to prototypes once the iOS app exists |
 | First run and feeding stage | Not written; see [#712](https://github.com/jirigrill/eczema-helper/issues/712) |
-| Settings | Not written |
+| [`settings.md`](settings.md) | Written — [#716](https://github.com/jirigrill/eczema-helper/issues/716) |
 | Persistence model (SwiftData + CloudKit) | Not written; carries the schema deadlines |
 
 The meal editor is the one area extracted **before** the template existed, and it lives on the
