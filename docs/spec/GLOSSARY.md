@@ -8,14 +8,44 @@ sections — not by being important.
 
 **This is not a port of the Czech `UBIQUITOUS_LANGUAGE.md`**, which freezes in the reference repo
 ([#677](https://github.com/jirigrill/eczema-helper/issues/677)). That file is 696 lines of a
-different product's vocabulary. This one starts nearly empty and grows only when a second section
-reaches for the same word.
+different product's vocabulary. This one starts small and grows only when a second section reaches
+for the same word — the four entries below each earned their place that way, and two of them
+(*feeding stage*, *eligible actors*) were found by applying the rule to sections already written.
 
 **Domain invariants are not vocabulary.** `INV-1..14` live in
 [`CONTEXT.md`](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md) and are cited by
 anchor, never restated here — see [`TEMPLATE.md`](TEMPLATE.md).
 
 ---
+
+## Feeding stage
+
+One of `breastfed`, `mixed`, `solids`. It determines which actors may log a meal, per the
+unnumbered *Actor* rule in
+[`CONTEXT.md`](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md) § _Glossary_ — cited
+by heading, because that rule is deliberately unnumbered.
+
+It is a **single app-wide value**, not a per-record one: exactly one stage is in force at a time, and
+changing it does not rewrite meals already recorded under the previous stage. That is what makes
+*eligible actors* below a question about *now* rather than about the record.
+
+Where it is set and how it persists is `settings.md` §2. Which rows a day renders under it is
+`day-view.md` §3. The skin section does not read it.
+
+## Eligible actors
+
+The actors the current *feeding stage* permits — a function of the stage alone, evaluated for the
+stage in force now.
+
+The term earns its place here by being the join between two sections that state **different halves**
+of it: settings owns the stage that determines the set, and the day view owns what the set does to a
+slot. Neither half is usable without the other, and the day view needs the contrast — eligible actors
+are not *recorded actors*, the actors of meals that actually exist, which is a per-slot term the day
+view owns (`day-view.md` §1) because no other section reads it.
+
+That gap is deliberate and load-bearing: a stage change alters the eligible set while recorded meals
+stay exactly as they were, so the two can disagree for any day. The day view's union rule
+(`day-view.md` §3.2) exists to render both.
 
 ## Pending work
 
