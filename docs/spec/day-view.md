@@ -84,11 +84,15 @@ marked inline and indexed in §8. Two of them fix defects that are live in the s
 | **Back edge** | The oldest date the date selector reaches. |
 | **Slot** | One `(day, meal type)` pair — the unit the meal section is built from. |
 | **Actor row** | One row inside a slot, belonging to one actor (`mother` or `baby`). |
-| **Eligible actors** | The actors the current feeding stage permits — see `CONTEXT.md` § _Actor_. |
 | **Recorded actors** | The actors of meals that actually exist in a slot, whatever the stage is now. |
 | **Union rows** | Eligible actors ∪ recorded actors. What the slot actually renders (§3). |
 | **Observation entry** | One row in the skin section, representing one saved observation. |
 | **Add control** | The always-available control for starting a new record on the day shown. |
+
+Two terms this section uses are shared with settings and defined in
+[`GLOSSARY.md`](GLOSSARY.md): **feeding stage** and **eligible actors**. *Recorded actors* above is
+this section's own — no other area reads it — and the gap between the two is what §3.2's union rule
+exists to render.
 
 ---
 

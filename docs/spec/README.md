@@ -15,6 +15,9 @@ cited by anchor and never restated but always given a **disposition**, divergenc
 marked inline *and* indexed, and every section ending in a verification table, an on-device
 acceptance pass, and its open questions.
 
+[`GLOSSARY.md`](GLOSSARY.md) holds the terms used by **more than one** section, so no single section
+owns them. Area-local terms stay in each section's own §1 Vocabulary table.
+
 ## Sections
 
 | Section | Status |

@@ -78,13 +78,15 @@ honest one.
 
 | Term | Meaning |
 | --- | --- |
-| **Feeding stage** | One of `breastfed`, `mixed`, `solids`. Determines which actors may log a meal — see `CONTEXT.md` § _Actor_. |
-| **Eligible actors** | The actors the current feeding stage permits. |
 | **Account state** | The five-valued iCloud account status of [#687](https://github.com/jirigrill/eczema-helper/issues/687), not a boolean. |
 | **Degraded state** | `noAccount` or `restricted` only — the two states that gate writing. `temporarilyUnavailable` and `couldNotDetermine` are **not** degraded for this purpose. |
 | **Delete-all control** | The single destructive control in the app, settled by [#705](https://github.com/jirigrill/eczema-helper/issues/705). |
 | **Her iCloud** | The private CloudKit database in the mother's own iCloud account. The developer holds no copy and cannot reach it. |
 | **System deletion path** | Apple's own route to delete an app's iCloud data from iOS Settings, outside this app (§6). |
+
+Two terms this section uses are shared with the day view and defined in
+[`GLOSSARY.md`](GLOSSARY.md): **feeding stage** — the app-wide `breastfed` / `mixed` / `solids`
+value this screen owns the setting of (§2) — and **eligible actors**, the set that stage permits.
 
 ---
 
