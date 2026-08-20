@@ -101,7 +101,10 @@ of the document and are indexed in §10.
 | **Compose** | A visit that will create a new observation. |
 | **Edit** | A visit that will modify an existing one, identified by its id. |
 | **Dirty** | An edit visit whose live state differs from what was loaded (§4.3). |
-| **Undoable action** | The application-wide, single-slot holder for "the thing that just happened and can be reversed" (§8). Shared with the meal editor; owned by neither. |
+
+Two terms this section uses are shared with other areas and defined in
+[`GLOSSARY.md`](GLOSSARY.md): **undoable action** (specified here in §8.1, owned by no screen) and
+**pending work** (§8.2 states what it means for this screen).
 
 ### 1.1 Fixed at entry
 
@@ -614,6 +617,9 @@ record that screen is opening. A mismatched action is left alone, not adopted.
 
 ### 8.2 Leaving with unsaved work
 
+The question this group answers is **pending work** ([`GLOSSARY.md`](GLOSSARY.md)) — would leaving
+lose something she did? `SKIN-UNDO-6` states what counts as work on this screen.
+
 **`SKIN-UNDO-4` (MUST)** — Leaving a **dirty edit** without saving records an undoable action
 carrying the live state, so returning restores exactly what she had — levels, note, staged
 additions, and pending removals — and the action is consumed on restoration.
@@ -911,12 +917,15 @@ not have before; and the App Store privacy labels, which must declare it. Copy, 
 per the map's marketing-tripwire note, copy about medical photographs is exactly where this
 product's risk lives.
 
-**12.7 — Does anything on this screen need a *pending work* concept?**
-[#707](https://github.com/jirigrill/eczema-helper/issues/707) asks whether the term generalises,
-and notes this screen may not need it because every visit can save. Divergence 8 changes that
-premise: once compose drafts are buffered, this screen *does* need to answer "would leaving lose
-something she did?" — `SKIN-UNDO-6` states it locally. Whether that is the same concept as the meal
-editor's, and where it is defined, is #707's.
+**12.7 — Does anything on this screen need a *pending work* concept? — RESOLVED.**
+[#707](https://github.com/jirigrill/eczema-helper/issues/707) settled it: **yes, and it is the same
+concept as the meal editor's.** *Pending work* is one shared question — would leaving lose something
+she did? — defined in [`GLOSSARY.md`](GLOSSARY.md), with each area stating what counts as work.
+`SKIN-UNDO-6` is this screen's list and is unchanged. This section's own premise for doubting it was
+the one that failed: *every visit can save* ([INV-7](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-7))
+says nothing about whether leaving loses anything, and Divergence 8 is the proof — a compose visit
+that could always have saved still discards nine bumped regions, a note and staged photos with no
+undo.
 
 **12.8 — Whether attaching an older library photo needs any visible signal. (Sources are
 decided; this consequence is not.)** `SKIN-PHOTO-7`, `-22`, `-23`, Divergence 15. The owner has

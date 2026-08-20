@@ -27,6 +27,17 @@ Every section opens with:
 4. **Invariant dispositions** — the table described below.
 5. **Divergences** — a pointer to the inline marks and the index.
 
+## Vocabulary
+
+Every section opens its numbered content with a **§1 Vocabulary** table: the terms that section
+uses, defined once, so no rule has to define a word mid-sentence.
+
+Keep it to the terms the section **owns**. A term used by more than one section belongs in
+[`GLOSSARY.md`](GLOSSARY.md), cited from the sections that use it — never copied into two tables,
+which is how two definitions of one word start drifting apart. Where a shared term needs an
+area-specific detail, the glossary states the question and the section states its own answer, as
+*pending work* does.
+
 ## Rules
 
 ### Ids
