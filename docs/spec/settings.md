@@ -1,14 +1,20 @@
 # Settings — behavior specification
 
-**Status:** owner-confirmed. Written against the format settled by
+**Status:** owner-confirmed **except §4.1**, which is written against
+[#723](https://github.com/jirigrill/eczema-helper/issues/723) and **awaits the owner's confirmation on
+five of its nine decisions** — the diagnostic log's shape, the banner/Settings split, the 24-hour
+threshold, the quota copy, and the two timestamps. The four the owner has settled are marked in §4.1's
+own note. Written against the format settled by
 [#682](https://github.com/jirigrill/eczema-helper/issues/682) — see
 [`TEMPLATE.md`](TEMPLATE.md) for the rules, and
 [`skin-observation.md`](skin-observation.md) for the worked example.
 **Behavior reference:** `jirigrill/eczema-helper` @ `582f662` (frozen PWA),
 `src/routes/settings/`, `src/lib/stores/settings.svelte.ts`, `src/lib/db/reset-database.ts`.
+§4.1 has **no behavior reference** — the PWA has no sync of any kind.
 **Resolves:** [#716](https://github.com/jirigrill/eczema-helper/issues/716) on the transition map
-[#672](https://github.com/jirigrill/eczema-helper/issues/672), and
-[#709](https://github.com/jirigrill/eczema-helper/issues/709) (§5, the privacy notice's form).
+[#672](https://github.com/jirigrill/eczema-helper/issues/672),
+[#709](https://github.com/jirigrill/eczema-helper/issues/709) (§5, the privacy notice's form), and
+[#723](https://github.com/jirigrill/eczema-helper/issues/723) (§4.1, sync health).
 
 ## Overview
 
@@ -44,6 +50,10 @@ Four things are worth knowing before the rules make sense:
    the least like a screen spec: **six of its fourteen rules are `MUST NOT`s**, constraining what a
    legal document may claim rather than what the screen does, because each stops the app asserting
    something no primary source supports.
+5. **The app is silent about sync while sync is working.** §4.1 says so as a numbered prohibition, not
+   as an absence, because no Apple API can report that the store is synchronised — only that one
+   operation finished at one moment. The app speaks up on **persistent** failure and says nothing
+   otherwise, which is the opposite of what most CloudKit apps do and is deliberate.
 
 **How to read this document:** see
 [`skin-observation.md` § How to read this document](skin-observation.md#how-to-read-this-document).
@@ -57,7 +67,7 @@ citation cannot import a contradiction.
 
 | Ref | Leading phrase | Disposition here |
 | --- | --- | --- |
-| [INV-1](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-1) | _Single device, no sync_ | **Void for iOS.** Sync is mandatory and always on ([#705](https://github.com/jirigrill/eczema-helper/issues/705)). It is why §4 exists at all — the reference implementation had no account state to display. |
+| [INV-1](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-1) | _Single device, no sync_ | **Void for iOS.** Sync is mandatory and always on ([#705](https://github.com/jirigrill/eczema-helper/issues/705)). It is why §4 exists at all — the reference implementation had no account state to display, and no sync that could fail. Voiding it creates the whole of §4.1: a failure mode the PWA could not have. But it is void only as to *whether records leave the device* — it does not license reporting sync's health, which `SET-SYNC-1` forbids. |
 | [INV-2](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-2) | _No backup mechanism exists_ | **Void for iOS** as to durability — sync carries it ([#683](https://github.com/jirigrill/eczema-helper/issues/683)). But there is still **no rollback**, which is what makes every rule in §3 irreversible and why `SET-ABSENT-3` forbids implying otherwise. |
 | [INV-8](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-8) | _`id` and `createdAt` immutable across edit, delete, undo_ | **Holds unchanged**, and is load-bearing off-screen: [#687](https://github.com/jirigrill/eczema-helper/issues/687)'s forced re-save on the sign-in transition must not stamp today onto months of records. Settings triggers nothing that may touch them. |
 | [INV-9](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-9) | _Photos stored unencrypted at rest_ | **Void for iOS.** `encryptedValues` field encryption ships from release one ([#705](https://github.com/jirigrill/eczema-helper/issues/705), field list [#714](https://github.com/jirigrill/eczema-helper/issues/714)). Bears on what the privacy route in §6 may claim — encryption protects **values, never structure**. |
@@ -72,7 +82,7 @@ screen and is cited by heading: _Actor_ (the stage → actors mapping) under § 
 
 This is not a 1:1 port. Per [#690](https://github.com/jirigrill/eczema-helper/issues/690),
 **coherence is presumed right**: where the reference implementation does two different things, the
-port takes the coherent rule, and *keeping* a wart needs a named reason. There are **seven**, marked
+port takes the coherent rule, and *keeping* a wart needs a named reason. There are **nine**, marked
 inline and indexed in §8. Most of this section has no PWA counterpart at all, so the divergence
 count is a poor measure of how much changed here — §9's "rules nothing verifies today" is the
 honest one.
@@ -86,8 +96,10 @@ honest one.
 | **Account state** | The five-valued iCloud account status of [#687](https://github.com/jirigrill/eczema-helper/issues/687), not a boolean. |
 | **Degraded state** | `noAccount` or `restricted` only — the two states that gate writing. `temporarilyUnavailable` and `couldNotDetermine` are **not** degraded for this purpose. |
 | **Delete-all control** | The single destructive control in the app, settled by [#705](https://github.com/jirigrill/eczema-helper/issues/705). |
+| **Diagnostic log** | A local, bounded, unsynced record of observed sync failures. Captured because error detail is unrecoverable after the fact; has no user-facing surface in v1 (§4.1). |
 | **Her iCloud** | The private CloudKit database in the mother's own iCloud account. The developer holds no copy and cannot reach it. |
 | **Notice revision** | An opaque monotonic identifier (`v1`, `v2`, …) for one wording of the privacy notice. Not the app's version, not a date (§5). |
+| **Persistent failure** | A sync failure still unresolved 24 hours after the last success, with changes pending. Only a persistent failure is ever surfaced to her (§4.1). |
 | **The notice** | The Art. 13 privacy notice: one English text, shipped in the bundle and served at a stable URL (§5). |
 | **System deletion path** | Apple's own route to delete an app's iCloud data from iOS Settings, outside this app (§5). |
 
@@ -310,12 +322,173 @@ matters stops being read.
 **`SET-ICLOUD-5` (MUST NOT)** — Settings offers no control that changes the account state. The OS
 owns it; the app may link out to iOS Settings and may not simulate a sign-in.
 
-**`SET-ICLOUD-6` (OPEN)** — Whether a positive sync-health indicator exists at all is
-[#723](https://github.com/jirigrill/eczema-helper/issues/723)'s decision, not this section's. If one
-ships, Settings is a candidate host alongside the day view. This section reserves no place for it
-and does not assume one is coming. Two constraints travel with it if it does: a verdict only once an
-event has ended, or it cries wolf on every launch; and **which `CKError` codes reach the app is
-still unverified**, so no rule may be keyed to a specific code.
+### 4.1 Sync health — the app speaks only when something is wrong
+
+Settled by [#723](https://github.com/jirigrill/eczema-helper/issues/723). The rules below replace the
+`SET-ICLOUD-6` placeholder this section previously carried.
+
+**Confirmation status, stated per decision** so nothing unreviewed passes as settled. Twelve rules, of
+which three (`SET-SYNC-2`, `-8`, `-9`) are forced by the platform and are not product choices at all —
+leaving **nine decisions, four settled and five awaiting confirmation**.
+
+**Settled by the owner:** silence while sync is healthy (`SET-SYNC-1`), writing that silence as a
+numbered prohibition rather than leaving it an absence (`-1`), two failure messages keyed to the
+consequence for her (`-3`), and surfacing only persistent failures rather than every one (`-4`).
+
+**Awaiting confirmation:** the diagnostic log's capture-only shape (`-10`, `-11`), the banner/Settings
+split and its empty-store exception (`-5`, `-6`), the **24-hour** figure specifically (`-4` — that the
+gate is persistence is settled; the number is not), naming quota as a *likely* cause in the copy
+(`-7`), and recording the two timestamps (`-12`).
+
+**`SET-SYNC-1` (MUST NOT)** — The app displays no affirmative sync state anywhere: no "synced", no
+"up to date", no "last synced at", no cloud glyph in a healthy condition, no progress indicator. It
+is **silent while sync is healthy** and speaks only when something is wrong.
+
+This is written as a prohibition, not left as an absence, because it is the counter-intuitive half of
+the decision and would otherwise read to an implementer as an oversight — the pattern
+`docs/spec/day-view.md` `DAY-DERIVE-1` uses for the same reason. It is **not** merely a product
+preference: **no API can report that the store is synchronised.** Two Apple staff answers settle it.
+A successful `.import` means only that *"your device is 'current' with whats in iCloud … it doesn't
+imply anything about the state of other devices"* (Frameworks Engineer, forum thread 744709), and the
+notification *"tells you the state of an individual `export` or `import` event, and not that the whole
+Core Data store is synchronized with the CloudKit server (or not), because there may have new changes
+happening on the CloudKit server while the event is being handled"* (DTS Engineer, thread 763876, on
+SwiftData specifically). A "synced" indicator would therefore assert something unknowable, on the
+screen the mother would most reasonably trust — in an app with no export
+([#683](https://github.com/jirigrill/eczema-helper/issues/683)) where that assertion is the last line
+of defence.
+
+**`SET-SYNC-2` (MUST)** — A sync failure is judged only from an event that has **ended**. An event
+whose end date is absent is in flight and is never a verdict.
+
+The single most dangerous detail in this area. An in-flight event reports *not succeeded*, so an
+indicator reading success alone reports failure **on every launch during healthy setup** — the
+cries-wolf outcome [#687](https://github.com/jirigrill/eczema-helper/issues/687) rates as worse than
+no indicator at all. Apple's own guidance is the three-part predicate — match the event type, match
+the store, and check the end date is not nil (WWDC22 session 10119; sample
+`SynchronizingALocalStoreToTheCloud`). **Apple's other sample gets this wrong**, checking success
+before the end date so an in-flight event takes the failure branch
+(`SharingCoreDataObjectsBetweenICloudUsers`, `PersistenceController+Deduplicate.swift`) — the two
+samples contradict each other and the app-facing one is the wrong one, which is why this is a rule
+rather than a note.
+
+**`SET-SYNC-3` (MUST)** — Two failure messages exist, keyed to the **consequence for her**, never to
+the event type or the error:
+
+| Failing operation | What she is told |
+| --- | --- |
+| Upload, or mirroring failing to initialise | Her records are **on this phone only** — not yet copied to iCloud. |
+| Download | This phone **may not be showing everything** recorded on another device or before a reinstall. |
+
+Three event types collapse onto two messages because only two consequences differ for her. A
+mirroring-initialisation failure sits with upload: when mirroring never starts, nothing leaves the
+phone, and the durability consequence is the one that matters. Keying on event *type* rather than on
+an error code is also what makes these rules writable at all — see `SET-SYNC-8`.
+
+**`SET-SYNC-4` (MUST)** — A failure is surfaced only once it is **persistent**: no successful upload
+for **24 hours** while unexported changes are pending. A single failure is never surfaced.
+
+`SET-ICLOUD-4` makes this a **durability** gate rather than a connectivity one, and the same
+reasoning has to apply one level down or the gate stops meaning anything: a tunnel, a lift or a
+basement must produce no warning. **The threshold is wall-clock and cannot be a count of failures**,
+because Apple documents no retry schedule for mirroring — automatic recovery is documented for
+*throttles* only (*"stops synchronization when hitting rate limit throttles, and automatically
+recovers when the throttles expire"*, TN3164), quota is never documented as a throttle, and any
+backoff, attempt cap or give-up condition is `NOT FOUND`. "Three consecutive failures" would
+therefore have no knowable duration behind it. 24 hours is chosen against usage: this app is opened
+roughly daily, so a day of silence is the natural unit, and it survives a phone left in a drawer over
+a weekend.
+
+**`SET-SYNC-5` (MUST)** — The upload-failure message appears as the persistent non-blocking banner of
+`SET-ICLOUD-2`, and as a line in Settings.
+
+**A correction to #687, which this section inherited.** #687 recorded the banner as *"a deliberate
+departure from the HIG"*, citing Apple's *"you don't need to display an alert notifying them iCloud is
+unavailable"*. **The sentence does not end there.** The HIG's iCloud page continues: *"However, it may
+still be helpful to unobtrusively let people know that changes they make won't be available on other
+devices until they restore iCloud access."* Apple's objection is to an **alert**, and the second clause
+affirmatively endorses exactly what these rules specify. The same page asks for *"subtle feedback"* on
+slow updates and for apps to *"Respect iCloud storage space."* So a passive, non-modal banner is
+**inside** the guidance, not a departure from it — and nothing here needs the departure justification
+#687 wrote. Recurring word across all three statements: *unobtrusive*.
+
+**`SET-SYNC-6` (MUST)** — The download-failure message appears **only** as a line in Settings, except
+when the store holds no records at all, in which case it also takes the banner.
+
+She can do nothing about a failed download, so a persistent banner on every screen would be alarm
+without a remedy. The exception is the case
+[#712](https://github.com/jirigrill/eczema-helper/issues/712) exists to prevent: a mother who has
+just reinstalled, looking at an app with no records in it, reading apparent total data loss. An empty
+store plus a failed download is exactly that moment, and the only time this message is explanatory
+rather than merely worrying. Note this reads emptiness for something far weaker than the first-run
+detection #712 ruled out: not to decide who she is, only whether a failure is worth showing, where a
+false positive shows an accurate message slightly too eagerly.
+
+**`SET-SYNC-7` (MUST)** — The upload-failure copy names **full iCloud storage as a likely cause** and
+routes her to iOS Settings to manage it, without asserting that it *is* the cause.
+
+Hedged deliberately, because the app cannot know (`SET-SYNC-8`) — but it is the most likely cause and
+the only one she can fix, and Apple's sole published recovery instruction for private-database quota
+is to *"Prompt the user to go to iCloud settings to manage their storage."* Copy that named quota
+outright would assert what the app cannot observe; copy that named nothing would report a problem
+with no route to fixing it.
+
+**`SET-SYNC-8` (MUST NOT)** — No rule, message or branch is keyed to a specific CloudKit error code.
+
+Not caution — **quota exhaustion is not detectable through the mirroring API**, confirmed by Apple
+staff as a known framework issue. The quota error *"is nested inside the CloudKit operation's internal
+partial failures dictionary, and `NSPersistentCloudKitContainer` does not preserve or populate
+`partialErrorsByItemID` … on the public `Event.error` object"* (DTS Engineer, thread 840348, Aug 2026,
+with a third-party feedback report on file); a Frameworks Engineer confirms the intent is otherwise —
+*"We expect the `eventChangedNotification` to include the full error payload … If that's not
+happening we would like the fix that"* (thread 830420, accepted, Jun 2026). So it is a bug, not a
+design, and until it is fixed the outer error is `NSCocoaErrorDomain 134410` — **the same code Apple
+documents for fatal setup failure** — so a code cannot even distinguish "her iCloud is full" from
+"mirroring never initialised". Apple's only workaround is a probe write via raw CloudKit followed by a
+delete, which DTS itself calls *"far from ideal"*; it is not specified here.
+
+**`SET-SYNC-9` (MUST)** — A failed upload never means a lost record. Copy says **not yet copied to
+iCloud**, never *not saved*.
+
+Documented, not reassurance. TN3163: *"When you perform a save, Core Data writes the data to the
+store and records the changes in the persistent history."* The export queue *is* that on-disk
+persistent history, so an unexported change survives termination and a later launch can still upload
+it. A quota condition means "not uploaded"; it never means "not recorded".
+
+**`SET-SYNC-10` (MUST)** — Sync-event failures are captured to a **local diagnostic log** at the
+moment they are observed: the error's full detail, the event type, and the time. The log is pruned to
+a bounded number of recent entries.
+
+The one irreversible decision in this area, which is why it ships in v1 with no UI attached. Error
+detail exists **only live on the notification** — events re-read afterwards retain *"only the domain /
+code of the original error"* (Frameworks Engineer, thread 830420; TN3163). An app that does not
+capture at notification time has lost the detail permanently. It is also the only route by which the
+open question of *which codes actually arrive* (§10) can ever close from real use, rather than from
+another spike that cannot provoke a failure.
+
+**`SET-SYNC-11` (MUST NOT)** — The diagnostic log has no user-facing surface in v1: it is not
+displayed, not exported, and not shared.
+
+Deliberately capture-only. A share-to-support flow would send an infant's medical record to the
+developer's inbox — Bear warns its own users that sync logs *"can contain pieces of text of your
+notes"* and asks them to redact before sending; the equivalent here is health data about a child,
+which would make the developer a recipient and require a new disclosure in the Art. 13 notice
+([#709](https://github.com/jirigrill/eczema-helper/issues/709)). Reading and sharing are **additive**
+and cheap to add later; the capture in `SET-SYNC-10` is the part that cannot be added retrospectively.
+
+**`SET-SYNC-12` (MUST)** — The app records the time of the last successful upload and the last
+successful download.
+
+The upload timestamp is a **correctness requirement, not a display feature** — nothing in `SET-SYNC-1`
+shows it to her. Apple gates persistent-history purging on it: purging history that mirroring still
+needs *"invalidates some internal state, and triggers a `reset` operation that synchronizes the store
+with the CloudKit server truth"*, and apps are told to gate purging on the start date of the last
+successful export event. Whatever purges history is
+[#730](https://github.com/jirigrill/eczema-helper/issues/730)'s to specify; this rule exists so the
+value is being recorded before anything needs it. The download timestamp is
+[#712](https://github.com/jirigrill/eczema-helper/issues/712)'s banked value, which that ticket
+recorded for this section to read — under `SET-SYNC-1` nothing reads it in the UI, so it survives as
+a diagnostic only.
 
 ---
 
@@ -571,9 +744,9 @@ counts, no storage figure, no days-logged, no summary of any kind
 ([INV-11](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-11)).
 
 The same distinction `docs/spec/day-view.md` `DAY-DERIVE-3` draws applies: a fact about the *app* —
-that sync last succeeded at a time — is about the machine and is `SET-ICLOUD-6`'s to decide. A count
-of *her records* is a statement about her diary, and acquires a meaning she never recorded the
-moment it appears.
+that sync last succeeded at a time — is about the machine rather than her diary, and §4.1 decides it.
+`SET-SYNC-1` forbids showing one. A count of *her records* is a statement about her diary, and
+acquires a meaning she never recorded the moment it appears.
 
 **`SET-ABSENT-5` (MUST NOT)** — There is no account, no sign-in, no profile and no child profile.
 The app has no accounts of its own and v1 is single-child.
@@ -602,8 +775,10 @@ delete-all control could not have lived there even if that had been wanted.
 | 5 | §7 `SET-ABSENT-1`..`-7` | The absences become numbered prohibitions rather than features that merely do not exist. | Settled by #716 |
 | 6 | §5 `SET-PRIVACY-6` | The notice carries a revision identifier, though no source requires one. | Settled by #709 |
 | 7 | §5 `SET-PRIVACY-4` | The notice states the deletion path but never what uninstalling does, overriding #705's requirement to state it. | Settled by #709 |
+| 8 | §4.1 `SET-SYNC-1` | The app never reports healthy sync, and the prohibition is numbered rather than left as an absence. | Settled by #723 |
+| 9 | §4.1 `SET-SYNC-7`, `-8` | Quota exhaustion is named only as a *likely* cause, because it is undetectable through the mirroring API. | Forced by platform |
 
-Seven divergences, of which two (1 and 4) correct copy that is misleading in the shipped PWA today.
+Nine divergences, of which two (1 and 4) correct copy that is misleading in the shipped PWA today.
 The count understates the change: §4, §5 and most of §7 have **no PWA counterpart at all**, so they
 are not divergences from the reference — they are new behavior the reference never had a reason to
 express. Divergences 6 and 7 are the clearest case: the PWA has **no privacy notice whatsoever** — no
@@ -633,7 +808,8 @@ map*, not from the reference implementation.
 | `SET-DELETE-7` | none, and none is possible in the reference — there is no server | **re-derive** |
 | `SET-DELETE-8` | `page.test.ts:80-98` asserts navigation only once the settings signal flips — a `liveQuery` race guard | **do not translate** (Divergence 3); re-derive the landing state alone |
 | `SET-DELETE-9`..`-13` | none | **re-derive** |
-| `SET-ICLOUD-1`..`-6` | none | **re-derive** |
+| `SET-ICLOUD-1`..`-5` | none | **re-derive** |
+| `SET-SYNC-1`..`-12` | none, and none is possible in the reference — the PWA has no sync of any kind | **re-derive**; `-2` is the one to write first, and it is testable without CloudKit by feeding the handler a synthetic in-flight event |
 | `SET-PRIVACY-1`..`-4` | none | **re-derive** |
 | `SET-PRIVACY-5`..`-14` | none — the PWA has no privacy notice at all | **re-derive**; `-6`, `-8` and `-11` are checked against the built bundle and the served page rather than in-app, and `-14` is `OPEN` |
 | `SET-ABSENT-1`..`-7` | none | **re-derive** as absence checks; see below |
@@ -648,7 +824,8 @@ Most of this section, and the reasons differ in a way worth separating.
   has never had a test. It is the first thing to write.
 - **The whole of §4, §5 and §7.** Not gaps in the reference's coverage — the reference has no
   account state, no privacy notice and no sync to toggle. Nothing was missed; there was nothing
-  there.
+  there. §4.1 is the largest such block and is broken out separately below, because its rules differ
+  in *why* they resist verification.
 - **The notice's revision identifier reaching the consent record (`SET-PRIVACY-6`).** The half a
   Swift test can check is that the identifier stored equals the identifier of the bundled text — worth
   writing, because the failure mode is silent and only discovered when someone asks what a mother was
@@ -665,6 +842,19 @@ Most of this section, and the reasons differ in a way worth separating.
   found the reference's own best guard to be exactly this shape — a regression test asserting a
   removed attribute stays absent. `SET-ABSENT-1` and `-2` deserve the same, since both reverse an
   owner decision taken against a recommendation.
+- **The 24-hour persistence threshold (`SET-SYNC-4`).** Unit-testable with an injected clock, and it
+  must be — the two failure modes are opposite and both bad: too eager and the mother sees a warning
+  every time she logs a meal in a lift, too patient and a genuinely broken sync stays quiet for a day.
+  What no test settles is whether 24 hours is the right number; that is a judgment, listed as awaiting
+  confirmation in §4.1.
+- **The diagnostic log (`SET-SYNC-10`, `-11`).** Testable and cheap — assert a synthetic failure event
+  lands in the log and that no screen reads it — but note what the test cannot cover: `-11` is a
+  prohibition on a surface nobody has asked for yet, so the test's whole value is holding that line
+  in a later release.
+- **Everything else in §4.1 that needs a real failing CloudKit account.** `SET-SYNC-5`..`-7` and `-9`
+  need quota actually exhausted or the network actually down on a device, which is the acceptance pass
+  below, not a test. `SET-SYNC-2` is the exception and the one to write first: a synthetic in-flight
+  event is enough to prove the app stays silent about it.
 - **`SET-STAGE-9`/`-10` in a real degraded state.** Requires a signed-out device; see the standing
   ceiling on account-state testing recorded on
   [#704](https://github.com/jirigrill/eczema-helper/issues/704).
@@ -728,6 +918,28 @@ something.
     guarantee: nothing certifies server-side completion (`SET-DELETE-12`).
 23. Check that a photo you had shared to the camera roll is **still in Photos** — the deletion did
     not reach it, exactly as the confirmation said (`SET-DELETE-11`).
+24. With everything healthy and signed in, look for any mention of sync on **every** screen: Settings,
+    the day view, the skin screen, the meal editor. There is **none** — no "synced", no "last synced",
+    no cloud icon, no spinner (`SET-SYNC-1`). This step passes by finding nothing.
+25. Turn on airplane mode, log a meal, and wait. For the whole of the first day there is still
+    **nothing** — no banner, no warning (`SET-SYNC-4`). Then check the meal is still there and
+    editable: a pending upload is not a lost record (`SET-SYNC-9`).
+26. Leave the device offline past 24 hours with that meal unsynced. A persistent, non-blocking banner
+    now appears, and it says her records are on this phone only, mentions that iCloud storage may be
+    full, and routes to iOS Settings (`SET-SYNC-5`, `-7`). It is not an alert and does not block
+    anything. Tap it: it lands on the Settings line (`SET-ICLOUD-2`).
+27. Restore the network. The banner clears on the next successful upload, and the meal reaches a second
+    device (`SET-SYNC-4`).
+28. Hardest step, and the one worth doing on a spare device: delete the app, reinstall, and launch it
+    with the network **off** so the download cannot run. The store is empty, so the banner appears and
+    says this phone may not be showing everything — the explanation for an empty screen
+    (`SET-SYNC-6`). Restore the network; records arrive and the banner clears.
+29. Repeat 28 with records **already** on the phone and the network off. This time there is **no**
+    banner — only a line in Settings (`SET-SYNC-6`). This is the step that distinguishes the two
+    failure messages, and it is the easiest to get wrong.
+30. Verification of `SET-SYNC-10`..`-12` is not a manual step — the diagnostic log has no surface
+    (`SET-SYNC-11`). Confirm from the code and its tests that a failure is captured with full error
+    detail at notification time, and that the two success timestamps are recorded.
 
 ---
 
@@ -768,10 +980,17 @@ structure** — Core Data stores relationships as plaintext foreign keys
 can see has to be written narrowly. Not an open question so much as a drafting constraint that
 `SET-PRIVACY-9`'s facts must respect: "encrypted" without qualification would overclaim.
 
-**`SET-ICLOUD-6` — a sync-health indicator.**
-[#723](https://github.com/jirigrill/eczema-helper/issues/723) owns whether one exists. Settings is a
-candidate host; nothing here reserves a place for it. Quota messaging travels with it — reactive
-only, since there is no remaining-quota API.
+**Which CloudKit error codes actually reach the app.** Unverified, and it is the one gap §4.1 cannot
+close by reasoning. Every event in every measured run succeeded, so the error field stayed empty
+([#713](https://github.com/jirigrill/eczema-helper/issues/713) item 5, measured on a physical device);
+provoking one needs a deliberately failing account state, such as an exhausted quota. Two facts make
+this narrower than it sounds. Quota specifically is **not reachable at all** today — Apple staff
+confirm the payload is dropped before it reaches the public event (`SET-SYNC-8`) — so no amount of
+testing would surface it until the framework is fixed. And **no rule here depends on the answer**:
+`SET-SYNC-3` keys on the event type, which is typed and verified, so the codes are wanted for
+diagnosis rather than for behavior. `SET-SYNC-10`'s capture is what turns this from a question needing
+another spike into one that answers itself from real use. **No schema deadline** — the diagnostic log
+is local, unsynced, and freely reshapeable.
 
 **Apple asks CloudKit apps to provide export, and `SET-ABSENT-2` does not.** Found while writing
 this section. Apple's *Providing User Access to CloudKit Data* states that *"apps that integrate
@@ -804,6 +1023,11 @@ stage lives outside the store by #691's decision.
   [`day-view.md`](day-view.md) owns `DAY-STAGE-1`/`-2`/`-3` and `DAY-MEAL-2`/`-3`.
 - **The persistence model** — the SwiftData schema, CloudKit configuration, `encryptedValues` field
   list, dedupe, and the zone-deletion mechanics `SET-DELETE-7` requires.
+- **Where the sync-event observer lives, and what purges persistent history.** §4.1 says what the app
+  tells her and what it must capture; the notification subscription, the diagnostic log's storage, and
+  the purge gated on `SET-SYNC-12`'s upload timestamp are
+  [#730](https://github.com/jirigrill/eczema-helper/issues/730)'s. The rule exists so the timestamp is
+  recorded before anything needs it, not to specify the purge.
 - **The consent screen and the refusal path.** [#705](https://github.com/jirigrill/eczema-helper/issues/705)
   settled that consent is one checkbox covering recording and sync, and explicitly left the
   decline-terminal-state unspecified. It is not this section's.

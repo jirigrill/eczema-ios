@@ -544,11 +544,15 @@ this is **not** schema-deadlined, because an open question about dates reads lik
 additive-only promotion rule — the record already carries both a calendar date and a `createdAt`
 instant, so either resolution is expressible in the shape that ships.
 
-**Where a sync-health indicator would live.**
-[#723](https://github.com/jirigrill/eczema-helper/issues/723) owns whether one exists at all, and
-inherits a hard constraint (a verdict only when an event has ended, or it cries wolf on every
-launch). If one ships, the day view is its most likely host, being the only screen she reliably
-opens. This section does not reserve a place for it and does not assume one is coming.
+**~~Where a sync-health indicator would live.~~ Closed by
+[#723](https://github.com/jirigrill/eczema-helper/issues/723): no positive indicator exists, on any
+screen.** `settings.md` `SET-SYNC-1` makes it a prohibition rather than an absence — no API can report
+that the store is synchronised, so a "synced" mark would assert what cannot be known. The day view is
+therefore **not** a host for one, and `DAY-DERIVE-3`'s enumeration of permitted marks stands unamended.
+What can reach this screen is a **failure** banner, and only under two conditions: a persistent upload
+failure (`SET-SYNC-5`), or a failed download while the store is empty (`SET-SYNC-6`) — the
+[#712](https://github.com/jirigrill/eczema-helper/issues/712) case where an empty screen reads as total
+data loss. Neither is a mark about her records, so neither touches `DAY-DERIVE-1`.
 
 **Duplicate rows under sync.** §3.5 records that the day view is where a CloudKit-side duplicate
 would become visible. Whether anything on this screen should *react* to one — merge, flag, or simply
