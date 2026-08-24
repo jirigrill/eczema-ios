@@ -268,26 +268,81 @@ did. How it is truncated is a layout matter this document does not own.
 **`DAY-SKIN-4` (MUST)** — When the day shown has no observations, the section offers a control that
 opens the skin screen in compose for **that day**.
 
-**`DAY-SKIN-5` (MUST NOT)** — Until `DAY-SKIN-6` is resolved, an observation entry shows no photo
-indicator of any kind — no thumbnail, no glyph, no count.
+**~~`DAY-SKIN-5`~~ (RETIRED)** — Retired by
+[#727](https://github.com/jirigrill/eczema-helper/issues/727). It prohibited any photo indicator on
+an observation entry *until `DAY-SKIN-6` was resolved*, and existed only to stop an indicator
+pre-empting the prototype. With placement decided the prohibition has no subject left; the question
+it was holding open is now `DAY-SKIN-9`. The id is **not reused**.
 
-An indicator is the smallest possible version of the decision `DAY-SKIN-6` defers, and shipping one
-would pre-empt the prototype.
+**`DAY-SKIN-6` (MUST)** — A day's photos appear in a **day-level photo card below the observation
+list**: a three-column grid of every photo recorded that day, in chronological order, each thumbnail
+square and captioned `region · time`.
 
-**`DAY-SKIN-6` (OPEN)** — Where a day's photos appear on the day view, if anywhere, is undecided →
-[#727](https://github.com/jirigrill/eczema-helper/issues/727). To be settled **by prototype, once
-the iOS app exists** — the two candidate shapes (a separate day-level grid as the PWA has, or
-thumbnails folded into the observation entry) differ in a way that is judged by looking, not by
-argument. **No schema deadline**; both read the same records.
+Resolved by prototype → [#727](https://github.com/jirigrill/eczema-helper/issues/727) — this rule's
+original question answered, not a new rule. The PWA's shape carries over, chosen on a phone with all
+three candidates side by side. Two consequences follow, and both are decisions rather than layout
+details: the unit shown to her is **the day**, not the observation — so `SKIN-VIEW-2`'s per-entry
+unit does **not** extend to photos — and the photos appear **somewhere**, closing the "if anywhere"
+limb.
 
-> **⚠ Divergence 4.** *PWA:* a separate day-level photo card below the observation list — a
-> three-column grid of every photo taken that day, each captioned `region · time`, where the time is
-> re-derived at render from an `id → time` map built on the page
-> (`day/[date]/+page.svelte:28-30`, `SkinPhotoCard.svelte:65-69`). *iOS:* nothing ships until
-> #727 resolves. *Why:* the owner declined to settle it on paper. Recorded for whoever runs the
-> prototype: the grid detaches a photo from the record it belongs to and then spends a derived map
-> re-attaching it, while `SKIN-VIEW-2` already makes the observation entry the unit she reads.
-> Class: **deferred to #727**.
+**`DAY-SKIN-7` (MUST)** — The caption reads `region · time`, where the time is the parent
+observation's, and it is **required**: it is the only thing re-attaching a photo to the record it
+came from once the grid has separated them.
+
+Verified legible rather than assumed: white on a 45%-black scrim measures **8.76:1**, against WCAG
+AA's 4.5:1 for small text. The time is **not** stored on the photo — see `DAY-SKIN-10`.
+
+**`DAY-SKIN-8` (OPEN)** — Whether the grid caps its visible rows, and what affordance reveals the
+rest, is undecided → [#738](https://github.com/jirigrill/eczema-helper/issues/738).
+
+The grid's height is **unbounded**. Photos are per *frame* with no cap
+([#684](https://github.com/jirigrill/eczema-helper/issues/684)), so every three photos adds roughly
+118 pt. Measured on the prototype (iPhone 17 Pro, 402×874 pt): eight photos cost the grid 397 pt and
+push total content to 725 pt, at which point the meal section's header reaches the screen at 688 pt
+but the card is cut at the bottom edge. `DAY-SKIN-3` puts skin above meals to prioritise skin, not to
+evict meals, so a heavy day is a real tension rather than a hypothetical one. The prototype did not
+test a cap; #727 chose placement only.
+
+**`DAY-SKIN-9` (OPEN)** — Whether an observation entry carries any indicator that it has photos is
+undecided → [#739](https://github.com/jirigrill/eczema-helper/issues/739).
+
+With photos living day-level, **nothing in the observation list distinguishes an entry that carries
+photos from one that does not** — a note-only entry and an all-calm entry that carries a photo
+(`SKIN-PHOTO-4`) render identically. Previously held closed by the retired `DAY-SKIN-5`, which
+existed only to avoid pre-empting the prototype; resolving placement makes it live. Note the
+tension with `DAY-DERIVE-1`: a *count* is prohibited, so any indicator here would have to be a
+presence mark rather than a quantity.
+
+**`DAY-SKIN-10` (MUST)** — The caption's time is **derived at render** from the photo's parent
+observation, not stored on the photo record. A photo whose parent cannot be resolved renders its
+region without a time, and never a broken or empty caption.
+
+Inherited deliberately with the grid. The PWA builds an `observationId → H:MM` map on the page
+(`day/[date]/+page.svelte:28-30`) and `SkinPhotoCard.svelte:11-19` documents the degradation:
+orphans "shouldn't happen given the FK relationship, but we degrade silently rather than showing a
+broken pill." Specified rather than left to be rediscovered, because on iOS the parent is resolved
+through a SwiftData relationship and CloudKit **cannot enforce cascade delete**
+([#679](https://github.com/jirigrill/eczema-helper/issues/679)) — so an orphan is reachable here in a
+way it was not in the single-device PWA.
+
+**`DAY-SKIN-11` (OPEN)** — What tapping a thumbnail does is undecided →
+[#740](https://github.com/jirigrill/eczema-helper/issues/740).
+
+The PWA opens a full-screen lightbox (`PhotoLightbox`). #727 was a placement prototype and never put
+tap behaviour on a phone, so the PWA's answer is recorded as description, not requirement.
+
+> **⚠ Divergence 4.** *PWA:* a day-level photo card below the observation list — a three-column grid
+> of every photo taken that day, each captioned `region · time`, the time re-derived at render from
+> an `id → time` map built on the page (`day/[date]/+page.svelte:28-30`,
+> `SkinPhotoCard.svelte:65-69`). *iOS:* **the same shape**, minus the count. *Why:* chosen by
+> prototype ([#727](https://github.com/jirigrill/eczema-helper/issues/727)) over the alternative of
+> folding thumbnails into each entry. The pre-decision note recorded here — that the grid detaches a
+> photo from its record and then spends a derived map re-attaching it, while `SKIN-VIEW-2` already
+> makes the entry the unit she reads — was put to the phone and **did not win**; the derived map is
+> accepted as the cost of the day-level view (`DAY-SKIN-10`). The measured alternative was also
+> *taller*: folding eight thumbnails into entries grew the skin card to 642 pt against the grid's
+> combined 615 pt. Class: **resolved by #727**. The count remains dropped (`DAY-DERIVE-1`,
+> Divergence 8).
 
 ---
 
@@ -418,7 +473,7 @@ earliest record she has, so it extends backwards on its own as older records arr
 | 1 | §2 `DAY-NAV-3` | Future days are unreachable; the PWA renders and logs seven of them. | Owner's call, #715 |
 | 2 | §3.2 `DAY-MEAL-2/3` | Meal rows are the union of eligible and recorded actors; the PWA filters by eligible actors alone and hides the rest. | Settled by #712 |
 | 3 | §3.2 `DAY-MEAL-5` | Actor rows are labelled when there is more than one; the PWA uses icons only. | Forced by Divergence 2 |
-| 4 | §4 `DAY-SKIN-5/6` | No day-level photo grid ships; display deferred to prototype. | Deferred to #727 |
+| 4 | §4 `DAY-SKIN-6` | The day-level photo grid carries over from the PWA, minus the count. | Resolved by #727 |
 | 5 | §5 `DAY-EMPTY-2` | Empty-state copy names the day shown; the PWA says "today" on every day. | Defect fixed |
 | 6 | §5 `DAY-EMPTY-4` | The permanent bottom hint is removed. | Owner's call, #715 |
 | 7 | §6 `DAY-STAGE-3` | Records are never blanked while the stage is unknown; the PWA flashes a logged day empty. | Defect fixed |
@@ -448,7 +503,8 @@ data-loss fix inherited from #712.
 | `DAY-MEAL-7`, `-8`, `-9` | `page.test.ts:432-574` (hrefs carry type, date, actor, `returnTo`) | **translate** the parameter contract; the URL form itself is web-specific |
 | `DAY-MEAL-10` | `MealCard.test.ts:130` (no swipe or long-press handlers) | **translate** as an absence check |
 | `DAY-SKIN-1`..`-4` | `SkinObservationCard.test.ts`; ordering, chips, all-calm chip, absence of a count at `:244` | **translate** — but see `skin-observation.md` §11, which owns these |
-| `DAY-SKIN-5`, `-6` | none | **re-derive** once #727 resolves |
+| `DAY-SKIN-6`, `-7`, `-10` | `SkinPhotoCard.test.ts` — grid presence `:48`, one image per photo `:34`, the `region · time` caption `:101`, distinct times for two photos of one region `:114`, and **both** orphan paths `:132,146` | **translate** the grid, the caption format and the orphan degradation — `-10`'s rule is directly pinned. **Do not translate** the object-URL lifecycle or the count test `:80`, which asserts the count `DAY-DERIVE-1` drops |
+| `DAY-SKIN-11` | `SkinPhotoCard.test.ts:159-208` (lightbox open, × close, backdrop close) | **do not translate yet** — the rule is `OPEN`; these pin the PWA's answer, not a decision |
 | `DAY-EMPTY-3` | `page.test.ts:427`, `MealCard.test.ts:31` (the empty sentence is asserted absent) | **translate** |
 | `DAY-DERIVE-1` | `page.test.ts:290-296` (`task-counter` absent, "parked: daily-completeness") | **translate** — the single most valuable guard on this screen |
 | `DAY-DERIVE-2` | none here; `skin-observation.md` owns it | **translate** from there |
@@ -510,9 +566,13 @@ something.
     screen blanks while the stage is resolving (`DAY-STAGE-3`). **✗ PWA**
 14. Record two skin observations on one day, one all-calm. Both appear as separate entries, in time
     order, and the all-calm one is visibly an entry rather than an omission
-    (`DAY-SKIN-1`). Confirm no photo indicator appears on either entry (`DAY-SKIN-5`).
-15. Attach a photo to an observation. Confirm **no** count of photos appears anywhere on the day
-    view (`DAY-DERIVE-1`, Divergence 8). **✗ PWA**
+    (`DAY-SKIN-1`).
+15. Attach a photo to an observation. It appears in the photo card **below** the observation list,
+    in a three-column grid, captioned with its region and the observation's time (`DAY-SKIN-6`,
+    `-7`). Confirm **no** count of photos appears anywhere on the day view (`DAY-DERIVE-1`,
+    Divergence 8). **✗ PWA**
+16. Record eight or more photos across the day. Note where the meal section lands and whether it is
+    reachable — the grid is uncapped, and `DAY-SKIN-8` is the open question this observation feeds.
 16. Read the entire screen and confirm there is no number on it that you did not enter yourself: no
     meal count, no streak, no severity for the day, no completeness indicator (`DAY-DERIVE-1`,
     `-2`).
@@ -530,12 +590,16 @@ something.
 
 ## 10. Open questions
 
-**`DAY-SKIN-6` — where photos appear on the day view.**
-[#727](https://github.com/jirigrill/eczema-helper/issues/727). Not answerable on paper: the two
-candidate shapes differ in how a photo relates to the record it came from, which is judged by
-looking. **To be prototyped once the iOS app exists**, not before. Nothing depends on it except
-`DAY-SKIN-5`, which holds the placeholder open by shipping no indicator at all. **No schema
-deadline** — both shapes read records that already exist.
+**~~`DAY-SKIN-6` — where photos appear on the day view.~~ Closed by
+[#727](https://github.com/jirigrill/eczema-helper/issues/727): the PWA's day-level grid carries
+over.** Decided on a phone with all three candidates side by side, which is what made it unanswerable
+on paper. `DAY-SKIN-5` is retired with it — the prohibition it held existed only to keep the
+prototype unprejudiced. **Three questions opened in its place**, none of which the placement
+prototype tested: whether the uncapped grid limits its visible rows (`DAY-SKIN-8` →
+[#738](https://github.com/jirigrill/eczema-helper/issues/738)), whether an entry indicates it carries
+photos (`DAY-SKIN-9` → [#739](https://github.com/jirigrill/eczema-helper/issues/739)), and what a tap
+does (`DAY-SKIN-11` → [#740](https://github.com/jirigrill/eczema-helper/issues/740)). None is schema
+deadlined; all read records that already exist.
 
 **`DAY-NAV-9` — time zones.**
 [#728](https://github.com/jirigrill/eczema-helper/issues/728). Also a prototype, and also **once the

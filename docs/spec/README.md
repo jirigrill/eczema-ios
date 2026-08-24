@@ -23,7 +23,7 @@ owns them. Area-local terms stay in each section's own §1 Vocabulary table.
 | Section | Status |
 | --- | --- |
 | [`skin-observation.md`](skin-observation.md) | Written — the template section |
-| [`day-view.md`](day-view.md) | Written; 2 **OPEN** rules ([#727](https://github.com/jirigrill/eczema-helper/issues/727), [#728](https://github.com/jirigrill/eczema-helper/issues/728)), both deferred to prototypes once the iOS app exists |
+| [`day-view.md`](day-view.md) | Written; 4 **OPEN** rules — photo grid growth ([#738](https://github.com/jirigrill/eczema-helper/issues/738)), per-entry photo indicator ([#739](https://github.com/jirigrill/eczema-helper/issues/739)), thumbnail tap ([#740](https://github.com/jirigrill/eczema-helper/issues/740)), and time zones ([#728](https://github.com/jirigrill/eczema-helper/issues/728)). Photo placement is settled by [#727](https://github.com/jirigrill/eczema-helper/issues/727) |
 | First run and feeding stage | Not written; see [#712](https://github.com/jirigrill/eczema-helper/issues/712) |
 | [`settings.md`](settings.md) | Written — [#716](https://github.com/jirigrill/eczema-helper/issues/716) |
 | Persistence model (SwiftData + CloudKit) | Not written; carries the schema deadlines |
