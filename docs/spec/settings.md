@@ -7,7 +7,8 @@
 **Behavior reference:** `jirigrill/eczema-helper` @ `582f662` (frozen PWA),
 `src/routes/settings/`, `src/lib/stores/settings.svelte.ts`, `src/lib/db/reset-database.ts`.
 **Resolves:** [#716](https://github.com/jirigrill/eczema-helper/issues/716) on the transition map
-[#672](https://github.com/jirigrill/eczema-helper/issues/672).
+[#672](https://github.com/jirigrill/eczema-helper/issues/672), and
+[#709](https://github.com/jirigrill/eczema-helper/issues/709) (§5, the privacy notice's form).
 
 ## Overview
 
@@ -25,7 +26,7 @@ This document states what the screen does, in English, without reference to Swif
 SwiftData, Svelte, Dexie, or the Czech interface. Swift tests are derived from the numbered rules;
 the owner's acceptance pass is derived from §9.
 
-Three things are worth knowing before the rules make sense:
+Four things are worth knowing before the rules make sense:
 
 1. **The feeding stage governs what may be *created*, never what is *shown*, and a change is never
    retroactive.** [INV-14](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-14)
@@ -39,6 +40,10 @@ Three things are worth knowing before the rules make sense:
    ([#705](https://github.com/jirigrill/eczema-helper/issues/705)) and no export, import or backup
    of any kind ([#683](https://github.com/jirigrill/eczema-helper/issues/683)). Settings is where a
    reader would look for both, so §7 states them as prohibitions rather than leaving a gap.
+4. **The privacy notice is bundled text, not a web page.** §5 is the largest part of this section and
+   the least like a screen spec: **six of its fourteen rules are `MUST NOT`s**, constraining what a
+   legal document may claim rather than what the screen does, because each stops the app asserting
+   something no primary source supports.
 
 **How to read this document:** see
 [`skin-observation.md` § How to read this document](skin-observation.md#how-to-read-this-document).
@@ -67,7 +72,7 @@ screen and is cited by heading: _Actor_ (the stage → actors mapping) under § 
 
 This is not a 1:1 port. Per [#690](https://github.com/jirigrill/eczema-helper/issues/690),
 **coherence is presumed right**: where the reference implementation does two different things, the
-port takes the coherent rule, and *keeping* a wart needs a named reason. There are **five**, marked
+port takes the coherent rule, and *keeping* a wart needs a named reason. There are **seven**, marked
 inline and indexed in §8. Most of this section has no PWA counterpart at all, so the divergence
 count is a poor measure of how much changed here — §9's "rules nothing verifies today" is the
 honest one.
@@ -82,7 +87,9 @@ honest one.
 | **Degraded state** | `noAccount` or `restricted` only — the two states that gate writing. `temporarilyUnavailable` and `couldNotDetermine` are **not** degraded for this purpose. |
 | **Delete-all control** | The single destructive control in the app, settled by [#705](https://github.com/jirigrill/eczema-helper/issues/705). |
 | **Her iCloud** | The private CloudKit database in the mother's own iCloud account. The developer holds no copy and cannot reach it. |
-| **System deletion path** | Apple's own route to delete an app's iCloud data from iOS Settings, outside this app (§6). |
+| **Notice revision** | An opaque monotonic identifier (`v1`, `v2`, …) for one wording of the privacy notice. Not the app's version, not a date (§5). |
+| **The notice** | The Art. 13 privacy notice: one English text, shipped in the bundle and served at a stable URL (§5). |
+| **System deletion path** | Apple's own route to delete an app's iCloud data from iOS Settings, outside this app (§5). |
 
 Two terms this section uses are shared with the day view and defined in
 [`GLOSSARY.md`](GLOSSARY.md): **feeding stage** — the app-wide `breastfed` / `mixed` / `solids`
@@ -316,9 +323,25 @@ still unverified**, so no rule may be keyed to a specific code.
 
 **`SET-PRIVACY-1` (MUST)** — Settings offers a route to the Art. 13 privacy notice.
 
-**`SET-PRIVACY-2` (OPEN)** — Where the notice lives, what it says, and whether it is in-app text or
-a link is [#709](https://github.com/jirigrill/eczema-helper/issues/709)'s decision. This section
-fixes only that Settings is a route to it. **No schema deadline.**
+**`SET-PRIVACY-2` (MUST)** — The route opens the notice **as a screen in the app**, rendered from
+text compiled into the bundle. It does not open a browser, and it does not fetch anything.
+
+Settled by [#709](https://github.com/jirigrill/eczema-helper/issues/709). Two independent reasons.
+Apple's guideline 5.1.1(i) requires *"a link to their privacy policy in the App Store Connect
+metadata field **and within the app in an easily accessible manner**"* — so an in-app route is
+mandatory, not a choice. And the notice is the one document that must be readable in exactly the
+conditions a network is not: `SET-ICLOUD-4` requires the app to work in a basement, and a notice that
+404s or spins is not *"easily accessible"* in the sense WP260 para 11 means. Bundling it also
+forecloses the drift question — the text she reads is the text her consent record names
+(`SET-PRIVACY-6`).
+
+Whether embedded text *by itself* discharges 5.1.1(i) is **`NOT FOUND`** in Apple's documentation:
+the guideline says "link", the ADPLA §3.3.3(C) says *"in Your Application, on the App Store, and/or
+on Your website"*, and Apple has never reconciled the two
+(`docs/research/privacy-notice-hosting.md` §2.2). This section does not need the question answered,
+because `SET-PRIVACY-7` requires the hosted URL as well — a bundled screen **plus** the App Store
+Connect URL satisfies every reading of the guideline without an interpretive claim about Apple's
+intent.
 
 **`SET-PRIVACY-3` (MUST)** — Settings names the **system deletion path** — Apple's own route to
 delete this app's data from iCloud, in iOS Settings — as a second route, independent of
@@ -330,15 +353,180 @@ is documented as *"an error that occurs when the user deletes a record zone usin
 (`docs/research/settings-data-deletion.md` §C).
 
 **`SET-PRIVACY-4` (MUST NOT)** — The app does not state that deleting the app removes her iCloud
-data, and does not state that it preserves it.
+data, and does not state that it preserves it. **This binds the notice too, not only the screen.**
 
 Apple documents **neither** — the dedicated article on deleting an app mentions iCloud only to link
 to a separate article about *Backup*, and the question is `NOT FOUND` in both directions
 (`docs/research/settings-data-deletion.md` §C). The existence of the system deletion path implies
 the data survives, but an implication is not a citation, and this is a statement to a mother about
 where her infant's health records are. State the path (`SET-PRIVACY-3`); do not narrate the
-consequence of uninstalling. → §10, and a note for #709, whose content requirement currently rests
-on the unsourced half of this.
+consequence of uninstalling.
+
+> **Divergence 7 — the notice states the deletion *path*, never the uninstall *consequence*.**
+> **PWA:** no notice exists, and the question cannot arise — there is no server and no iCloud.
+> **iOS:** [#705](https://github.com/jirigrill/eczema-helper/issues/705) obliged the notice to state
+> *"data already in iCloud stays there until deleted, and how to delete it"*. The survival half is
+> **not stated**; the deletion path is.
+> **Why:** a direct conflict, resolved in favour of the sourced half.
+> [#716](https://github.com/jirigrill/eczema-helper/issues/716) found the survival claim `NOT FOUND`
+> in both directions and wrote `SET-PRIVACY-4` forbidding the app from asserting it either way — so
+> the notice cannot both state it and not state it. The **substance** of #705's requirement survives
+> intact without the unsourced mechanism: Art. 13(2)(a) retention ("kept until you delete it; the
+> developer holds no copy") plus the two deletion routes (`SET-DELETE-1`, `SET-PRIVACY-3`) tell her
+> everything actionable. What is dropped is a claim about what iOS does on uninstall, which is Apple's
+> to document and Apple has not.
+
+**`SET-PRIVACY-5` (MUST)** — The notice is reachable in **at most two taps** from the day view, under
+a plainly-named route.
+
+WP260 para 11 offers *"never more than 'two taps away'"* as **one way** to meet the accessibility
+test, not as the test itself — the rule is that she *"should not have to seek out the information"*.
+Two taps is adopted because it is the only numeric figure any endorsed source states, and because
+Settings is already one tap from the day view (`SET-NAV-1`), so the notice is the second and the
+budget is met by the navigation this screen already has. Apple's own definition of *"easily
+accessible"* is **`NOT FOUND`** — the phrase appears twice in the Review Guidelines, undefined both
+times (`docs/research/privacy-notice-hosting.md` §2.1) — so this rule is sourced to WP260 alone and
+must not be attributed to Apple.
+
+**`SET-PRIVACY-6` (MUST)** — The notice carries a **revision identifier** — an opaque monotonic
+string, `v1`, `v2`, … — displayed on the notice itself, and the consent record stores the identifier
+of the revision she was actually shown.
+
+No source requires a version number or a date: *"version"* appears **0 times** in the GDPR and **0
+times** in WP260 (`docs/research/art-13-notice-form.md` §3.1). The requirement is one step removed
+and is mandatory in its own terms — EDPB 05/2020 para 108 requires that *"the information provided to
+the data subject at the time shall be demonstrable"*, illustrates it with *"a copy of the information
+that was presented to the data subject at that time"*, and rules out the cheap substitute: *"It would
+not be sufficient to merely refer to a correct configuration of the respective website."* An
+identifier plus bundled text is the cheapest thing that satisfies that, since the text ships with the
+binary anyway.
+
+The identifier is deliberately **not** the app's build or version number, and not a date. A build
+number over-versions — most releases will not touch the notice, and a consent record naming build 47
+implies a text that changed 46 times. A date under-specifies if two edits land in one day. The
+revision is bumped when the notice's **wording** changes, which is a different question from whether
+consent must be re-obtained: EDPB 05/2020 para 110 triggers re-consent on *"the processing operations
+change[ing] or evolv[ing] considerably"*, not on rewording, and no source consulted says a
+wording-only change invalidates consent.
+
+> **Divergence 6 — the notice is versioned though nothing requires it.**
+> **PWA:** no privacy notice exists at all — there is no privacy string, no route, and nothing in
+> `src/`. This is a from-scratch artifact, not a port.
+> **iOS:** the notice carries a revision identifier and the consent record stores it.
+> **Why:** not a port decision but a consequence of taking Art. 9(2)(a) explicit consent, which the
+> PWA never did. Apple requires no versioning either (`NOT FOUND`,
+> `docs/research/privacy-notice-hosting.md` §5.1) — and Apple stores only the *URL*, never the text
+> (§5.2), so **the developer is the only party retaining the notice's history**. Attributing this
+> rule to Apple would be wrong.
+
+**`SET-PRIVACY-7` (MUST)** — The same revision is also served at a **stable public URL**, and that
+URL is what the App Store Connect Privacy Policy field holds.
+
+Required by 5.1.1(i) independently of the in-app route, and the field is mandatory for submission.
+The rule says **stable** for a mechanical reason: Apple's editability table marks Privacy Policy URL
+`Required` and `Localized` but leaves `Editable` **blank** — the same class as the app **Name** — and
+App Store Connect Help states the consequence outright, *"Any changes to the URLs releases with your
+next app version"* (`docs/research/privacy-notice-hosting.md` §1.3). So **moving the URL costs a
+submission, while editing the content behind it costs nothing.** The URL must be one that can be held
+for the app's lifetime, which is why it is not tied to a repo name or an account plan.
+
+Which domain is a deployment decision, not a behavior one, and is deliberately **not** fixed here —
+it is a pre-submission blocker in the same class as the app's real name
+([#697](https://github.com/jirigrill/eczema-helper/issues/697)) and trader status. The spec constrains
+only that the URL is stable and that the served text is not *older* than the shipped one
+(`SET-PRIVACY-8`).
+
+**`SET-PRIVACY-8` (MUST NOT)** — The served page is never a revision **older** than the one in the
+shipped app.
+
+Drift is one-directional by construction: a phone running an old build holds old text, which is
+expected and correct — that is what her consent record names. A website behind the current release is
+a defect, because it is the copy a person who has not installed the app reads. The bundled text is
+authoritative for what *that user* consented to; the served copy is authoritative for nothing, which
+is why both display the revision identifier and a reader can tell which is which.
+
+**`SET-PRIVACY-9` (MUST NOT)** — The notice does not state that the processor contract with Apple
+fails Art. 28(3), and does not otherwise characterise the developer's own compliance.
+
+It states the **facts** instead, which are the actual Art. 13 disclosures: Apple receives the data,
+Apple's sub-processors are not published so recipients are named at **category** level, storage
+location is at Apple's contractual discretion, and no adequacy safeguard is verified. What stays out
+is the legal *characterisation*.
+
+Nothing in Art. 13(1) or (2) reaches a processor-contract deficiency, and requiring a controller to
+confess its own non-compliance to data subjects is **`NOT FOUND`** across EDPB and WP29 guidance
+(`docs/research/art-13-notice-form.md` §4.2). The distinction the rule turns on is textual and clean:
+Art. 30(4) sends the record of processing *"to the supervisory authority on request"*, whereas
+Arts. 12–14 govern what reaches the data subject. The assessment is the accountability deliverable
+and it belongs in the internal file
+([#694](https://github.com/jirigrill/eczema-helper/issues/694) §5.7). Disclosing the characterisation
+would also assert the controller reading, which #694 left deliberately **UNSETTLED**.
+
+This is a narrowing rule, not a licence: the EDPB is blunt that weak bargaining power does not excuse
+accepting non-compliant processor terms, so the underlying exposure is real. It is simply not a
+transparency problem.
+
+**`SET-PRIVACY-10` (MUST NOT)** — The notice does not state or imply that Apple participates in the
+EU–US Data Privacy Framework.
+
+**Apple Inc. is not on the DPF participant list at all** — verified against the official 42,398-entry
+workbook (`docs/research/art-13-notice-form.md` §5). There is no certification to describe, no status
+and no date. This is consistent with Apple's own ADPLA, which names *"Model Contract Clauses"* and
+never mentions the DPF or Privacy Shield. #709 carried this as an **UNVERIFIED** status to check; the
+answer inverts the question, so the transfer disclosure must rest on Apple's contractual terms alone.
+
+**`SET-PRIVACY-11` (MUST)** — One text, in English, with no dialect split and no Czech version.
+
+[#702](https://github.com/jirigrill/eczema-helper/issues/702) ships three catalog localizations
+(`en` / `en-GB` / `en-US`) because `courgette` and `zucchini` are food names on a tile that a mother
+must recognise. A privacy notice has no dialect-divergent vocabulary worth a second file, and two
+texts are two things to keep in sync for no comprehension gain — with `SET-PRIVACY-6` and `-8` that
+cost is real rather than notional.
+
+No primary source requires Czech. The trigger throughout is **targeting**, not establishment: WP260
+requires translation *"where the controller targets data subjects speaking those languages"*, and
+Recital 23 treats language as evidence of targeting. ÚOOÚ has enforced on notice language, but only
+against Czech-facing services, so the test cuts in an English-only product's favour; zákon
+č. 634/1992 Sb. § 11(1) is a closed enumeration that does not reach a privacy notice
+(`docs/research/art-13-notice-form.md` §2.3). If the product is ever offered in Czech, this rule is
+what must be revisited first — `SET-ABSENT-6` records that no language picker exists.
+
+**`SET-PRIVACY-12` (MUST NOT)** — The notice does not claim to be legal advice, and does not present
+itself as a lawyer's work.
+
+The owner drafts it against #694's Tier-2 table, and a review by a qualified Czech data-protection
+lawyer is **recommended but not a gate this section imposes** — the content is fixed by primary
+sources, so drafting is transcription, and #694's two lawyer questions (the Art. 28 conclusion, and
+Art. 7(3) withdrawal under mandatory sync) are about the *product's* exposure rather than the notice's
+wording. If the review happens it should be a **dated artifact**:
+[#681](https://github.com/jirigrill/eczema-helper/issues/681) found that how a review is documented
+bears on whether professional indemnity cover responds.
+
+**`SET-PRIVACY-13` (MUST NOT)** — The notice does not tell her to check back for changes.
+
+**`SET-PRIVACY-14` (OPEN)** — Whether the app **actively notifies** her when the notice changes
+substantively, and by what surface, is not decided here.
+
+These two are one finding split by how sure it is. The prohibition is sourced flatly: WP260 para 29
+holds that *"References in the privacy statement/ notice to the effect that the data subject should
+regularly check the privacy statement/notice for changes or updates are considered not only
+insufficient but also unfair in the context of Article 5.1(a)"* — so the standard formula is barred
+outright, which makes it a rule rather than a preference.
+
+What the same paragraph requires *instead* is active, dedicated notification: *"a notification of
+changes should always be communicated by way of an appropriate modality (e.g. email, hard copy letter,
+pop-up on a webpage or other modality which will effectively bring the changes to the attention of the
+data subject) specifically devoted to those changes"*. Every modality WP260 names assumes a channel
+this app does not have — **there is no email address, no account and no server-side reach**
+(`SET-ABSENT-5`); the developer cannot contact her at all. The only surface available is the app itself
+on a later launch, which is a first-run decision rather than a Settings one, and it interacts with
+re-consent: para 110 triggers re-consent when the *processing* changes considerably, **not** on
+rewording, so a notice-change prompt and a consent prompt are different events and conflating them
+would ask for consent nothing requires.
+
+Left `OPEN` rather than guessed, per the template: filling it in means inventing either a modality or a
+re-consent trigger. **No schema deadline** — and it cannot bind the first release, which has no
+previous notice to have changed from.
 
 ---
 
@@ -412,11 +600,15 @@ delete-all control could not have lived there even if that had been wanted.
 | 3 | §3 `SET-DELETE-8` | The post-wipe navigation guard does not port. | Obsolete |
 | 4 | §3 `SET-DELETE-11` | The confirmation names the camera-roll exception; the PWA claims all photos are permanently deleted, which is false for any photo she shared out. | Defect fixed |
 | 5 | §7 `SET-ABSENT-1`..`-7` | The absences become numbered prohibitions rather than features that merely do not exist. | Settled by #716 |
+| 6 | §5 `SET-PRIVACY-6` | The notice carries a revision identifier, though no source requires one. | Settled by #709 |
+| 7 | §5 `SET-PRIVACY-4` | The notice states the deletion path but never what uninstalling does, overriding #705's requirement to state it. | Settled by #709 |
 
-Five divergences, of which two (1 and 4) correct copy that is misleading in the shipped PWA today.
+Seven divergences, of which two (1 and 4) correct copy that is misleading in the shipped PWA today.
 The count understates the change: §4, §5 and most of §7 have **no PWA counterpart at all**, so they
 are not divergences from the reference — they are new behavior the reference never had a reason to
-express.
+express. Divergences 6 and 7 are the clearest case: the PWA has **no privacy notice whatsoever** — no
+privacy string, no route, nothing in `src/` — so both are divergences from a *decision taken on this
+map*, not from the reference implementation.
 
 ---
 
@@ -443,6 +635,7 @@ express.
 | `SET-DELETE-9`..`-13` | none | **re-derive** |
 | `SET-ICLOUD-1`..`-6` | none | **re-derive** |
 | `SET-PRIVACY-1`..`-4` | none | **re-derive** |
+| `SET-PRIVACY-5`..`-14` | none — the PWA has no privacy notice at all | **re-derive**; `-6`, `-8` and `-11` are checked against the built bundle and the served page rather than in-app, and `-14` is `OPEN` |
 | `SET-ABSENT-1`..`-7` | none | **re-derive** as absence checks; see below |
 
 ### Rules nothing verifies today
@@ -456,6 +649,14 @@ Most of this section, and the reasons differ in a way worth separating.
 - **The whole of §4, §5 and §7.** Not gaps in the reference's coverage — the reference has no
   account state, no privacy notice and no sync to toggle. Nothing was missed; there was nothing
   there.
+- **The notice's revision identifier reaching the consent record (`SET-PRIVACY-6`).** The half a
+  Swift test can check is that the identifier stored equals the identifier of the bundled text — worth
+  writing, because the failure mode is silent and only discovered when someone asks what a mother was
+  shown, by which time the answer is unrecoverable. The half nothing can check is whether the text
+  itself is accurate.
+- **`SET-PRIVACY-8` — the served page never older than the shipped one.** Not testable from inside
+  the app at all: it compares an artifact in the bundle against a hosted page. It belongs to the
+  release checklist, and it is the one rule here whose violation is invisible on any device.
 - **Server-side deletion (`SET-DELETE-7`, `-12`).** Cannot be verified even in principle by a unit
   test, and Apple exposes no API that reports completion. The acceptance pass is the only check, and
   it is an observation rather than an assertion.
@@ -494,21 +695,38 @@ something.
    before — not greyed, not annotated (`SET-STAGE-9`, `-10`).
 9. Find the route to the privacy notice, and the line naming Apple's own path for deleting this
    app's data from iCloud in iOS Settings (`SET-PRIVACY-1`, `-3`).
-10. Read that copy carefully: nothing on the screen tells you what deleting the app does to your
-    iCloud data, in either direction (`SET-PRIVACY-4`).
-11. Sign back in. Tap the delete-all control. Read the button: it says **delete**, not "restart" or
+10. Count the taps from the day view to the notice's first line of text. It is **two or fewer**, and
+    the route is named something you would look for — "Privacy" — not buried under an "About"
+    (`SET-PRIVACY-5`).
+11. Turn on airplane mode and open the notice again. It renders **in full**, in the app: no browser
+    opens, no spinner, no error (`SET-PRIVACY-2`). **✗ PWA** — there is no notice to open.
+12. Find the revision identifier on the notice — `v1` or similar — and check the same identifier is
+    what the app recorded when you consented on first run (`SET-PRIVACY-6`).
+13. Open the App Store Connect privacy policy URL in a browser. It serves the **same text** and shows
+    a revision identifier **not older** than the one in the app (`SET-PRIVACY-7`, `-8`).
+14. Read the notice end to end, checking five things it must **not** say: that the contract with Apple
+    falls short of any legal requirement (`SET-PRIVACY-9`); that Apple is certified under the EU–US
+    Data Privacy Framework (`SET-PRIVACY-10`); that it is legal advice (`SET-PRIVACY-12`); that you
+    should check back for updates (`SET-PRIVACY-13`); and anything at all about what deleting the app
+    does to your iCloud data (`SET-PRIVACY-4`).
+15. Check what it **does** say about Apple: that Apple receives the data, that Apple's own
+    sub-processors are described by category rather than named, that where it is stored is Apple's
+    choice, and that no adequacy safeguard is verified (`SET-PRIVACY-9`).
+16. Confirm the notice is in English, and that there is no language picker anywhere
+    (`SET-PRIVACY-11`, `SET-ABSENT-6`).
+17. Sign back in. Tap the delete-all control. Read the button: it says **delete**, not "restart" or
     "OK" (`SET-DELETE-5`). **✗ PWA**
-12. Read the confirmation: it names meals, observations and photos, says it cannot be undone, and
+18. Read the confirmation: it names meals, observations and photos, says it cannot be undone, and
     says that photos you saved to your camera roll are **not** removed
     (`SET-DELETE-3`, `-9`, `-11`). **✗ PWA** on the camera-roll line.
-13. Cancel. Everything is still there (`SET-DELETE-4`).
-14. Tap it again and confirm. You land on first run and are asked for the feeding stage — the same
+19. Cancel. Everything is still there (`SET-DELETE-4`).
+20. Tap it again and confirm. You land on first run and are asked for the feeding stage — the same
     state as a fresh install (`SET-DELETE-8`). The app does not quit (`SET-DELETE-10`).
-15. Complete first run, then check the day view: it is empty (`SET-DELETE-6`).
-16. On a second device signed into the same iCloud account, confirm the records are gone there too
+21. Complete first run, then check the day view: it is empty (`SET-DELETE-6`).
+22. On a second device signed into the same iCloud account, confirm the records are gone there too
     (`SET-DELETE-7`). **✗ PWA** — the reference has no server. Note this is an observation, not a
     guarantee: nothing certifies server-side completion (`SET-DELETE-12`).
-17. Check that a photo you had shared to the camera roll is **still in Photos** — the deletion did
+23. Check that a photo you had shared to the camera roll is **still in Photos** — the deletion did
     not reach it, exactly as the confirmation said (`SET-DELETE-11`).
 
 ---
@@ -524,13 +742,31 @@ pending obligation. Sharpened by two facts: deletion is **not verifiably complet
 (`SET-DELETE-12`), and in `noAccount` she cannot reach her own iCloud data from this app at all, so
 `SET-PRIVACY-3`'s system path is the only route. **No schema deadline.**
 
-**`SET-PRIVACY-2` — the privacy notice.**
-[#709](https://github.com/jirigrill/eczema-helper/issues/709). This section fixes only that Settings
-routes to it. Two things this section hands back to that ticket: the notice's required statement
-that iCloud data survives uninstall is **unsourced in both directions** (`SET-PRIVACY-4`), and
-`encryptedValues` protects **values, never structure** — Core Data stores relationships as plaintext
-foreign keys ([#714](https://github.com/jirigrill/eczema-helper/issues/714)), so any claim about
-what Apple can see needs to be written narrowly.
+**`SET-PRIVACY-14` — notifying her that the notice changed.** WP260 para 29 requires active,
+dedicated notification of substantive changes and bars the "check back regularly" formula outright
+(`SET-PRIVACY-13`), but every modality it names — email, letter, a pop-up on a webpage — assumes a
+channel this app does not have: no email address, no account, no way for the developer to reach her.
+The only available surface is the app on a later launch, which makes it a first-run decision
+([#729](https://github.com/jirigrill/eczema-helper/issues/729)) rather than a Settings one. It must
+not be conflated with re-consent, which EDPB 05/2020 para 110 triggers on the **processing** changing
+considerably rather than on rewording. **No schema deadline**, and it cannot bind the first release,
+which has no previous notice to have changed from.
+
+**The notice's prose, and the consent record's schema.** #709 settled the notice's *rules*; the ~1,500
+words a mother reads are drafting, deliberately not in this section, and mechanical against #694's
+Tier-2 table. Two things it hands forward. The **revision identifier is a persisted field** on the
+consent record (`SET-PRIVACY-6`), so it is deadlined by
+[#730](https://github.com/jirigrill/eczema-helper/issues/730)'s schema — the only schema surface §5
+has, and the reason the "no schema deadlines" note below is narrower than it was. And a **stable
+public URL must exist before the first submission** (`SET-PRIVACY-7`): the App Store Connect field is
+mandatory to submit and **not editable without a version submission**, which puts it in the same
+pre-submission class as the app's real name and trader status.
+
+**What the notice must claim about encryption.** `encryptedValues` protects **values, never
+structure** — Core Data stores relationships as plaintext foreign keys
+([#714](https://github.com/jirigrill/eczema-helper/issues/714)) — so any statement about what Apple
+can see has to be written narrowly. Not an open question so much as a drafting constraint that
+`SET-PRIVACY-9`'s facts must respect: "encrypted" without qualification would overclaim.
 
 **`SET-ICLOUD-6` — a sync-health indicator.**
 [#723](https://github.com/jirigrill/eczema-helper/issues/723) owns whether one exists. Settings is a
@@ -547,10 +783,14 @@ in view. **Owner's call: recorded as a correction on #683 and carried; not reope
 because a future reader of `SET-ABSENT-2` will find that document too and should not have to
 re-litigate it. Full detail: `docs/research/settings-data-deletion.md` §"Contradictions".
 
-**No schema deadlines in this section.** Worth stating explicitly, since a section about deletion
-and sync looks like it should have one. Settings has no schema surface of its own: the feeding stage
-lives outside the store by #691's decision, and every other rule here reads or destroys records the
-persistence section already owns.
+**One schema deadline, arriving with #709.** This section had none when it was written, and the note
+was worth stating because a section about deletion and sync looks like it should. It now has exactly
+one: the **notice revision identifier stored on the consent record** (`SET-PRIVACY-6`), deadlined by
+[#730](https://github.com/jirigrill/eczema-helper/issues/730)'s schema promotion, because
+additive-only promotion means a field never recorded cannot be backfilled — and a consent record
+that cannot name the text she was shown is exactly what EDPB 05/2020 para 108 rules insufficient.
+Every other rule here reads or destroys records the persistence section already owns, and the feeding
+stage lives outside the store by #691's decision.
 
 ---
 
@@ -567,7 +807,12 @@ persistence section already owns.
 - **The consent screen and the refusal path.** [#705](https://github.com/jirigrill/eczema-helper/issues/705)
   settled that consent is one checkbox covering recording and sync, and explicitly left the
   decline-terminal-state unspecified. It is not this section's.
-- **The content of the privacy notice** — [#709](https://github.com/jirigrill/eczema-helper/issues/709).
+- **The content of the privacy notice** — its ~1,500 words of prose. §5 settles the notice's *form*,
+  where it lives, what it may not say, and how a revision is identified; the wording itself is
+  drafting against [#694](https://github.com/jirigrill/eczema-helper/issues/694)'s Tier-2 table.
+- **The App Store Connect listing surface** — the privacy nutrition labels, the domain the policy URL
+  points at, and trader status. `SET-PRIVACY-7` requires the URL to be stable and to serve the same
+  text; which host, and what the labels declare, are submission-time work.
 - **Layout, colour, typography, control shapes and component names.** Rules here constrain what the
   screen does and what it may claim, never how it looks — including whether the stage control is a
   segmented control, a list or chips.
