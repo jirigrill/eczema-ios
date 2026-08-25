@@ -36,7 +36,10 @@ Three things are worth knowing before the rules make sense:
    meals — not from the eligible set alone. This is the difference between a screen that can
    hide her records and one that cannot (§3, Divergence 1).
 3. **It displays nothing derived.** Not a severity, not a count, not a streak. §6 states this as a
-   blanket prohibition rather than leaving it to the absence of features.
+   blanket prohibition rather than leaving it to the absence of features. What the screen *does*
+   show is the content of her records — a time, a region, a note, and whether an entry has photos
+   (`DAY-SKIN-9`) — which is not a derivation, however small; §4 draws that line where #739 settled
+   it.
 
 **How to read this document:** see
 [`skin-observation.md` § How to read this document](skin-observation.md#how-to-read-this-document).
@@ -272,7 +275,9 @@ opens the skin screen in compose for **that day**.
 [#727](https://github.com/jirigrill/eczema-helper/issues/727). It prohibited any photo indicator on
 an observation entry *until `DAY-SKIN-6` was resolved*, and existed only to stop an indicator
 pre-empting the prototype. With placement decided the prohibition has no subject left; the question
-it was holding open is now `DAY-SKIN-9`. The id is **not reused**.
+it was holding open became `DAY-SKIN-9`, and
+[#739](https://github.com/jirigrill/eczema-helper/issues/739) has since answered it the other way —
+an entry **does** mark that it has photos. The id is **not reused**.
 
 **`DAY-SKIN-6` (MUST)** — A day's photos appear in a **day-level photo card below the observation
 list**: a three-column grid of every photo recorded that day, in chronological order, each thumbnail
@@ -317,8 +322,14 @@ hidden or forty**. That is the direct consequence of `DAY-SKIN-8a`, and it is no
 later by softening the prohibition — `DAY-DERIVE-1` is a blanket rule, and the count is the one number
 #715 already dropped from this exact card. The mitigation available is the control's own presence: it
 appears **only** when something is hidden, so its existence is a *presence* mark rather than a
-quantity — the same distinction `DAY-SKIN-9` must work within, and the same one `DAY-DERIVE-3`
-permits.
+quantity — the distinction `DAY-DERIVE-3` permits, because whether this grid is withholding something
+is a fact about the control she is looking at.
+
+> **Narrowed by [#739](https://github.com/jirigrill/eczema-helper/issues/739).** This passage
+> originally added "the same distinction `DAY-SKIN-9` must work within". That extension does not
+> hold: the entry's photo glyph is **record content**, not a mark about the screen, so it sits
+> outside `DAY-DERIVE-3` entirely and never needed the presence-vs-quantity exemption. The claim
+> above stands for *this* control, which is genuinely a screen mark.
 
 **Why a cap, and why this one.** The grid's height is **unbounded** — photos are per *frame* with no
 cap ([#684](https://github.com/jirigrill/eczema-helper/issues/684)) — so growth is the whole problem.
@@ -377,15 +388,79 @@ the cap's only purpose.
 > rule twice: the card heads with `snimkyCs(photos.length)`, and a `+N more` reveal would have
 > reintroduced exactly that quantity under a different name.
 
-**`DAY-SKIN-9` (OPEN)** — Whether an observation entry carries any indicator that it has photos is
-undecided → [#739](https://github.com/jirigrill/eczema-helper/issues/739).
+**`DAY-SKIN-9` (MUST)** — An observation entry that has photos shows a **single glyph** marking that
+it does. One mark per entry, whatever the number of photos or of photographed regions, and it reads
+as "photo" without prior learning — camera-like rather than an abstract dot or hairline.
 
-With photos living day-level, **nothing in the observation list distinguishes an entry that carries
-photos from one that does not** — a note-only entry and an all-calm entry that carries a photo
-(`SKIN-PHOTO-4`) render identically. Previously held closed by the retired `DAY-SKIN-5`, which
-existed only to avoid pre-empting the prototype; resolving placement makes it live. Note the
-tension with `DAY-DERIVE-1`: a *count* is prohibited, so any indicator here would have to be a
-presence mark rather than a quantity.
+Resolved by grilling → [#739](https://github.com/jirigrill/eczema-helper/issues/739); this rule's
+original question answered, not a new rule. The exact icon is layout's, as with `DAY-MEAL-11`'s row
+indication and `DAY-SKIN-2`'s note truncation. What the rule fixes is what she must be able to infer
+without being taught, because a bare dot marks the row without saying why.
+
+**Photo-presence is record content, and `DAY-DERIVE-1` does not reach it.** This rule was framed as
+in tension with that prohibition, resolvable only as a presence mark rather than a quantity. **That
+framing was wrong.** `DAY-SKIN-2` already displays the observation's *note* — content the record
+holds, rendered as-is, and never called derived. Photo-presence is the same class: the record either
+has photos attached or it does not. So an entry shows four kinds of record content — the time, the
+region chips, the note, and photo-presence.
+
+`DAY-DERIVE-1` bans *statements about her day synthesised from her records*: counts, totals, streaks,
+days-since, badges, grading. `DAY-DERIVE-3` permits *marks about the screen* ("this slot is empty").
+This is **neither**, and it is why `DAY-DERIVE-3` is **not amended** — adding photo-presence to its
+enumeration would miscategorise it as chrome. The count remains prohibited by `DAY-DERIVE-1` alone,
+which is why `DAY-SKIN-9a` does not restate it.
+
+**Why a mark at all**, when the grid sits directly below on the same screen and this screen shows
+only what she entered:
+
+- **`SKIN-PHOTO-4`'s all-calm entry.** `SKIN-VIEW-2` insists an all-calm observation is an *explicit*
+  entry, never an omission. Insisting an entry exist and then hiding what it holds is incoherent —
+  and that entry is exactly the one the day-level grid detached from its photo.
+- **The entry is the only route to editing or deleting a photo.** In the reference, tapping an entry
+  opens the skin screen in edit mode, which loads the persisted photos and offers per-photo delete
+  (`skin/+page.svelte:63-92`); `PhotoLightbox` is view-only, `onClose` its only handler. An entry
+  giving no hint it holds photos is the entry she has no reason to open. This holds however
+  `DAY-SKIN-11` resolves.
+
+`DAY-SKIN-7`'s caption already carries photo → entry. This rule closes the missing direction.
+
+**Why the entry and not the region chip.** Photos attach to a *region* (`SKIN-PHOTO-3`), so marking
+the chip would say *which* region was photographed — more information for the same pixels, and
+rejected twice over: an all-calm entry has no region chips at all, so `SKIN-PHOTO-4`'s photo would
+have to hang off the all-calm chip or vanish, breaking the case that motivated the rule; and two
+photographed regions would show two marks, which reads as a quantity. One mark per entry cannot be
+misread as a count, and the grid's caption names the region anyway.
+
+**`DAY-SKIN-9a` (MUST NOT)** — The mark never renders photo content: not a thumbnail, not a crop, not
+a blurred or shrunken frame.
+
+This is the scope boundary of `DAY-SKIN-6`, stated as a rule so it is not rediscovered. Thumbnails
+inside the entry are the shape #727 measured at 642 pt against the grid's 615 pt and **rejected on a
+phone**; reaching them through an "indicator" would reopen settled placement. The line is drawn at
+whether the mark shows photo pixels rather than at a size threshold, so it cannot be gamed by
+shrinking: a 16 pt thumbnail is the worst case available — thumbnail-class conceptually, yet too small
+to show a rash, paying the cost for none of the benefit.
+
+**`DAY-SKIN-9b` (MUST NOT)** — The mark is not a tap target of its own.
+
+The entry is already one tap target opening the skin screen in edit mode (`SKIN-VIEW-4`), which is
+where photos are edited and deleted. A tappable glyph jumping to the photo in the grid would decide
+`DAY-SKIN-11` sideways; the mark is decoration inside the existing target, and `SKIN-VIEW-4` remains
+the only tap behaviour on an entry.
+
+> **⚠ Divergence 10.** *PWA:* no photo indicator on an observation entry —
+> `SkinObservationCard.svelte` contains **zero** photo references, so a note-only entry and an
+> all-calm-with-photo entry render identically in the shipped app, not merely in this spec.
+> Photo-presence surfaces only in the day grid (with the count Divergence 8 drops), in the editor's
+> gallery *after* the entry is opened, and in the view-only lightbox — so her answer to "does this
+> entry have photos?" is *open it and see*. *iOS:* a single glyph on the entry. *Why:* the day-level
+> grid ([#727](https://github.com/jirigrill/eczema-helper/issues/727)) detached photos from their
+> entries, which made the gap a decision rather than an omission; settled by
+> [#739](https://github.com/jirigrill/eczema-helper/issues/739). Class: **new behaviour** — this is
+> the first rule in this section the reference does not implement in any form. Note there is no
+> photo-marker idiom to inherit: `DESIGN.md`'s one parenthetical mention of "photo markers" is a
+> corner-radius rule with no component behind it, so the glyph is chosen rather than matched.
+
 
 **`DAY-SKIN-10` (MUST)** — The caption's time is **derived at render** from the photo's parent
 observation, not stored on the photo record. A photo whose parent cannot be resolved renders its
@@ -506,6 +581,14 @@ first count is always the reasonable one.
 The photo entry is the one that shows where the line actually falls. "There is more below" is about
 the grid; "there are 34 more" is about her day — and the two differ by nothing but a number, which is
 why `DAY-SKIN-8a` states the prohibition at the control rather than relying on this rule to imply it.
+
+**`DAY-SKIN-9` is deliberately not in the list above**, and the omission is the point. The entry's
+photo glyph is **record content** — the same class as the note (`DAY-SKIN-2`), the time and the region
+chips — not a mark about the screen, so it needs no exemption from `DAY-DERIVE-1` and belongs in
+neither rule. Settled by [#739](https://github.com/jirigrill/eczema-helper/issues/739), which found
+the two-category framing (derived vs screen-mark) incomplete rather than the glyph borderline: there
+are **three** kinds of thing on this screen, and only the first is prohibited. Adding the glyph here
+would file her data as chrome.
 Third entry added by [#738](https://github.com/jirigrill/eczema-helper/issues/738); the enumeration is
 closed, so a fourth mark needs a decision, not an inference.
 
@@ -560,6 +643,7 @@ earliest record she has, so it extends backwards on its own as older records arr
 | 7 | §6 `DAY-STAGE-3` | Records are never blanked while the stage is unknown; the PWA flashes a logged day empty. | Defect fixed |
 | 8 | §6 `DAY-DERIVE-1` | The photo count is dropped — the app's only count. | Settled by #715 |
 | 9 | §4 `DAY-SKIN-8` | The photo grid caps at two rows with a countless reveal; the PWA's grid is uncapped. | Resolved by #738 |
+| 10 | §4 `DAY-SKIN-9` | An observation entry shows a glyph when it has photos; the PWA shows nothing. | New behaviour, #739 |
 
 Nine divergences, of which two (5 and 7) are live defects in the shipped PWA and one (2) is a
 data-loss fix inherited from #712.
@@ -587,6 +671,7 @@ data-loss fix inherited from #712.
 | `DAY-SKIN-1`..`-4` | `SkinObservationCard.test.ts`; ordering, chips, all-calm chip, absence of a count at `:244` | **translate** — but see `skin-observation.md` §11, which owns these |
 | `DAY-SKIN-6`, `-7`, `-10` | `SkinPhotoCard.test.ts` — grid presence `:48`, one image per photo `:34`, the `region · time` caption `:101`, distinct times for two photos of one region `:114`, and **both** orphan paths `:132,146` | **translate** the grid, the caption format and the orphan degradation — `-10`'s rule is directly pinned. **Do not translate** the object-URL lifecycle or the count test `:80`, which asserts the count `DAY-DERIVE-1` drops |
 | `DAY-SKIN-8`, `-8a`, `-8b` | none — the reference grid is uncapped, so there is no cap, no reveal control and no collapsed state to assert | **re-derive** entirely. Three assertions have no reference equivalent: that a 7th photo is not rendered collapsed, that the collapsed six are the chronologically **first** six (`-8b`), and that no numeral appears in the control's label in either state (`-8a`) — the last is the regression guard that keeps `+N more` from returning |
+| `DAY-SKIN-9`, `-9a`, `-9b` | none — and the reference asserts the **opposite** by omission: `SkinObservationCard.test.ts` covers ordering, chips, the all-calm chip and the note without ever asserting a photo mark, because the component has none | **re-derive** entirely. Four assertions, all new: that an entry with photos shows the mark and one without does not; that an **all-calm** entry with a photo shows it (`SKIN-PHOTO-4`, the case the rule exists for); that an entry with many photos across several regions shows **exactly one** mark (the count guard); and that the mark renders no image and carries no tap handler (`-9a`, `-9b`) |
 | `DAY-SKIN-11` | `SkinPhotoCard.test.ts:159-208` (lightbox open, × close, backdrop close) | **do not translate yet** — the rule is `OPEN`; these pin the PWA's answer, not a decision |
 | `DAY-EMPTY-3` | `page.test.ts:427`, `MealCard.test.ts:31` (the empty sentence is asserted absent) | **translate** |
 | `DAY-DERIVE-1` | `page.test.ts:290-296` (`task-counter` absent, "parked: daily-completeness") | **translate** — the single most valuable guard on this screen |
@@ -662,16 +747,25 @@ something.
     (`DAY-SKIN-8b`).
 18. On that same heavy day, confirm the meal section is reachable by scrolling, and note that it is
     below the fold — the cap shortens the day, it does not fit it on one screen.
-19. Read the entire screen and confirm there is no number on it that you did not enter yourself: no
+19. Look at the observation list on a day where one entry has photos and another does not: the one
+    with photos carries a small mark, the one without carries none, and you can tell which is which
+    without opening either (`DAY-SKIN-9`). The mark shows **no** picture and **no** number, and
+    tapping it does the same thing as tapping the row — it opens the observation for editing
+    (`DAY-SKIN-9a`, `-9b`). **✗ PWA** — the reference marks nothing.
+20. Attach a photo to an **all-calm** observation and look at its entry. It carries the mark too
+    (`SKIN-PHOTO-4`) — this is the case the rule exists for, and the one that is invisible without
+    it. Then attach several photos across two regions to one observation and confirm the entry still
+    shows **exactly one** mark (`DAY-SKIN-9`). **✗ PWA**
+21. Read the entire screen and confirm there is no number on it that you did not enter yourself: no
     meal count, no streak, no severity for the day, no completeness indicator (`DAY-DERIVE-1`,
     `-2`).
-20. Confirm the feeding stage appears nowhere on this screen and cannot be changed from it
+22. Confirm the feeding stage appears nowhere on this screen and cannot be changed from it
     (`DAY-STAGE-1`, `-2`).
-21. Delete a meal from inside the editor. You return to the day view and the undo appears there
+23. Delete a meal from inside the editor. You return to the day view and the undo appears there
     (`DAY-ROOT-7`). Confirm you cannot delete anything by swiping on the day view itself
     (`DAY-MEAL-10`).
-22. Copy a meal to another day. You land on the **destination** day (`DAY-ROOT-6`).
-23. With the app open on today, add a record from a second device (or wait for one to arrive).
+24. Copy a meal to another day. You land on the **destination** day (`DAY-ROOT-6`).
+25. With the app open on today, add a record from a second device (or wait for one to arrive).
     It appears without you doing anything, and your position on the screen does not move
     (`DAY-LIVE-1`, `-2`).
 
@@ -686,10 +780,13 @@ on paper. `DAY-SKIN-5` is retired with it — the prohibition it held existed on
 prototype unprejudiced. **Three questions opened in its place**, none of which the placement
 prototype tested: whether the uncapped grid limits its visible rows (~~`DAY-SKIN-8`~~ → **closed by
 [#738](https://github.com/jirigrill/eczema-helper/issues/738): two rows, countless reveal**), whether an
-entry indicates it carries photos (`DAY-SKIN-9` →
-[#739](https://github.com/jirigrill/eczema-helper/issues/739)), and what a tap
+entry indicates it carries photos (~~`DAY-SKIN-9`~~ → **closed by
+[#739](https://github.com/jirigrill/eczema-helper/issues/739): a single glyph, no photo content, not a
+tap target**), and what a tap
 does (`DAY-SKIN-11` → [#740](https://github.com/jirigrill/eczema-helper/issues/740)). None is schema
-deadlined; all read records that already exist.
+deadlined; all read records that already exist. **Only the tap question remains open**, and #739
+established that photo-presence is *record content* rather than a derivation — so `DAY-DERIVE-1`
+constrains neither the glyph nor anything else in the group beyond the count it already banned.
 
 **`DAY-NAV-9` — time zones.**
 [#728](https://github.com/jirigrill/eczema-helper/issues/728). Also a prototype, and also **once the
