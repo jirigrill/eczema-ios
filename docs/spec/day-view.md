@@ -292,16 +292,90 @@ came from once the grid has separated them.
 Verified legible rather than assumed: white on a 45%-black scrim measures **8.76:1**, against WCAG
 AA's 4.5:1 for small text. The time is **not** stored on the photo — see `DAY-SKIN-10`.
 
-**`DAY-SKIN-8` (OPEN)** — Whether the grid caps its visible rows, and what affordance reveals the
-rest, is undecided → [#738](https://github.com/jirigrill/eczema-helper/issues/738).
+**`DAY-SKIN-8` (MUST)** — The grid shows at most **two rows** — six thumbnails — and when more
+photos exist that day it carries a control revealing the rest in place. The control names **no
+quantity**: expanded and collapsed labels only, and it toggles both ways.
 
-The grid's height is **unbounded**. Photos are per *frame* with no cap
-([#684](https://github.com/jirigrill/eczema-helper/issues/684)), so every three photos adds roughly
-118 pt. Measured on the prototype (iPhone 17 Pro, 402×874 pt): eight photos cost the grid 397 pt and
-push total content to 725 pt, at which point the meal section's header reaches the screen at 688 pt
-but the card is cut at the bottom edge. `DAY-SKIN-3` puts skin above meals to prioritise skin, not to
-evict meals, so a heavy day is a real tension rather than a hypothetical one. The prototype did not
-test a cap; #727 chose placement only.
+Resolved by prototype → [#738](https://github.com/jirigrill/eczema-helper/issues/738); this rule's
+original question answered, not a new rule. Decided on a phone with all four candidates at five
+photo volumes, which is what made it unanswerable on paper.
+
+**`DAY-SKIN-8a` (MUST NOT)** — The reveal control never displays how many photos are hidden, or how
+many exist. `DAY-DERIVE-1` prohibits it, and the prototype measured that the prohibition is **free**:
+a count-bearing cap and a countless cap produce identical geometry at every volume, collapsed and
+expanded, so the count buys no space and no compactness. It buys only the knowledge it is prohibited
+from giving.
+
+**`DAY-SKIN-8b` (MUST)** — The collapsed grid shows the day's **first** six photos in the
+chronological order `DAY-SKIN-6` fixes. It does not select, rank, or prefer any photo.
+
+Any other choice would be a derived judgement about which photos matter (`DAY-DERIVE-2`), and nothing
+on this screen is allowed to make one.
+
+**The cost this rule accepts.** From the collapsed state she **cannot tell whether one photo is
+hidden or forty**. That is the direct consequence of `DAY-SKIN-8a`, and it is not a defect to be fixed
+later by softening the prohibition — `DAY-DERIVE-1` is a blanket rule, and the count is the one number
+#715 already dropped from this exact card. The mitigation available is the control's own presence: it
+appears **only** when something is hidden, so its existence is a *presence* mark rather than a
+quantity — the same distinction `DAY-SKIN-9` must work within, and the same one `DAY-DERIVE-3`
+permits.
+
+**Why a cap, and why this one.** The grid's height is **unbounded** — photos are per *frame* with no
+cap ([#684](https://github.com/jirigrill/eczema-helper/issues/684)) — so growth is the whole problem.
+Measured on the #738 prototype (iPhone 17 Pro, 402×874 pt, 724 pt viewport, spike chrome excluded).
+Every figure is the offset at which the meal section's header lands in the scroll content, so lower is
+better:
+
+| Photos | Uncapped | Capped, collapsed | Capped, expanded | Inner-scroll card |
+| --- | --- | --- | --- | --- |
+| 8 | 687 ✅ | 623 ✅ | 741 | 687 ✅ |
+| 10 | 805 | 623 ✅ | 859 | 701 ✅ |
+| 14 | 923 | 623 ✅ | 977 | 701 ✅ |
+| 27 | 1395 | 623 ✅ | 1449 | 701 ✅ |
+| 60 | 2693 | 623 ✅ | 2747 | 701 ✅ |
+
+✅ = the meal header is above the fold without scrolling.
+
+Four findings, each of which constrains something:
+
+- **The crossover is between 8 and 10 photos** — one 118 pt row, exactly the estimate #727 handed
+  forward. Uncapped, the meal section leaves the screen at the **4th row**, which is a plausible day
+  rather than a pathological one. This is what makes a cap worth its cost.
+- **Content exceeds the viewport in every configuration measured** — all 30 cells, including capped,
+  collapsed, 8 photos (853 pt against 724 pt). The skin card alone already overflows. So the cap
+  decides **how far down meals land, never whether she scrolls**, and no rule here should be read as
+  promising a single-screen day.
+- **`DAY-DERIVE-1` costs nothing here**, which `DAY-SKIN-8a` records.
+- **An expanded cap is 54 pt worse than never capping** (741 vs 687 at 8 photos; 2747 vs 2693 at 60)
+  — the 44 pt tap target plus spacing. A cap she expands on every visit is paid for twice. This is
+  the cap's real risk, and it is a usage question the simulator cannot answer.
+
+**The two candidates that lost.** *No cap* was measured and rejected: it is the only candidate whose
+cost grows without bound, and it fails at a volume a single bad day reaches. *A card of bounded
+height that scrolls internally* held meals at 701 pt even at 60 photos — the **best** number in the
+table — and was still declined: it nests a scroll view inside a scroll view and leaves the grid with
+no edge to reach. That is a feel judgement, made on the phone, and it is the reason the decision
+needed a device rather than this table.
+
+**What the cap does not settle.** The volumes above are stated as counts, not as evidence about real
+days: 8 is #727's fixture and 60 is chosen to show the shape a year of scrolling must survive.
+**Nobody has photographed a flare-up day** — the app has no users — so how often the reveal is tapped
+is unmeasured, and that frequency is what decides whether the 54 pt is well spent. Worth revisiting
+from real use rather than re-deciding on a simulator.
+
+**Two rows, not three.** Two rows put the meal header at 623 pt against a 724 pt viewport, leaving
+about 100 pt of the meal card on screen — enough that the section reads as present rather than as an
+edge. A third row costs 118 pt and would place the header at 741 pt, below the fold, which defeats
+the cap's only purpose.
+
+> **⚠ Divergence 9.** *PWA:* the grid is **uncapped** and has no reveal control — every photo of the
+> day renders (`SkinPhotoCard.svelte:47-70`), which is how the meal section comes to be cut at the
+> bottom edge on an eight-photo day. *iOS:* two rows with a countless in-place reveal. *Why:* chosen
+> by prototype ([#738](https://github.com/jirigrill/eczema-helper/issues/738)) over no cap and over an
+> internally-scrolling card. Class: **resolved by #738**. Note this is the second thing the PWA's
+> photo card loses on the way across, after the count (Divergence 8) — and that the two are the same
+> rule twice: the card heads with `snimkyCs(photos.length)`, and a `+N more` reveal would have
+> reintroduced exactly that quantity under a different name.
 
 **`DAY-SKIN-9` (OPEN)** — Whether an observation entry carries any indicator that it has photos is
 undecided → [#739](https://github.com/jirigrill/eczema-helper/issues/739).
@@ -421,12 +495,19 @@ product.
 
 **`DAY-DERIVE-3` (MUST)** — Marks that describe the *screen* rather than her records are not
 "derived" in the sense of `DAY-DERIVE-1`, and are permitted: whether a row currently holds a meal
-(`DAY-MEAL-11`), and the add control's marking of meal types already logged that day (`DAY-ROOT-2`).
+(`DAY-MEAL-11`), the add control's marking of meal types already logged that day (`DAY-ROOT-2`), and
+the photo grid's reveal control, which appears only when the grid is hiding something (`DAY-SKIN-8`).
 
 The distinction is what the mark is *about*. "This slot is empty" is a fact about the control she is
 looking at. "You logged three meals today" is a statement about her day, and the moment a number
 appears it acquires a meaning she never recorded. `DAY-DERIVE-1` is the blanket rule because the
 first count is always the reasonable one.
+
+The photo entry is the one that shows where the line actually falls. "There is more below" is about
+the grid; "there are 34 more" is about her day — and the two differ by nothing but a number, which is
+why `DAY-SKIN-8a` states the prohibition at the control rather than relying on this rule to imply it.
+Third entry added by [#738](https://github.com/jirigrill/eczema-helper/issues/738); the enumeration is
+closed, so a fourth mark needs a decision, not an inference.
 
 ---
 
@@ -478,8 +559,9 @@ earliest record she has, so it extends backwards on its own as older records arr
 | 6 | §5 `DAY-EMPTY-4` | The permanent bottom hint is removed. | Owner's call, #715 |
 | 7 | §6 `DAY-STAGE-3` | Records are never blanked while the stage is unknown; the PWA flashes a logged day empty. | Defect fixed |
 | 8 | §6 `DAY-DERIVE-1` | The photo count is dropped — the app's only count. | Settled by #715 |
+| 9 | §4 `DAY-SKIN-8` | The photo grid caps at two rows with a countless reveal; the PWA's grid is uncapped. | Resolved by #738 |
 
-Eight divergences, of which two (5 and 7) are live defects in the shipped PWA and one (2) is a
+Nine divergences, of which two (5 and 7) are live defects in the shipped PWA and one (2) is a
 data-loss fix inherited from #712.
 
 ---
@@ -504,6 +586,7 @@ data-loss fix inherited from #712.
 | `DAY-MEAL-10` | `MealCard.test.ts:130` (no swipe or long-press handlers) | **translate** as an absence check |
 | `DAY-SKIN-1`..`-4` | `SkinObservationCard.test.ts`; ordering, chips, all-calm chip, absence of a count at `:244` | **translate** — but see `skin-observation.md` §11, which owns these |
 | `DAY-SKIN-6`, `-7`, `-10` | `SkinPhotoCard.test.ts` — grid presence `:48`, one image per photo `:34`, the `region · time` caption `:101`, distinct times for two photos of one region `:114`, and **both** orphan paths `:132,146` | **translate** the grid, the caption format and the orphan degradation — `-10`'s rule is directly pinned. **Do not translate** the object-URL lifecycle or the count test `:80`, which asserts the count `DAY-DERIVE-1` drops |
+| `DAY-SKIN-8`, `-8a`, `-8b` | none — the reference grid is uncapped, so there is no cap, no reveal control and no collapsed state to assert | **re-derive** entirely. Three assertions have no reference equivalent: that a 7th photo is not rendered collapsed, that the collapsed six are the chronologically **first** six (`-8b`), and that no numeral appears in the control's label in either state (`-8a`) — the last is the regression guard that keeps `+N more` from returning |
 | `DAY-SKIN-11` | `SkinPhotoCard.test.ts:159-208` (lightbox open, × close, backdrop close) | **do not translate yet** — the rule is `OPEN`; these pin the PWA's answer, not a decision |
 | `DAY-EMPTY-3` | `page.test.ts:427`, `MealCard.test.ts:31` (the empty sentence is asserted absent) | **translate** |
 | `DAY-DERIVE-1` | `page.test.ts:290-296` (`task-counter` absent, "parked: daily-completeness") | **translate** — the single most valuable guard on this screen |
@@ -571,18 +654,24 @@ something.
     in a three-column grid, captioned with its region and the observation's time (`DAY-SKIN-6`,
     `-7`). Confirm **no** count of photos appears anywhere on the day view (`DAY-DERIVE-1`,
     Divergence 8). **✗ PWA**
-16. Record eight or more photos across the day. Note where the meal section lands and whether it is
-    reachable — the grid is uncapped, and `DAY-SKIN-8` is the open question this observation feeds.
-16. Read the entire screen and confirm there is no number on it that you did not enter yourself: no
+16. Record seven or more photos across the day. The grid shows **six**, in two rows, and a control
+    offering the rest. Read that control closely: it names **no number** (`DAY-SKIN-8`, `-8a`).
+    **✗ PWA** — the reference shows every photo and has no control at all.
+17. Tap it. The rest appear in place, and the control now offers to collapse again; tap it and you are
+    back to six. Confirm the six shown collapsed are the **earliest** six of the day, not a selection
+    (`DAY-SKIN-8b`).
+18. On that same heavy day, confirm the meal section is reachable by scrolling, and note that it is
+    below the fold — the cap shortens the day, it does not fit it on one screen.
+19. Read the entire screen and confirm there is no number on it that you did not enter yourself: no
     meal count, no streak, no severity for the day, no completeness indicator (`DAY-DERIVE-1`,
     `-2`).
-17. Confirm the feeding stage appears nowhere on this screen and cannot be changed from it
+20. Confirm the feeding stage appears nowhere on this screen and cannot be changed from it
     (`DAY-STAGE-1`, `-2`).
-18. Delete a meal from inside the editor. You return to the day view and the undo appears there
+21. Delete a meal from inside the editor. You return to the day view and the undo appears there
     (`DAY-ROOT-7`). Confirm you cannot delete anything by swiping on the day view itself
     (`DAY-MEAL-10`).
-19. Copy a meal to another day. You land on the **destination** day (`DAY-ROOT-6`).
-20. With the app open on today, add a record from a second device (or wait for one to arrive).
+22. Copy a meal to another day. You land on the **destination** day (`DAY-ROOT-6`).
+23. With the app open on today, add a record from a second device (or wait for one to arrive).
     It appears without you doing anything, and your position on the screen does not move
     (`DAY-LIVE-1`, `-2`).
 
@@ -595,9 +684,10 @@ something.
 over.** Decided on a phone with all three candidates side by side, which is what made it unanswerable
 on paper. `DAY-SKIN-5` is retired with it — the prohibition it held existed only to keep the
 prototype unprejudiced. **Three questions opened in its place**, none of which the placement
-prototype tested: whether the uncapped grid limits its visible rows (`DAY-SKIN-8` →
-[#738](https://github.com/jirigrill/eczema-helper/issues/738)), whether an entry indicates it carries
-photos (`DAY-SKIN-9` → [#739](https://github.com/jirigrill/eczema-helper/issues/739)), and what a tap
+prototype tested: whether the uncapped grid limits its visible rows (~~`DAY-SKIN-8`~~ → **closed by
+[#738](https://github.com/jirigrill/eczema-helper/issues/738): two rows, countless reveal**), whether an
+entry indicates it carries photos (`DAY-SKIN-9` →
+[#739](https://github.com/jirigrill/eczema-helper/issues/739)), and what a tap
 does (`DAY-SKIN-11` → [#740](https://github.com/jirigrill/eczema-helper/issues/740)). None is schema
 deadlined; all read records that already exist.
 
@@ -612,7 +702,11 @@ instant, so either resolution is expressible in the shape that ships.
 [#723](https://github.com/jirigrill/eczema-helper/issues/723): no positive indicator exists, on any
 screen.** `settings.md` `SET-SYNC-1` makes it a prohibition rather than an absence — no API can report
 that the store is synchronised, so a "synced" mark would assert what cannot be known. The day view is
-therefore **not** a host for one, and `DAY-DERIVE-3`'s enumeration of permitted marks stands unamended.
+therefore **not** a host for one, and `DAY-DERIVE-3`'s enumeration of permitted marks gained nothing
+from #723. (It has since gained a third entry from
+[#738](https://github.com/jirigrill/eczema-helper/issues/738) — the photo grid's reveal control — which
+does not disturb this: a sync mark is still prohibited, and for a different reason, that it would
+assert what cannot be known rather than what she did not record.)
 What can reach this screen is a **failure** banner, and only under two conditions: a persistent upload
 failure (`SET-SYNC-5`), or a failed download while the store is empty (`SET-SYNC-6`) — the
 [#712](https://github.com/jirigrill/eczema-helper/issues/712) case where an empty screen reads as total
