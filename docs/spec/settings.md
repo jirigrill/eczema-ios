@@ -4,7 +4,7 @@
 [#723](https://github.com/jirigrill/eczema-helper/issues/723) and **awaits the owner's confirmation on
 five of its nine decisions** — the diagnostic log's shape, the banner/Settings split, the 24-hour
 threshold, the quota copy, and the two timestamps. The four the owner has settled are marked in §4.1's
-own note. Written against the format settled by
+own note. §3's `SET-DELETE-13`..`-21` are **owner-confirmed** (#733, eight answers). Written against the format settled by
 [#682](https://github.com/jirigrill/eczema-helper/issues/682) — see
 [`TEMPLATE.md`](TEMPLATE.md) for the rules, and
 [`skin-observation.md`](skin-observation.md) for the worked example.
@@ -13,8 +13,10 @@ own note. Written against the format settled by
 §4.1 has **no behavior reference** — the PWA has no sync of any kind.
 **Resolves:** [#716](https://github.com/jirigrill/eczema-helper/issues/716) on the transition map
 [#672](https://github.com/jirigrill/eczema-helper/issues/672),
-[#709](https://github.com/jirigrill/eczema-helper/issues/709) (§5, the privacy notice's form), and
-[#723](https://github.com/jirigrill/eczema-helper/issues/723) (§4.1, sync health).
+[#709](https://github.com/jirigrill/eczema-helper/issues/709) (§5, the privacy notice's form),
+[#723](https://github.com/jirigrill/eczema-helper/issues/723) (§4.1, sync health), and
+[#733](https://github.com/jirigrill/eczema-helper/issues/733) (§3 `SET-DELETE-13`..`-21`, deletion
+that cannot reach the server).
 
 ## Overview
 
@@ -32,7 +34,7 @@ This document states what the screen does, in English, without reference to Swif
 SwiftData, Svelte, Dexie, or the Czech interface. Swift tests are derived from the numbered rules;
 the owner's acceptance pass is derived from §9.
 
-Four things are worth knowing before the rules make sense:
+Six things are worth knowing before the rules make sense:
 
 1. **The feeding stage governs what may be *created*, never what is *shown*, and a change is never
    retroactive.** [INV-14](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-14)
@@ -54,6 +56,12 @@ Four things are worth knowing before the rules make sense:
    as an absence, because no Apple API can report that the store is synchronised — only that one
    operation finished at one moment. The app speaks up on **persistent** failure and says nothing
    otherwise, which is the opposite of what most CloudKit apps do and is deliberate.
+6. **The deletion control never refuses, and its degraded path is disclosed rather than hidden.** §3's
+   deletion is **two** operations against two different stores — the zone in her iCloud and the store
+   on the phone — and only the second always works. `SET-DELETE-13`..`-21` settle that the second
+   proceeds regardless, that ordinary queued deletions carry the first when the account is later
+   reachable, and that the app says so plainly instead of implying a completeness the platform will
+   never confirm.
 
 **How to read this document:** see
 [`skin-observation.md` § How to read this document](skin-observation.md#how-to-read-this-document).
@@ -82,7 +90,7 @@ screen and is cited by heading: _Actor_ (the stage → actors mapping) under § 
 
 This is not a 1:1 port. Per [#690](https://github.com/jirigrill/eczema-helper/issues/690),
 **coherence is presumed right**: where the reference implementation does two different things, the
-port takes the coherent rule, and *keeping* a wart needs a named reason. There are **nine**, marked
+port takes the coherent rule, and *keeping* a wart needs a named reason. There are **ten**, marked
 inline and indexed in §8. Most of this section has no PWA counterpart at all, so the divergence
 count is a poor measure of how much changed here — §9's "rules nothing verifies today" is the
 honest one.
@@ -289,11 +297,110 @@ and the zone deletion are two operations with no shared transaction
 (`docs/research/settings-data-deletion.md` §D). Copy may state what was requested; it may not
 certify an outcome the platform will not report.
 
-**`SET-DELETE-13` (OPEN)** — What the control does when it cannot reach the server — she is offline,
-or in a degraded account state — is undecided → **[new ticket, §10]**. The local wipe can always
-proceed; the zone deletion cannot. Whether the control refuses, proceeds locally and completes
-later, or proceeds and says so, is a real product call with a privacy edge: in `noAccount` she
-cannot reach her own iCloud data from this app at all. **No schema deadline.**
+**`SET-DELETE-13` (MUST)** — The control never refuses. Whatever the account state, and with or
+without a network, accepting the confirmation destroys her records on this phone.
+
+Settled by [#733](https://github.com/jirigrill/eczema-helper/issues/733). An erasure right that a
+basement can block is not a right. The decisive case is `restricted`, which Apple documents as
+**nonrecoverable** — refusing there would not defer the deletion, it would forbid it permanently, on
+a phone whose state she has no way to fix. This is an Art. 17 surface and #705's Art. 7(3)
+withdrawal route, so availability is the property that matters most about it.
+
+**`SET-DELETE-14` (MUST)** — The deletion is carried out in two parts, in this order: her records'
+zone in iCloud is deleted first, then the store on the phone is wiped — **and the local wipe happens
+whether or not the first part succeeded.**
+
+Apple's order, from its own recipe: enumerate the private database's zones and delete them
+(*Responding to Requests to Delete Data*). Taking the server first avoids a gap that has no
+documented answer — what mirroring does with queued deletes aimed at a zone that no longer exists is
+`NOT FOUND` in both directions (`docs/research/settings-data-deletion.md` §D.4), and a silent zone
+re-creation would be the worst outcome available here. Never gating the local wipe on the result is
+what collapses failure into the path `SET-DELETE-16` already specifies: there is one degraded path,
+not one for offline and another for a server error.
+
+**`SET-DELETE-15` (MUST)** — The local wipe deletes her records **through the store**, as ordinary
+deletions, so that the deletions themselves are queued for upload by normal mirroring.
+
+This is the mechanism that makes `SET-DELETE-16` work without new persisted state. Apple documents
+deletes as ordinary exportable work — *"the user creates, updates, or **deletes** a managed
+object… When its managed object context saves changes to the store, Core Data creates a background
+task… uploading it to CloudKit"* — so a deletion requested with no account is carried by the same
+machinery that carries a meal, and completes when the account is next reachable.
+
+The alternative was a wipe that destroys the store outright plus a durable pending-deletion marker
+to drive a retry. It is **rejected**, and the reason is a deadline rather than a preference: such a
+marker is a persisted field, and additive-only schema promotion
+([#679](https://github.com/jirigrill/eczema-helper/issues/679)) means a field absent at first
+production promotion can never be backfilled ([#691](https://github.com/jirigrill/eczema-helper/issues/691)).
+This section takes on **no schema deadline**, which it could not have avoided under that design.
+
+> **Correction to a premise, recorded because it is the reason no marker is needed.** #733 was
+> written believing that a local wipe destroys the app's *handle* on the iCloud copy — *"it has just
+> destroyed its own handle on them"* — and that a marker is therefore unavoidable. That is wrong:
+> Apple's recipe enumerates zones **server-side**, from the account
+> (`fetchAllRecordZones`, then `CKModifyRecordZonesOperation` — §D.1). The handle is the account, not
+> the local store, so wiping the phone never orphans the zone, and `SET-PRIVACY-3`'s system route
+> stays available regardless.
+
+**`SET-DELETE-16` (MUST)** — When the zone deletion did not succeed — she is offline, the account is
+degraded, or the call failed — the app states plainly that the copy in her iCloud is **still there
+now**, and that it is removed when the phone next reaches her account.
+
+This is the disclosure half. `SET-DELETE-12` is a prohibition and cannot by itself require the app to
+say anything; without this rule the honest case would be unspoken. Note what the app knows here, which
+is more than `SET-DELETE-12`'s general uncertainty: not merely that completion is unconfirmed, but
+that the server side has **not started**.
+
+**`SET-DELETE-17` (MUST)** — In that same case, the copy names the two things she can do: **open the
+app once more while online**, which lets the queued deletion complete, and the **system deletion
+path** (`SET-PRIVACY-3`), which does not depend on this app at all.
+
+She is the only actor who can close this window, and it is a real one: she wipes, lands on first run,
+deletes the app, and the queued deletions never flush — the iCloud copy then survives with no in-app
+route left. Nothing detects this, because the app **cannot tell whether the queued deletions have
+flushed**: no API distinguishes "not yet exported" from "exported"
+(`docs/research/cloudkit-unavailable-behavior.md`), and `SET-SYNC-12`'s last-upload timestamp is a
+proxy, not an answer. One sentence closes the window; withholding it would leave her the harder route
+and not the easy one.
+
+**`SET-DELETE-18` (MUST)** — In `noAccount`, the copy **leads with** the system deletion path, and
+presents the in-app wipe as the part that clears this phone.
+
+The one state where the ordering changes, because it is the state where the in-app control is
+weakest: with no account she cannot reach her own iCloud data from this app at all, so
+`SET-PRIVACY-3`'s route is not an alternative, it is the only thing that works. Uniform copy would
+bury the working path exactly where it is needed. The local wipe is still offered — withholding it
+would be `SET-DELETE-13`'s refusal by another name.
+
+**`SET-DELETE-19` (MUST)** — A zone deletion that fails while the account **is** reachable is treated
+exactly as the unreachable case: same disclosure, same two remedies.
+
+No branching on the error. She can act on no `CKError` code, and the remedy is identical either way.
+The failure is also more likely to be partial than clean: in a custom zone *"the system processes all
+items in an operation atomically"*, so per-item failures cascade to `batchRequestFailed` (§D.4) —
+"the zone is partly deleted" is not a state worth describing to a mother. What must **not** happen is
+treating reachable-but-failed as success on the grounds that mirroring will carry the deletions
+anyway; that would certify an outcome `SET-DELETE-12` forbids certifying.
+
+**`SET-DELETE-20` (MUST)** — The outcome of the zone-deletion call — success, or the failure's full
+detail — is captured to the diagnostic log of `SET-SYNC-10`, with no user-facing surface.
+
+`SET-SYNC-10` as written covers **mirroring events**; a zone deletion is a direct CloudKit call and
+falls outside it, which is why this rule exists rather than being implied. It is the only
+capture-by-omission risk left in this section: a silent failure of the app's single erasure control
+would otherwise be unreconstructible afterwards, and this control is the one whose failure has a
+regulatory consequence. `SET-SYNC-11`'s prohibition continues to hold — captured, never displayed,
+never shared. No schema deadline: the log is local, unsynced and freely reshapeable.
+
+**`SET-DELETE-21` (MUST NOT)** — The destructive confirmation does not wait indefinitely on the
+network. If the zone deletion has not returned within a few seconds, the local wipe proceeds and
+`SET-DELETE-16`'s disclosure is shown.
+
+The corollary of `SET-DELETE-14`'s ordering. Apple describes sync as running on a *"natural cadence"*
+and offers no latency guarantee, so an ungated wait would hold a destructive action open on the water
+cycle — and a confirmation that appears to hang is read as a broken app, at the worst possible moment.
+The bound belongs in the spec because "wait for the server" is otherwise the obvious reading of
+`SET-DELETE-14`.
 
 ---
 
@@ -777,8 +884,9 @@ delete-all control could not have lived there even if that had been wanted.
 | 7 | §5 `SET-PRIVACY-4` | The notice states the deletion path but never what uninstalling does, overriding #705's requirement to state it. | Settled by #709 |
 | 8 | §4.1 `SET-SYNC-1` | The app never reports healthy sync, and the prohibition is numbered rather than left as an absence. | Settled by #723 |
 | 9 | §4.1 `SET-SYNC-7`, `-8` | Quota exhaustion is named only as a *likely* cause, because it is undetectable through the mirroring API. | Forced by platform |
+| 10 | §3 `SET-DELETE-14`..`-21` | The deletion is two operations with a disclosed degraded path, and the local wipe deletes through the store so mirroring carries it. | Forced by platform |
 
-Nine divergences, of which two (1 and 4) correct copy that is misleading in the shipped PWA today.
+Ten divergences, of which two (1 and 4) correct copy that is misleading in the shipped PWA today.
 The count understates the change: §4, §5 and most of §7 have **no PWA counterpart at all**, so they
 are not divergences from the reference — they are new behavior the reference never had a reason to
 express. Divergences 6 and 7 are the clearest case: the PWA has **no privacy notice whatsoever** — no
@@ -808,6 +916,9 @@ map*, not from the reference implementation.
 | `SET-DELETE-7` | none, and none is possible in the reference — there is no server | **re-derive** |
 | `SET-DELETE-8` | `page.test.ts:80-98` asserts navigation only once the settings signal flips — a `liveQuery` race guard | **do not translate** (Divergence 3); re-derive the landing state alone |
 | `SET-DELETE-9`..`-13` | none | **re-derive** |
+| `SET-DELETE-14`, `-15`, `-21` | none, and none is possible in the reference — there is no server and no queue | **re-derive**; all three are testable without CloudKit, by asserting call order, that the local wipe runs on a failed first part, that deletions go through the store rather than destroying it, and that the wait is bounded |
+| `SET-DELETE-16`..`-19` | none | **re-derive** as copy assertions per account state; `-19` is the one to write deliberately, since treating reachable-but-failed as success is the plausible implementation slip |
+| `SET-DELETE-20` | none | **re-derive** — assert a failed zone deletion lands in the diagnostic log with full detail, and that no screen reads it (`SET-SYNC-11`) |
 | `SET-ICLOUD-1`..`-5` | none | **re-derive** |
 | `SET-SYNC-1`..`-12` | none, and none is possible in the reference — the PWA has no sync of any kind | **re-derive**; `-2` is the one to write first, and it is testable without CloudKit by feeding the handler a synthetic in-flight event |
 | `SET-PRIVACY-1`..`-4` | none | **re-derive** |
@@ -837,6 +948,13 @@ Most of this section, and the reasons differ in a way worth separating.
 - **Server-side deletion (`SET-DELETE-7`, `-12`).** Cannot be verified even in principle by a unit
   test, and Apple exposes no API that reports completion. The acceptance pass is the only check, and
   it is an observation rather than an assertion.
+- **The deletion's degraded path (`SET-DELETE-13`..`-21`).** Splits cleanly, and the split is worth
+  respecting. The **mechanism** is unit-testable with no CloudKit at all, by injecting a failing
+  zone-deletion: call order, the local wipe running anyway, deletions going through the store, the
+  bounded wait, and the log capture are all assertions. The **completion** is not testable by anyone —
+  whether the queued deletions ever flush is precisely what no API reports, so `SET-DELETE-17`'s
+  instruction to her is load-bearing rather than belt-and-braces. Write the mechanism tests; observe
+  the rest in the acceptance pass.
 - **The absences (`SET-ABSENT-*`).** Testing that a feature does not exist reads as absurd until it
   is the third release and someone adds a helpful "Back up now" button. `docs/spec/day-view.md`
   found the reference's own best guard to be exactly this shape — a regression test asserting a
@@ -940,19 +1058,47 @@ something.
 30. Verification of `SET-SYNC-10`..`-12` is not a manual step — the diagnostic log has no surface
     (`SET-SYNC-11`). Confirm from the code and its tests that a failure is captured with full error
     detail at notification time, and that the two success timestamps are recorded.
+31. Now the degraded deletion, and it needs records worth deleting — log a few meals with photos
+    first. Turn on airplane mode, then tap the delete-all control and confirm. It **works**: nothing
+    refuses, nothing is greyed out, and you land on first run with the phone's records gone
+    (`SET-DELETE-13`). Note how long it took — it must not hang waiting for the network
+    (`SET-DELETE-21`).
+32. Read what it told you: that the copy in your iCloud is **still there now**, that it is removed
+    when the phone is next online, and both remedies — open the app again with signal, and Apple's own
+    route in iOS Settings (`SET-DELETE-16`, `-17`). It must not say the iCloud data has been deleted
+    (`SET-DELETE-12`).
+33. Restore the network and open the app. On a second device signed into the same account, the records
+    disappear — the queued deletions flushed (`SET-DELETE-15`). Timing is Apple's, so give it minutes,
+    not seconds; this is an observation, and there is no signal that says it finished.
+34. Repeat 31 signed **out** of iCloud entirely. Same outcome, but the copy now **leads with** Apple's
+    system deletion path and presents the local wipe as the part that clears this phone
+    (`SET-DELETE-18`). This is the state where the in-app control alone cannot finish the job, and the
+    step exists to check the app says so.
+35. Follow that system path in iOS Settings and confirm it reaches this app's data
+    (`SET-PRIVACY-3`) — the route the app just recommended, walked once so it is known to exist.
+36. Optional but valuable, and it needs a developer build: force the zone deletion to fail while
+    online. The deletion still completes locally and you see **the same** copy as step 32, not an
+    error code (`SET-DELETE-19`). Then confirm from the log that the failure was captured with full
+    detail (`SET-DELETE-20`).
 
 ---
 
 ## 10. Open questions
 
-**`SET-DELETE-13` — deletion that cannot reach the server.** New ticket. The local wipe can always
-proceed; the zone deletion needs a reachable account. Three shapes: refuse until reachable, wipe
-locally and complete the server side later, or wipe and say plainly that iCloud data remains. Each
-has a cost — the first blocks an erasure right on a connectivity problem, the second leaves a window
-where a full copy exists in iCloud that the app can no longer see, the third asks a mother to hold a
-pending obligation. Sharpened by two facts: deletion is **not verifiably complete** in any case
-(`SET-DELETE-12`), and in `noAccount` she cannot reach her own iCloud data from this app at all, so
-`SET-PRIVACY-3`'s system path is the only route. **No schema deadline.**
+**`SET-DELETE-13` is settled** — resolved by
+[#733](https://github.com/jirigrill/eczema-helper/issues/733) as `SET-DELETE-13`..`-21` in §3, and no
+longer open. The control **never refuses**; the zone deletion is attempted first and the local wipe
+proceeds regardless; the deletions go through the store so mirroring carries them when the account is
+next reachable; and the degraded case is disclosed, with the system deletion path and *open the app
+once more while online* named as the two remedies. **Still no schema deadline** — deliberately, since
+the rejected alternative (destroy the store outright plus a durable pending-deletion marker) would
+have created one that additive-only promotion makes permanent.
+
+One gap the resolution names rather than closes: the app **cannot tell whether the queued deletions
+have flushed**. No API distinguishes "not yet exported" from "exported"
+(`docs/research/cloudkit-unavailable-behavior.md`), so `SET-DELETE-17`'s instruction to her is the
+mechanism, and there is no supervisory check behind it. That is a platform limit, not an unmade
+decision.
 
 **`SET-PRIVACY-14` — notifying her that the notice changed.** WP260 para 29 requires active,
 dedicated notification of substantive changes and bars the "check back regularly" formula outright
@@ -1002,14 +1148,22 @@ in view. **Owner's call: recorded as a correction on #683 and carried; not reope
 because a future reader of `SET-ABSENT-2` will find that document too and should not have to
 re-litigate it. Full detail: `docs/research/settings-data-deletion.md` §"Contradictions".
 
-**One schema deadline, arriving with #709.** This section had none when it was written, and the note
-was worth stating because a section about deletion and sync looks like it should. It now has exactly
-one: the **notice revision identifier stored on the consent record** (`SET-PRIVACY-6`), deadlined by
+**One schema deadline, arriving with #709 — and #733 declined to add a second.** This section had none
+when it was written, and the note was worth stating because a section about deletion and sync looks
+like it should. It now has exactly one: the **notice revision identifier stored on the consent record**
+(`SET-PRIVACY-6`), deadlined by
 [#730](https://github.com/jirigrill/eczema-helper/issues/730)'s schema promotion, because
 additive-only promotion means a field never recorded cannot be backfilled — and a consent record
 that cannot name the text she was shown is exactly what EDPB 05/2020 para 108 rules insufficient.
 Every other rule here reads or destroys records the persistence section already owns, and the feeding
 stage lives outside the store by #691's decision.
+
+The second was avoidable and was avoided. #733's degraded-deletion path could have been built on a
+durable pending-deletion marker — a persisted field, and therefore a deadline on the same promotion.
+`SET-DELETE-15` uses ordinary queued deletions instead, so the retry mechanism is the platform's
+rather than the schema's. Worth recording as a decision rather than an absence: the marker design is
+the one that reads as more careful, and it is the one that would have put a permanent field in the
+schema for a branch that only fires when the account is unreachable.
 
 ---
 
@@ -1022,7 +1176,11 @@ stage lives outside the store by #691's decision.
 - **The day view**, including how a stage change becomes visible there.
   [`day-view.md`](day-view.md) owns `DAY-STAGE-1`/`-2`/`-3` and `DAY-MEAL-2`/`-3`.
 - **The persistence model** — the SwiftData schema, CloudKit configuration, `encryptedValues` field
-  list, dedupe, and the zone-deletion mechanics `SET-DELETE-7` requires.
+  list, dedupe, and the zone-deletion mechanics `SET-DELETE-7` requires. §3 now fixes the *order* of
+  the two deletions and that the local one goes through the store (`SET-DELETE-14`, `-15`); how the
+  zone is enumerated and deleted, and how a store-wide delete-through-the-context is performed, remain
+  [#730](https://github.com/jirigrill/eczema-helper/issues/730)'s. §3 takes on **no schema surface** —
+  the rejected pending-deletion marker was the only candidate.
 - **Where the sync-event observer lives, and what purges persistent history.** §4.1 says what the app
   tells her and what it must capture; the notification subscription, the diagnostic log's storage, and
   the purge gated on `SET-SYNC-12`'s upload timestamp are
