@@ -24,7 +24,7 @@ owns them. Area-local terms stay in each section's own §1 Vocabulary table.
 | --- | --- |
 | [`skin-observation.md`](skin-observation.md) | Written — the template section |
 | [`day-view.md`](day-view.md) | Written; 1 **OPEN** rule — time zones ([#728](https://github.com/jirigrill/eczema-helper/issues/728)). The photo group is fully settled: placement ([#727](https://github.com/jirigrill/eczema-helper/issues/727)), grid growth ([#738](https://github.com/jirigrill/eczema-helper/issues/738)), per-entry indicator ([#739](https://github.com/jirigrill/eczema-helper/issues/739)) and thumbnail tap ([#740](https://github.com/jirigrill/eczema-helper/issues/740)) |
-| First run and feeding stage | Not written; see [#712](https://github.com/jirigrill/eczema-helper/issues/712) |
+| First run and feeding stage | [`first-run.md`](first-run.md) — written; 1 **OPEN** rule — whether the app announces a changed privacy notice (`RUN-CONSENT-4`, shared with `settings.md` `SET-PRIVACY-14`). Awaiting owner confirmation on two points: the copy branch (`RUN-COPY-2`) and the degraded-state warning (`RUN-ICLOUD-2`) — [#729](https://github.com/jirigrill/eczema-helper/issues/729) |
 | [`settings.md`](settings.md) | Written — [#716](https://github.com/jirigrill/eczema-helper/issues/716) |
 | [`consent.md`](consent.md) | Written — [#737](https://github.com/jirigrill/eczema-helper/issues/737); no **OPEN** rules, but the consent copy is the owner's to draft and five questions are tabled for [#694](https://github.com/jirigrill/eczema-helper/issues/694)'s lawyer review |
 | Persistence model (SwiftData + CloudKit) | [`persistence-model.md`](persistence-model.md) — written; [#730](https://github.com/jirigrill/eczema-helper/issues/730). Carries the schema deadlines |
