@@ -192,11 +192,14 @@ instant.
 > instants as ISO 8601. *iOS:* the two instants become real instants; the calendar day stays a label.
 > *Why:* the instants genuinely are instants and should be typed as such, but the day is not one. It
 > is derived from the *local* calendar at the moment she logged, and typing it as an instant would make
-> the day a record appears under depend on the reader's time zone —
-> [#728](https://github.com/jirigrill/eczema-helper/issues/728) deferred the whole time-zone question
-> and its deferral is only safe *because* this field is not an instant. This is the one place the
-> reference implementation's stringly typing is correct rather than lazy. Class: **defect fixed
-> (half)** — half the fields are corrected, half are deliberately left as they are.
+> the day a record appears under depend on the reader's time zone.
+> [#728](https://github.com/jirigrill/eczema-helper/issues/728) has now **settled** the time-zone
+> question the same way — `day-view.md` `DAY-NAV-9`: the calendar date is fixed at log time and never
+> recomputed — so this typing is no longer merely keeping a deferral safe, it is what the resolution
+> requires. The prototype behind it measured the alternative and found that recomputing each day from
+> its instant moves records on every leg away from home *and does not unwind on return*. This is the
+> one place the reference implementation's stringly typing is correct rather than lazy. Class:
+> **defect fixed (half)** — half the fields are corrected, half are deliberately left as they are.
 
 **`DATA-MEAL-5` (MUST)** — The last-edit instant is **absent** on a newly composed meal, and set only
 when an existing meal is edited. Absent means "never edited since creation", and is distinct from
@@ -1075,6 +1078,15 @@ text.
   owns all of it. This section specifies what the store does; that one specifies what she sees.
 - **Account states and the sign-in transition.**
   [#687](https://github.com/jirigrill/eczema-helper/issues/687)'s.
-- **Time zones.** [#728](https://github.com/jirigrill/eczema-helper/issues/728) is open and deferred. This
-  section makes exactly one commitment that bears on it — `DATA-MEAL-3`'s calendar-day label — and that
-  commitment is what makes the deferral safe.
+- **Time zones.** Settled by [#728](https://github.com/jirigrill/eczema-helper/issues/728) —
+  `day-view.md` `DAY-NAV-9`..`-9c` own the rules, and this section makes the one commitment they rest
+  on: `DATA-MEAL-3`'s calendar-day label. **No schema change followed**, which is the point — the
+  resolution is expressible in the shape already specified here. A record **dated after today** is
+  settled too, as `day-view.md` `DAY-NAV-13`
+  ([#743](https://github.com/jirigrill/eczema-helper/issues/743)): it is stored, synced and complete,
+  with no quarantine, no pending state and no field marking it — `DATA-ARRIVE-7` already makes it
+  fully recorded, and its unreachability is a property of the selector's range, not of the record.
+  **One consequence remains unsettled** and it lands in this section rather than the day view: the
+  meal-slot collision on a twice-lived date
+  ([#744](https://github.com/jirigrill/eczema-helper/issues/744)), a write-side `INV-4` upsert
+  question for §4.1 and §5.

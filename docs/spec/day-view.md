@@ -138,11 +138,89 @@ is the parked daily-completeness counter returning by a side door — the same e
 **`DAY-NAV-8` (MUST)** — When a day other than today is shown, a control returns to today and
 recentres the selector.
 
-**`DAY-NAV-9` (OPEN)** — What the day view does when she crosses a time zone is undecided →
-[#728](https://github.com/jirigrill/eczema-helper/issues/728). The recommendation recorded there,
-not asserted here: dates are calendar dates fixed at log time, never instants, never recomputed in
-a later zone. **No schema deadline** — the record already carries both a calendar date and a
-`createdAt` instant, so either resolution is expressible in the shape that ships.
+**`DAY-NAV-9` (MUST)** — A record's calendar date is **fixed at log time and never recomputed**. It
+is the local calendar date where she was standing when she wrote it, and crossing a time zone does
+not move any existing record to a different day. `today` is re-resolved from the device's current
+zone, so where she is decides which day opens — but never what day a record already written belongs
+to.
+
+Resolved by prototype → [#728](https://github.com/jirigrill/eczema-helper/issues/728) (built and
+handed over by [#742](https://github.com/jirigrill/eczema-helper/issues/742)); the recommendation
+this rule previously recorded, now asserted. **No schema change** — `persistence-model.md`
+`DATA-MEAL-3` already stores the day as a calendar-day label rather than an instant, and Divergence 2
+there was written *because* the deferral needed that field not to be an instant. This resolution is
+what that typing was holding open.
+
+**What was rejected, and what the prototype measured.** The alternative was to recompute every
+record's day from its `createdAt` instant in the zone the phone is in now. Over a six-leg
+Prague → Auckland → Honolulu → Prague fixture, recomputation moved records on **every leg away from
+home**, and — the finding that decided it — **did not unwind on return**: back in Prague, five
+records still read under a different date than she filed them, in both directions. A dinner logged at
+23:00 in Prague lands on a **day she never lived** when read in Auckland. Fixing the date at log time
+moves nothing, ever.
+
+**The cost, accepted knowingly: an honest empty day.** A date she skipped by flying over it — `2026-05-15`
+in the fixture — shows as a day with records either side and nothing in it. That is not a gap in her
+record-keeping and the app must not imply it is (`DAY-DERIVE-1` already bars any completeness
+reading, and `DAY-NAV-7` bars the selector from marking which days hold records, so nothing renders
+the emptiness as a lapse). The rejected policy hid that day only while she was abroad, by relabelling
+the Prague records onto it, and the hole reappeared once she was home — so the choice was an honest
+empty day, always, over a filled one that empties later.
+
+**`DAY-NAV-9a` (MUST)** — A **newly written** record is filed under the device's local calendar date
+at the moment of writing. This half was never in dispute — all three prototype policies answered it
+identically — and it is stated rather than left implied, because a rule about dates that only
+describes reading invites the reader to assume writing is the interesting half. It is not: writing is
+settled, and only reading was ever the question.
+
+**`DAY-NAV-9b` (MUST NOT)** — No record's stored calendar date is ever rewritten in response to a
+zone change, on read or on any later edit. There is no migration, no backfill, and no
+convergence pass that restamps a day — `persistence-model.md` `DATA-CONV-3` already forbids
+restamping `createdAt`, and the calendar day is under the same prohibition for the same reason.
+
+**`DAY-NAV-9c` (MUST)** — A record's **time of day** is rendered in the device's **current** zone,
+from the stored instant. No record stores the zone it was written in, and none needs to.
+
+This is the second axis the decision had to answer, and it is answered the same way for the same
+reason: the app holds an instant and a calendar day, and renders both from what it has. The rejected
+alternative kept the date fixed but rendered each record's clock in the zone it was *logged* in, so a
+caption read the clock she actually saw.
+
+**The cost, stated because it is real and visible.** `DAY-SKIN-10` derives the caption's time at
+render, so an observation written at 22:50 in Prague reads **8:50** when that day is viewed from
+Auckland — an evening entry captioned as morning, under a date that correctly stays 14 May. The
+rejected alternative would have shown 22:50 from anywhere. It was declined because it **costs a
+schema field**: `persistence-model.md` `DATA-MEAL-3` fixes that reading the day "never involves a time
+zone", nothing in the record shape carries a zone, and adding one to improve a caption is a
+persistence change in service of a cosmetic gain. Fixing the date is what protects her data; fixing
+the caption only protects its phrasing.
+
+**This is the reversible half.** Changing it later needs a stored zone on new records and a decision
+about what to show for records written before the field existed — additive under
+`persistence-model.md`'s promotion rule, and no existing date moves. Reversing `DAY-NAV-9` itself
+would move every record; reversing this moves nothing.
+
+**Two things a reader will expect these rules to cover, and they do not.** Both are ways a record can
+end up somewhere these rules do not reach, and each has its own id or ticket:
+
+- **A record dated after today** — answered by `DAY-NAV-13`, not here. Fixing the date at log time is
+  what *creates* the state: a record keeps the date she filed it under, so a device whose today is
+  behind that date holds a record it cannot reach.
+  [#743](https://github.com/jirigrill/eczema-helper/issues/743) settled what happens (nothing — it is
+  unreachable and unsurfaced until today reaches its date) and corrected the framing this rule would
+  otherwise have implied: **travel is not the trigger**. With sync mandatory, the common path has no
+  traveller in the reading device's frame at all — she logs a meal abroad and the phone at home is
+  still a day behind. The gap is also **at most one day**, since zone offsets span at most ~26 hours.
+- **Two breakfasts on one calendar date.** Living one date twice means a second meal wanting a slot
+  the first already holds, and `INV-4`'s upsert key means the second overwrites the first with no
+  trace. This is a **write**-side collision, so every policy above suffers it equally and none of
+  these rules prevents it. → [#744](https://github.com/jirigrill/eczema-helper/issues/744), §3.5 and
+  the persistence section.
+
+**Not tested by the prototype: daylight saving.** No leg of the fixture crosses a DST transition (all
+three zones hold a constant offset across the journey), so what these rules are measured against is
+the date-line effect alone. Nothing here should be read as evidence about a one-hour shift.
+
 
 **`DAY-NAV-10` (MUST)** — Crossing local midnight while the view is open does **not** change the
 day shown. The day is re-resolved to today on the next foreground.
@@ -835,6 +913,14 @@ earliest record she has, so it extends backwards on its own as older records arr
 Twelve divergences, of which three (5, 7 and 12) are live defects in the shipped PWA and one (2) is a
 data-loss fix inherited from #712.
 
+**`DAY-NAV-9`..`-9c` add no divergence, and that is worth saying.** Every other resolved rule in this
+section changed something: the time-zone resolution is the one that ratifies the reference's existing
+behaviour instead. The PWA already fixes the calendar date at log time and renders times in the
+current zone — see `todayIso()` (`src/lib/utils/date.ts:14-16`) and `formatObservationTime`
+(`:72-75`) — so `DAY-NAV-9` is a **port**, not a change. What differs is only that the behaviour is
+now decided and stated rather than falling out of the fact that the date field happens to be a string,
+which is why §9 lists it as *re-derive* with nothing to translate.
+
 **Divergence 12 is the one a reader should not skim.** `DAY-SKIN-6` has required chronological order
 since #715, and the reference has never honoured it: `skin-photo-session.ts:23` fetches the day's photos
 with `anyOf(observationIds)`, which returns rows in the index's order — grouped by the parent's UUID.
@@ -856,6 +942,7 @@ real rather than incidental.
 | `DAY-NAV-4`, `-5` | `day-strip.test.ts` (window computation, earliest-logged extension, no cap), `DayStrip.test.ts` (centring) | **translate** the window rules; **re-derive** the forward edge, which Divergence 1 changes |
 | `DAY-NAV-6`, `-7` | `page.test.ts:298-321` (today ring carries no `data-recorded`) | **translate** — it is a regression guard against exactly the feature §2 prohibits |
 | `DAY-NAV-8` | `page.test.ts:166-205` (chip presence, absence on today, navigation, recentre signal) | **translate**, minus the store-counter assertion, which is an implementation detail with no DOM consequence |
+| `DAY-NAV-9`, `-9a`, `-9b`, `-9c` | **nothing** — no test in the reference ever reads a record from a second zone | **re-derive.** The PWA's dates survive a zone change only because the field is a string, so there is no behavioural test to translate; see §9's *Rules nothing verifies today*, which carries the two guards worth writing |
 | `DAY-NAV-10`, `-11`, `-12` | `-12` only, via the header de-duplication tests `page.test.ts:207-257` | **translate** `-12`; `-10` and `-11` are **re-derive** |
 | `DAY-NAV-13` | none — the reference renders seven future cells, so a record dated after today is reachable there by construction and there is no unreachable state to assert | **re-derive** entirely. Three assertions, all new and all cheap because none needs a zone change: with a record written one day ahead, the selector's forward edge is still today and no cell exists for that date; no screen shows any mark, count or message about it; and advancing today to that date makes it render as an ordinary record. The second is the regression guard — it is what keeps a "1 record ahead" courtesy out |
 | `DAY-MEAL-1`, `-11` | `MealCard.test.ts:220` (all four types always render), `page.test.ts:398-428` | **translate** |
@@ -887,7 +974,14 @@ This is the honest list, and it is long for this screen.
 - **The date selector as the page sees it.** Cell count, back-edge extension and forward edge are
   tested in the strip's own unit tests; the page never asserts what it computed, and tapping a cell
   from the page is untested.
-- **Midnight rollover** (`DAY-NAV-10`) and **time zones** (`DAY-NAV-9`) — nothing anywhere.
+- **Midnight rollover** (`DAY-NAV-10`) and **time zones** (`DAY-NAV-9`, `-9a`, `-9b`, `-9c`) —
+  nothing anywhere. Both are **re-derive**, and the time-zone rules are the more urgent of the two:
+  the PWA has no test that reads a record from a second zone at all, which is how a `MUST` about
+  dates came to rest entirely on the fact that its date field happens to be a string. Two guards are
+  cheap and pin the decision rather than the implementation: a record written in one zone reads under
+  the **same** calendar date after the zone changes (`DAY-NAV-9`, `-9b`), and the same record's
+  **time of day** re-renders in the new zone (`-9c`). The prototype drives the real zone via
+  `SIMCTL_CHILD_TZ`, so this is testable on a simulator without a plane.
 - **Records dated after today** (`DAY-NAV-13`) — nothing, and nothing could: the reference's forward
   edge renders seven future cells, so the state the rule governs does not exist there. Worth
   separating from `DAY-NAV-9` above, because unlike the time-zone question this one is testable
@@ -988,6 +1082,24 @@ something.
     (`DAY-NAV-13`, `DAY-NAV-3`, `DAY-NAV-7`). Then set **this** phone forward a day: the meal is
     there, on an ordinary day, indistinguishable from any other record. **✗ PWA** — the reference
     renders and logs seven future cells, so the record was reachable all along (Divergence 1).
+31. **The zone change.** Log a meal and an observation, noting the day they land on and the time the
+    observation's entry shows. Then move the device to a zone far enough east or west to change the
+    calendar date — Settings › General › Date & Time with *Set Automatically* off, or a simulator
+    launched under `SIMCTL_CHILD_TZ`. Reopen the app: **both records are still on the day you logged
+    them**, and neither has moved to a neighbouring day (`DAY-NAV-9`, `-9b`). The observation's
+    **time of day** has re-rendered to the new zone, so an evening entry may now read as a morning
+    one (`DAY-NAV-9c`) — this is intended, and it is the cost that rule records.
+32. Still in the far zone, log something new. It files under **that** zone's calendar date, not your
+    home zone's (`DAY-NAV-9a`). Then return the device to your home zone and confirm the record from
+    step 31 has **not** moved back, forward, or anywhere at all (`DAY-NAV-9b`) — a policy that looks
+    correct while travelling and rewrites history on return is exactly what
+    [#728](https://github.com/jirigrill/eczema-helper/issues/728) rejected.
+33. If crossing the date line for real, expect a day you flew over to show as **empty** with records
+    either side (`DAY-NAV-9`), and expect nothing on the screen to characterise that emptiness as a
+    lapse (`DAY-DERIVE-1`, `DAY-NAV-7`). Travelling **west** can also strand a record ahead of today,
+    which step 30 covers by clock instead (`DAY-NAV-13`). One further effect is **out of scope here**
+    and tracked separately: a second breakfast silently overwriting the first on a twice-lived date
+    ([#744](https://github.com/jirigrill/eczema-helper/issues/744)).
 
 ---
 
@@ -1012,12 +1124,25 @@ derivation — so `DAY-DERIVE-1` constrains neither the glyph nor anything else 
 count it already banned — and #740 established that the same rule reaches inside a full-screen surface
 launched from this screen, which is why the viewer shows no "3 of 40".
 
-**`DAY-NAV-9` — time zones.**
-[#728](https://github.com/jirigrill/eczema-helper/issues/728). Also a prototype, and also **once the
-iOS app exists**: it is judged by carrying a phone across a boundary. Worth stating explicitly that
-this is **not** schema-deadlined, because an open question about dates reads like one under #679's
-additive-only promotion rule — the record already carries both a calendar date and a `createdAt`
-instant, so either resolution is expressible in the shape that ships.
+**~~`DAY-NAV-9` — time zones.~~ Closed by
+[#728](https://github.com/jirigrill/eczema-helper/issues/728): the calendar date is fixed at log time
+and never recomputed; time of day renders in the current zone.** Settled by prototype rather than by
+argument — built and handed over by
+[#742](https://github.com/jirigrill/eczema-helper/issues/742), which is also where the numbers behind
+it are computed. It did **not** need the iOS app to exist, which is the one thing this entry got
+wrong: `SIMCTL_CHILD_TZ` makes a simulator report any zone, so the question was decidable without
+carrying a phone across a boundary. The rest held — it was not schema-deadlined, and the resolution
+confirms why: `persistence-model.md` `DATA-MEAL-3`'s calendar-day label is exactly the shape the
+answer needed, so nothing in the schema moved.
+
+Two neighbouring effects are **not** closed by it. A record dated after today is **now settled
+separately** as `DAY-NAV-13` ([#743](https://github.com/jirigrill/eczema-helper/issues/743), the entry
+directly below), and it is worth knowing the two resolutions landed independently and agree: fixing
+the date at log time is what creates the stranded state, and `DAY-NAV-13` is what says the app does
+nothing about it. Still ticketed and unwritten: the meal-slot collision on a twice-lived date
+([#744](https://github.com/jirigrill/eczema-helper/issues/744), §3.5 and the persistence section), a
+**write**-side `INV-4` upsert that no date-resolution rule touches. **Daylight saving is untested** by
+the prototype, whose fixture crosses no DST transition.
 
 **~~What happens to a record dated after today.~~ Closed by
 [#743](https://github.com/jirigrill/eczema-helper/issues/743): nothing — it is unreachable and
