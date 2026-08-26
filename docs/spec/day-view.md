@@ -92,8 +92,10 @@ marked inline and indexed in §8. Two of them fix defects that are live in the s
 | **Observation entry** | One row in the skin section, representing one saved observation. |
 | **Add control** | The always-available control for starting a new record on the day shown. |
 
-Two terms this section uses are shared with settings and defined in
-[`GLOSSARY.md`](GLOSSARY.md): **feeding stage** and **eligible actors**. *Recorded actors* above is
+Three terms this section uses are shared with other areas and defined in
+[`GLOSSARY.md`](GLOSSARY.md): **feeding stage** and **eligible actors** (shared with settings), and
+the **photo viewer** (shared with the skin screen, and specified in `skin-observation.md` §5.5).
+*Recorded actors* above is
 this section's own — no other area reads it — and the gap between the two is what §3.2's union rule
 exists to render.
 
@@ -419,8 +421,10 @@ only what she entered:
 - **The entry is the only route to editing or deleting a photo.** In the reference, tapping an entry
   opens the skin screen in edit mode, which loads the persisted photos and offers per-photo delete
   (`skin/+page.svelte:63-92`); `PhotoLightbox` is view-only, `onClose` its only handler. An entry
-  giving no hint it holds photos is the entry she has no reason to open. This holds however
-  `DAY-SKIN-11` resolves.
+  giving no hint it holds photos is the entry she has no reason to open. This held however
+  `DAY-SKIN-11` resolved, and it still holds now that it has: the viewer that tap opens deletes
+  nothing (`SKIN-PHOTO-30`), so the entry — reachable from the viewer's own edit control
+  (`DAY-SKIN-11c`) or directly — remains the only route to removing a photo.
 
 `DAY-SKIN-7`'s caption already carries photo → entry. This rule closes the missing direction.
 
@@ -444,9 +448,10 @@ to show a rash, paying the cost for none of the benefit.
 **`DAY-SKIN-9b` (MUST NOT)** — The mark is not a tap target of its own.
 
 The entry is already one tap target opening the skin screen in edit mode (`SKIN-VIEW-4`), which is
-where photos are edited and deleted. A tappable glyph jumping to the photo in the grid would decide
-`DAY-SKIN-11` sideways; the mark is decoration inside the existing target, and `SKIN-VIEW-4` remains
-the only tap behaviour on an entry.
+where photos are edited and deleted. A tappable glyph jumping to the photo in the grid would have
+decided `DAY-SKIN-11` sideways; the mark is decoration inside the existing target, and `SKIN-VIEW-4`
+remains the only tap behaviour on an entry. `DAY-SKIN-11`'s resolution does not disturb this — the
+viewer is reached by tapping a **thumbnail in the grid**, never by tapping an entry or its mark.
 
 > **⚠ Divergence 10.** *PWA:* no photo indicator on an observation entry —
 > `SkinObservationCard.svelte` contains **zero** photo references, so a note-only entry and an
@@ -474,11 +479,127 @@ through a SwiftData relationship and CloudKit **cannot enforce cascade delete**
 ([#679](https://github.com/jirigrill/eczema-helper/issues/679)) — so an orphan is reachable here in a
 way it was not in the single-device PWA.
 
-**`DAY-SKIN-11` (OPEN)** — What tapping a thumbnail does is undecided →
-[#740](https://github.com/jirigrill/eczema-helper/issues/740).
+**`DAY-SKIN-11` (MUST)** — Tapping a thumbnail opens the **photo viewer** — a full-screen surface that
+**pages through the day's photos**, flat and chronological, in the same order the grid shows them. The
+tapped photo is where it opens. Its shared behavior is specified in
+[`skin-observation.md` §5.5](skin-observation.md#55-the-photo-viewer); this rule fixes only what is
+particular to the day view: the sequence is **the day**, and it is a single flat sequence rather than
+one per observation.
 
-The PWA opens a full-screen lightbox (`PhotoLightbox`). #727 was a placement prototype and never put
-tap behaviour on a phone, so the PWA's answer is recorded as description, not requirement.
+Resolved by grilling → [#740](https://github.com/jirigrill/eczema-helper/issues/740); this rule's
+original question answered, not a new rule. The PWA opens a full-screen lightbox showing **one** photo
+with no paging (`PhotoLightbox.svelte`), and #727 was a placement prototype that never put tap
+behaviour on a phone — so the PWA's answer was recorded as description, not requirement, and paging is
+the part that is genuinely new.
+
+**Why the day and not the observation.** The alternative was a pager scoped to the photos of the
+observation the tapped photo belongs to. It was rejected because **the group boundaries are invisible in
+the grid**: nothing on a thumbnail says where one observation's photos end, so paging would stop for a
+reason she cannot see. The day-level sequence matches the surface she tapped from, which is the
+governing principle for the pager's order throughout (`SKIN-PHOTO-24`).
+
+**Why not region-grouped.** A third candidate grouped the sequence by region, so a region photographed
+three times in a day would page as a series — the intra-day progression view. Declined here: it would
+have the pager disagree with the grid's chronological order (`DAY-SKIN-6`), so the sequence she walks
+would not be the one she just looked at. Region-major progression is a real idea with a real prior
+effort behind it — map [#656](https://github.com/jirigrill/eczema-helper/issues/656) chartered a 2D
+viewer with regions on one axis and each region's history on the other, and was **parked** with its
+coordinate model never worked (see §10) — and it deserves its own surface, not a reinterpretation of
+this grid's order.
+
+**`DAY-SKIN-11a` (MUST)** — The viewer's sequence is **every photo of the day**, including photos
+`DAY-SKIN-8`'s cap is not currently showing. Paging is not limited to the six visible thumbnails, and
+its reach does not change according to whether the grid is expanded.
+
+**This amends `DAY-SKIN-8a`'s stated cost, and does not violate it.** That rule accepts as a knowing
+cost that from the collapsed grid "she cannot tell whether one photo is hidden or forty". She still
+cannot — nothing anywhere reports the quantity (`DAY-SKIN-11b`) — but she can now **reach** the fortieth
+by paging. The distinction is the same one `DAY-DERIVE-1` turns on: what is prohibited is a *number
+rendered on a control*, because that is what "acquires a meaning she never recorded". Walking through
+her own photographs one at a time is not a derived statement about her day; it is the record itself,
+shown one item at a time.
+
+The alternative — a pager reaching only what the grid currently shows — was rejected for a worse
+failure than the disclosure it prevents: the same tap on the same thumbnail would page differently
+depending on the grid's expansion state, which is invisible from inside the viewer.
+
+**`DAY-SKIN-11b` (MUST NOT)** — The viewer displays no position and no extent. No "3 of 40", no page
+dots, no scroll indicator that reveals the sequence's length.
+
+**`DAY-DERIVE-1` reaches inside the viewer.** This is stated because it is not obvious: that rule is
+written about the day view, and this is a full-screen surface covering it. The viewer is not a separate
+product surface — it renders her records, is launched from the governed screen, and shows nothing the
+day view could not. The rule's blanket form exists precisely so that "the first count is always the
+reasonable one" is refused, and a position indicator is exactly that first reasonable count.
+
+**Dots are the case worth naming**, because they look like an exemption and are not: forty dots *is* the
+quantity `DAY-SKIN-8a` refuses, drawn rather than written. At the volumes this grid must survive they
+are also illegible, so they would disclose the count without conveying the position.
+
+Paired with `DAY-SKIN-11a`, the result is deliberate: **she can reach every photo and is never told how
+many there are.** `SKIN-PHOTO-29`'s end-stop is what tells her a sequence has ended, and it is the only
+signal of extent anywhere in the viewer.
+
+**`DAY-SKIN-11c` (MUST)** — The viewer offers a control opening the tapped photo's observation in edit
+mode, replacing the viewer. That editor returns to the **day view**, not to the viewer.
+
+**Why an edit route exists here at all**, when `SKIN-VIEW-4` already makes the entry the way into the
+editor: the prior design work on this screen recorded direct feedback from the primary user that she
+**goes straight to the photo section on the day view and ignores the observation entries' chip list
+entirely**. If that holds, the entry-only route sends her through a list she does not read. One control
+is cheap, and this is the surface she is actually on.
+
+**Where that claim comes from, and how far it reaches.** It is recorded in
+`docs/design/HANDOFF-photo-surfacing.md` on the frozen repo's **unmerged** branch
+`docs/photo-surfacing-handoff` (tip `76eca5d`), and restated in the body of
+[#416](https://github.com/jirigrill/eczema-helper/issues/416), which is closed and postponed. Two
+cautions, because this is the one rule in the group resting on reported behaviour rather than on a
+prototype: the observation is about the **chip list** specifically, not the entry row as a whole, and
+the handoff itself framed the consequence conditionally — the photo card is "possibly" the sole skin
+surface, not demonstrably. It is enough to justify *adding one control* and would not be enough to
+justify removing `SKIN-VIEW-4`'s route, which is why `DAY-SKIN-9`'s glyph and the entry tap both stay.
+The branch is unmerged, so like #658's research it is **lost if pruned** (§10).
+
+**Why it returns to the day view.** `DAY-ROOT-5` requires every editor to return to the day it was
+opened from, and honouring it literally also avoids a three-deep stack — day → viewer → editor → viewer
+— whose back behaviour nobody could predict. The viewer is transient; the day view is the root.
+
+**The control is absent, not inert, for an orphan photo** (`DAY-SKIN-10`) — a photo whose parent cannot
+be resolved has no observation to open. Nothing explains its absence: an explanation would be a sentence
+about sync internals, and `settings.md` `SET-SYNC-1` sets the standing posture that the app does not
+narrate healthy sync.
+
+**Tapping the caption never navigates.** The caption is a label (`DAY-SKIN-7`); overloading it would make
+an accidental tap move her, the class of mistake `skin-observation.md` `SKIN-INT-2`'s activate-then-cycle
+rule exists to prevent.
+
+**`DAY-SKIN-11d` (MUST)** — The viewer's sequence is **fixed when it opens**. A photo arriving from sync
+while the viewer is open does not enter the sequence, re-sort it, or move her position; it appears in the
+grid once she closes.
+
+`DAY-LIVE-1` makes the grid live and `DAY-LIVE-2` promises that an arriving record "never moves her
+position within it". A live sequence would break that promise in a way peculiar to paging: a photo
+arriving at position 1 silently changes what a swipe means and how far the end is, so the sequence she is
+walking stops being the one she started. Freezing also makes `SKIN-PHOTO-29`'s end-stop honest — the end
+does not move while she is reaching for it. The staleness is transient and self-correcting, because
+`DAY-LIVE-1` governs the grid, which is current the moment she returns to it.
+
+> **⚠ Divergence 11.** *PWA:* tapping a thumbnail opens a single-photo lightbox — no paging, no zoom, no
+> route onward; dismissed by an `×` or a backdrop tap (`SkinPhotoCard.svelte:74-80`,
+> `PhotoLightbox.svelte`). *iOS:* a pager across the day's photos, with pinch-to-zoom, an edit route, and
+> swipe-down dismissal. *Why:* the owner's call, against a recommendation to port the lightbox as-is
+> view-only. The reasoning for the smaller option is recorded on
+> [#740](https://github.com/jirigrill/eczema-helper/issues/740); what carried the day is that the grid
+> shrinks a photograph to a thumbnail and the viewer is where the evidence is actually read, so reaching
+> the next photo should not cost a round trip through the grid. Class: **resolved by #740**.
+
+> **⚠ Divergence 12.** *PWA:* the day's photos are **not sorted** — `skin-photo-session.ts:23` returns
+> `db.photos.where('observationId').anyOf(observationIds).toArray()`, which yields rows in index order,
+> i.e. grouped by the parent's UUID rather than by time. *iOS:* chronological, as `DAY-SKIN-6` already
+> requires. *Why:* **live defect in the shipped PWA.** `DAY-SKIN-6` was written as a `MUST` from the
+> card's visual shape and the reference does not honour it; nothing tests the order. It is cosmetic in a
+> grid and load-bearing in a pager, because paging *asserts* a sequence — `DAY-SKIN-11` and
+> `SKIN-PHOTO-24` both rest on the grid's order being real. Class: **defect fixed**.
 
 > **⚠ Divergence 4.** *PWA:* a day-level photo card below the observation list — a three-column grid
 > of every photo taken that day, each captioned `region · time`, the time re-derived at render from
@@ -644,9 +765,19 @@ earliest record she has, so it extends backwards on its own as older records arr
 | 8 | §6 `DAY-DERIVE-1` | The photo count is dropped — the app's only count. | Settled by #715 |
 | 9 | §4 `DAY-SKIN-8` | The photo grid caps at two rows with a countless reveal; the PWA's grid is uncapped. | Resolved by #738 |
 | 10 | §4 `DAY-SKIN-9` | An observation entry shows a glyph when it has photos; the PWA shows nothing. | New behaviour, #739 |
+| 11 | §4 `DAY-SKIN-11` | Tapping a thumbnail opens a paging, zoomable viewer; the PWA's lightbox shows one photo. | Resolved by #740 |
+| 12 | §4 `DAY-SKIN-6` | The day's photos are chronological; the PWA does not sort them at all. | Defect fixed |
 
-Nine divergences, of which two (5 and 7) are live defects in the shipped PWA and one (2) is a
+Twelve divergences, of which three (5, 7 and 12) are live defects in the shipped PWA and one (2) is a
 data-loss fix inherited from #712.
+
+**Divergence 12 is the one a reader should not skim.** `DAY-SKIN-6` has required chronological order
+since #715, and the reference has never honoured it: `skin-photo-session.ts:23` fetches the day's photos
+with `anyOf(observationIds)`, which returns rows in the index's order — grouped by the parent's UUID.
+Nothing tests the order, which is how a `MUST` came to be written from a card's appearance rather than
+its behavior. It was cosmetic while the grid was the only surface; #740 made it load-bearing, because a
+pager **asserts** a sequence and both `DAY-SKIN-11` and `SKIN-PHOTO-24` rest on the grid's order being
+real rather than incidental.
 
 ---
 
@@ -669,10 +800,10 @@ data-loss fix inherited from #712.
 | `DAY-MEAL-7`, `-8`, `-9` | `page.test.ts:432-574` (hrefs carry type, date, actor, `returnTo`) | **translate** the parameter contract; the URL form itself is web-specific |
 | `DAY-MEAL-10` | `MealCard.test.ts:130` (no swipe or long-press handlers) | **translate** as an absence check |
 | `DAY-SKIN-1`..`-4` | `SkinObservationCard.test.ts`; ordering, chips, all-calm chip, absence of a count at `:244` | **translate** — but see `skin-observation.md` §11, which owns these |
-| `DAY-SKIN-6`, `-7`, `-10` | `SkinPhotoCard.test.ts` — grid presence `:48`, one image per photo `:34`, the `region · time` caption `:101`, distinct times for two photos of one region `:114`, and **both** orphan paths `:132,146` | **translate** the grid, the caption format and the orphan degradation — `-10`'s rule is directly pinned. **Do not translate** the object-URL lifecycle or the count test `:80`, which asserts the count `DAY-DERIVE-1` drops |
+| `DAY-SKIN-6`, `-7`, `-10` | `SkinPhotoCard.test.ts` — grid presence `:48`, one image per photo `:34`, the `region · time` caption `:101`, distinct times for two photos of one region `:114`, and **both** orphan paths `:132,146` | **translate** the grid, the caption format and the orphan degradation — `-10`'s rule is directly pinned. **Do not translate** the object-URL lifecycle or the count test `:80`, which asserts the count `DAY-DERIVE-1` drops. **`-6`'s ordering clause is verified by nothing and the reference violates it** (Divergence 12) — a fresh test, and a prerequisite for the pager |
 | `DAY-SKIN-8`, `-8a`, `-8b` | none — the reference grid is uncapped, so there is no cap, no reveal control and no collapsed state to assert | **re-derive** entirely. Three assertions have no reference equivalent: that a 7th photo is not rendered collapsed, that the collapsed six are the chronologically **first** six (`-8b`), and that no numeral appears in the control's label in either state (`-8a`) — the last is the regression guard that keeps `+N more` from returning |
 | `DAY-SKIN-9`, `-9a`, `-9b` | none — and the reference asserts the **opposite** by omission: `SkinObservationCard.test.ts` covers ordering, chips, the all-calm chip and the note without ever asserting a photo mark, because the component has none | **re-derive** entirely. Four assertions, all new: that an entry with photos shows the mark and one without does not; that an **all-calm** entry with a photo shows it (`SKIN-PHOTO-4`, the case the rule exists for); that an entry with many photos across several regions shows **exactly one** mark (the count guard); and that the mark renders no image and carries no tap handler (`-9a`, `-9b`) |
-| `DAY-SKIN-11` | `SkinPhotoCard.test.ts:159-208` (lightbox open, × close, backdrop close) | **do not translate yet** — the rule is `OPEN`; these pin the PWA's answer, not a decision |
+| `DAY-SKIN-11`, `-11a`..`-11d` | `SkinPhotoCard.test.ts:159-208` (lightbox open, × close, backdrop close) | **Do not translate.** These pin the single-photo lightbox Divergence 11 replaces — the backdrop-close test asserts a mechanism `SKIN-PHOTO-27` removes. Re-derive; `skin-observation.md` §5.5 owns the shared behavior, and four assertions are particular to this caller: the sequence spans the **day** (`-11`), it reaches photos the cap is hiding (`-11a`), no position or extent is shown in either orientation (`-11b`), and an arriving photo does not enter an open sequence (`-11d`). The last needs a sync double, and `-11b` is the regression guard that keeps "3 of 40" from arriving as a courtesy |
 | `DAY-EMPTY-3` | `page.test.ts:427`, `MealCard.test.ts:31` (the empty sentence is asserted absent) | **translate** |
 | `DAY-DERIVE-1` | `page.test.ts:290-296` (`task-counter` absent, "parked: daily-completeness") | **translate** — the single most valuable guard on this screen |
 | `DAY-DERIVE-2` | none here; `skin-observation.md` owns it | **translate** from there |
@@ -747,25 +878,39 @@ something.
     (`DAY-SKIN-8b`).
 18. On that same heavy day, confirm the meal section is reachable by scrolling, and note that it is
     below the fold — the cap shortens the day, it does not fit it on one screen.
-19. Look at the observation list on a day where one entry has photos and another does not: the one
+19. Still on that day, tap the **first** thumbnail. It fills the screen showing its region and the
+    parent observation's time (`DAY-SKIN-11`, `SKIN-PHOTO-26`). Swipe sideways all the way to the
+    right: you reach photos the collapsed grid was **not** showing, and the grid's expansion state
+    made no difference to how far you got (`DAY-SKIN-11a`). **✗ PWA** — the reference lightbox shows
+    one photo and does not page (Divergence 11).
+20. In that viewer, look for anything telling you where you are or how many there are: no "3 of 40",
+    no dots, no scroll bar. There is none, in either orientation (`DAY-SKIN-11b`) — this is the guard
+    that keeps a helpful count from arriving later.
+21. Use the viewer's control to open the photo's observation. It replaces the viewer, and when you
+    leave the editor you land on the **day view**, not back in the viewer (`DAY-SKIN-11c`,
+    `DAY-ROOT-5`). **✗ PWA**
+22. With the viewer open on today, add a photo from a second device. Your position does not move and
+    the new photo does not join the sequence; close the viewer and it is in the grid
+    (`DAY-SKIN-11d`).
+23. Look at the observation list on a day where one entry has photos and another does not: the one
     with photos carries a small mark, the one without carries none, and you can tell which is which
     without opening either (`DAY-SKIN-9`). The mark shows **no** picture and **no** number, and
     tapping it does the same thing as tapping the row — it opens the observation for editing
     (`DAY-SKIN-9a`, `-9b`). **✗ PWA** — the reference marks nothing.
-20. Attach a photo to an **all-calm** observation and look at its entry. It carries the mark too
+24. Attach a photo to an **all-calm** observation and look at its entry. It carries the mark too
     (`SKIN-PHOTO-4`) — this is the case the rule exists for, and the one that is invisible without
     it. Then attach several photos across two regions to one observation and confirm the entry still
     shows **exactly one** mark (`DAY-SKIN-9`). **✗ PWA**
-21. Read the entire screen and confirm there is no number on it that you did not enter yourself: no
+25. Read the entire screen and confirm there is no number on it that you did not enter yourself: no
     meal count, no streak, no severity for the day, no completeness indicator (`DAY-DERIVE-1`,
     `-2`).
-22. Confirm the feeding stage appears nowhere on this screen and cannot be changed from it
+26. Confirm the feeding stage appears nowhere on this screen and cannot be changed from it
     (`DAY-STAGE-1`, `-2`).
-23. Delete a meal from inside the editor. You return to the day view and the undo appears there
+27. Delete a meal from inside the editor. You return to the day view and the undo appears there
     (`DAY-ROOT-7`). Confirm you cannot delete anything by swiping on the day view itself
     (`DAY-MEAL-10`).
-24. Copy a meal to another day. You land on the **destination** day (`DAY-ROOT-6`).
-25. With the app open on today, add a record from a second device (or wait for one to arrive).
+28. Copy a meal to another day. You land on the **destination** day (`DAY-ROOT-6`).
+29. With the app open on today, add a record from a second device (or wait for one to arrive).
     It appears without you doing anything, and your position on the screen does not move
     (`DAY-LIVE-1`, `-2`).
 
@@ -783,10 +928,14 @@ prototype tested: whether the uncapped grid limits its visible rows (~~`DAY-SKIN
 entry indicates it carries photos (~~`DAY-SKIN-9`~~ → **closed by
 [#739](https://github.com/jirigrill/eczema-helper/issues/739): a single glyph, no photo content, not a
 tap target**), and what a tap
-does (`DAY-SKIN-11` → [#740](https://github.com/jirigrill/eczema-helper/issues/740)). None is schema
-deadlined; all read records that already exist. **Only the tap question remains open**, and #739
-established that photo-presence is *record content* rather than a derivation — so `DAY-DERIVE-1`
-constrains neither the glyph nor anything else in the group beyond the count it already banned.
+does (~~`DAY-SKIN-11`~~ → **closed by
+[#740](https://github.com/jirigrill/eczema-helper/issues/740): a viewer paging the day's photos, no
+position indicator, an edit route, no deletion**). None was schema deadlined; all read records that
+already exist. **All three are now settled, so the group #727 opened is closed.** Two findings from
+those resolutions outlive them: #739 established that photo-presence is *record content* rather than a
+derivation — so `DAY-DERIVE-1` constrains neither the glyph nor anything else in the group beyond the
+count it already banned — and #740 established that the same rule reaches inside a full-screen surface
+launched from this screen, which is why the viewer shows no "3 of 40".
 
 **`DAY-NAV-9` — time zones.**
 [#728](https://github.com/jirigrill/eczema-helper/issues/728). Also a prototype, and also **once the
@@ -812,6 +961,28 @@ data loss. Neither is a mark about her records, so neither touches `DAY-DERIVE-1
 **Duplicate rows under sync.** §3.5 records that the day view is where a CloudKit-side duplicate
 would become visible. Whether anything on this screen should *react* to one — merge, flag, or simply
 show both — is the persistence section's question, not this one's.
+
+**A region-major progression viewer, and the parked map behind it.** `DAY-SKIN-11`'s viewer pages the
+day flat and chronological. It deliberately does **not** answer "how has this elbow changed over
+weeks", which is a different surface with its own charted effort:
+[#656](https://github.com/jirigrill/eczema-helper/issues/656) specified a 2D viewer — regions across
+one axis, each region's history down the other — and was **parked** on 2026-08-11 with its children
+closed as *not planned* rather than resolved. Its one genuinely resolved ticket,
+[#658](https://github.com/jirigrill/eczema-helper/issues/658), surveyed prior art and found that no
+mainstream viewer commits to a true 2D gesture grid, and that the derm apps closest to this data model
+answer the comparison question with an explicit **two-up compare** rather than a browse grid — pushback
+on the 2D premise that was never addressed, because the coordinate model
+([#657](https://github.com/jirigrill/eczema-helper/issues/657)) was never worked.
+
+Two things about it matter for iOS. Its findings on mechanism are **web-specific** and do not carry:
+scroll-snap, transform paging, `100svh`, `role="grid"`. Its findings on *what people actually do with
+serial skin photographs* are platform-independent and are the best available input if this is ever
+resumed. And #658's artifact is at risk: `docs/research/photo-2d-nav.md` exists only on the unmerged
+throwaway branch `research/photo-2d-nav` (commit `a584d9f`) in the frozen repo — **the only record
+outside the tracker, lost if that branch is pruned.**
+
+Nothing in `DAY-SKIN-11` forecloses this. A flat day pager and a region-major history viewer can
+coexist; what the spec refuses is making *this* grid's tap mean the second thing (see §4).
 
 ---
 

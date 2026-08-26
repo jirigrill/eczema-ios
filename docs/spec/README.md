@@ -23,7 +23,7 @@ owns them. Area-local terms stay in each section's own §1 Vocabulary table.
 | Section | Status |
 | --- | --- |
 | [`skin-observation.md`](skin-observation.md) | Written — the template section |
-| [`day-view.md`](day-view.md) | Written; 4 **OPEN** rules — photo grid growth ([#738](https://github.com/jirigrill/eczema-helper/issues/738)), per-entry photo indicator ([#739](https://github.com/jirigrill/eczema-helper/issues/739)), thumbnail tap ([#740](https://github.com/jirigrill/eczema-helper/issues/740)), and time zones ([#728](https://github.com/jirigrill/eczema-helper/issues/728)). Photo placement is settled by [#727](https://github.com/jirigrill/eczema-helper/issues/727) |
+| [`day-view.md`](day-view.md) | Written; 1 **OPEN** rule — time zones ([#728](https://github.com/jirigrill/eczema-helper/issues/728)). The photo group is fully settled: placement ([#727](https://github.com/jirigrill/eczema-helper/issues/727)), grid growth ([#738](https://github.com/jirigrill/eczema-helper/issues/738)), per-entry indicator ([#739](https://github.com/jirigrill/eczema-helper/issues/739)) and thumbnail tap ([#740](https://github.com/jirigrill/eczema-helper/issues/740)) |
 | First run and feeding stage | Not written; see [#712](https://github.com/jirigrill/eczema-helper/issues/712) |
 | [`settings.md`](settings.md) | Written — [#716](https://github.com/jirigrill/eczema-helper/issues/716) |
 | [`consent.md`](consent.md) | Written — [#737](https://github.com/jirigrill/eczema-helper/issues/737); no **OPEN** rules, but the consent copy is the owner's to draft and five questions are tabled for [#694](https://github.com/jirigrill/eczema-helper/issues/694)'s lawyer review |

@@ -9,7 +9,7 @@ sections — not by being important.
 **This is not a port of the Czech `UBIQUITOUS_LANGUAGE.md`**, which freezes in the reference repo
 ([#677](https://github.com/jirigrill/eczema-helper/issues/677)). That file is 696 lines of a
 different product's vocabulary. This one starts small and grows only when a second section reaches
-for the same word — the four entries below each earned their place that way, and two of them
+for the same word — the five entries below each earned their place that way, and two of them
 (*feeding stage*, *eligible actors*) were found by applying the rule to sections already written.
 
 **Domain invariants are not vocabulary.** `INV-1..14` live in
@@ -97,3 +97,25 @@ Its entry condition is *pending work* above — one buffer, one question decidin
 In the reference implementation the buffer is already shared while three independently-written
 predicates decide when to fill it, and they disagree; that split is what these two entries exist to
 close.
+
+## Photo viewer
+
+The full-screen surface that shows one skin photo at a time and **pages** between photos. Reached by
+tapping a thumbnail, from either of the two thumbnail surfaces in the app: the day view's photo grid
+(`day-view.md` `DAY-SKIN-11`) and the skin screen's gallery (`skin-observation.md` `SKIN-PHOTO-24`).
+
+It earns its place here the same way *undoable action* does — **one** surface with two callers, owned
+by neither. Its shared behavior is specified once, in `skin-observation.md` §5.5 (`SKIN-PHOTO-24` …
+`-31`), because that section owns photos; the day view's rules add only what is particular to being
+launched from a day.
+
+**What each caller fixes is the sequence**, and the governing principle is that the pager's order is
+always the order of the surface it was launched from: the day's photos chronologically from the grid,
+one observation's photos in gallery order from the gallery. The only other difference between the two
+is that the day view's viewer offers a route into the observation (`DAY-SKIN-11c`) while the gallery's
+does not (`SKIN-PHOTO-31`) — the observation is already open there.
+
+Two prohibitions travel with the term wherever it appears: it **deletes nothing**
+(`SKIN-PHOTO-30`), and it shows **no position and no extent** — no "3 of 40", no dots
+(`DAY-SKIN-11b`). Both are settled by
+[#740](https://github.com/jirigrill/eczema-helper/issues/740).

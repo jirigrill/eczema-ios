@@ -102,9 +102,10 @@ of the document and are indexed in §10.
 | **Edit** | A visit that will modify an existing one, identified by its id. |
 | **Dirty** | An edit visit whose live state differs from what was loaded (§4.3). |
 
-Two terms this section uses are shared with other areas and defined in
-[`GLOSSARY.md`](GLOSSARY.md): **undoable action** (specified here in §8.1, owned by no screen) and
-**pending work** (§8.2 states what it means for this screen).
+Three terms this section uses are shared with other areas and defined in
+[`GLOSSARY.md`](GLOSSARY.md): **undoable action** (specified here in §8.1, owned by no screen),
+**pending work** (§8.2 states what it means for this screen), and the **photo viewer** (specified
+here in §5.5, reached from this screen's gallery and from the day view's grid).
 
 ### 1.1 Fixed at entry
 
@@ -454,6 +455,103 @@ description is user-facing text that must not overstate ([#709](https://github.c
 the App Store privacy labels must declare it, and `SKIN-PHOTO-21` is what keeps the concession
 narrow — a deliberate act each time, never a default. → §12.6
 
+### 5.5 The photo viewer
+
+The viewer is reached from **both** thumbnail surfaces — this screen's gallery and the day view's photo
+grid ([`day-view.md`](day-view.md) `DAY-SKIN-11`) — and it is **one** surface, not two. The rules here
+are the shared ones; each caller fixes only its own sequence. Settled by
+[#740](https://github.com/jirigrill/eczema-helper/issues/740), which took both halves as one decision
+because they are the same component and the same question.
+
+**`SKIN-PHOTO-24` (MUST)** — Tapping a thumbnail on this screen opens the photo viewer, paging across
+**this observation's** photos, in the gallery's own display order — stored photos then staged ones, exactly
+as the gallery lays them out.
+
+**The pager's order is always the order of the surface it was launched from.** That is the governing
+principle, and it is why the two callers differ: the day view's grid is chronological across the day, this
+gallery's is stored-then-staged within one observation. A pager that re-sorted — by capture time, say,
+interleaving staged photos among stored ones — would disagree with the grid she just tapped, and would
+need a capture instant that a staged library photo may not carry.
+
+**`SKIN-PHOTO-25` (MUST)** — A photo marked for removal (`SKIN-PHOTO-12`) still opens, and is shown as
+marked in the viewer.
+
+`SKIN-PHOTO-12` deliberately keeps a marked photo **in view** rather than removing it, and the reason
+extends here: opening one full-screen is a reasonable way to decide whether she meant to remove it. A
+marked photo she cannot inspect is a decision she has to make from a thumbnail.
+
+**`SKIN-PHOTO-26` (MUST)** — The viewer shows the photo's caption on open — the region, and for the day
+view's grid the parent observation's time (`DAY-SKIN-7`) — and a tap hides it. A further tap restores it.
+The dismiss control lives in that same chrome and hides with it.
+
+`DAY-SKIN-7` makes the caption **required** in the grid, on the grounds that it is the only thing
+re-attaching a photo to the record it came from once the grid has separated them. Full-screen that
+argument is stronger, not weaker: the surrounding grid is gone, so nothing else says which region or which
+check this is. Hence shown on open rather than hidden by default.
+
+Hiding is offered for the one legitimate reason to want it: at full screen the caption's scrim covers part
+of the image, and the image is the evidence. That is not true at thumbnail size, which is why the grid's
+caption is unconditional and the viewer's is not.
+
+**`SKIN-PHOTO-27` (MUST)** — The viewer is dismissed by a downward swipe, available whether or not the
+chrome is showing, **and** by an explicit control in the chrome.
+
+The swipe is what the platform's own photo viewers train, and it does not collide with the pager's
+horizontal axis. The explicit control is the accessibility half: a gesture-only dismissal is unreachable
+for anyone who cannot perform it, and this screen is used one-handed while holding a baby — the same
+premise `SKIN-INT-2` reasons from. Keeping the swipe available with chrome hidden is what makes hiding the
+chrome safe.
+
+**`SKIN-PHOTO-28` (MUST)** — The viewer supports pinch-to-zoom.
+
+This is a product requirement rather than a convenience. The thing lossy compression destroys first is
+fine texture — scale, papules, lichenification — and texture is what separates a `Moderate` region from a
+`Severe` one. A viewer she cannot zoom cannot answer the question she opened it to ask.
+
+**`SKIN-PHOTO-29` (MUST)** — Paging **stops** at the first and last photo of the sequence. It does not
+wrap.
+
+Wrapping a chronological sequence would jump from the day's last photo to its first with nothing marking
+that it happened. With `DAY-SKIN-11b` removing any position indicator, the resistance at the end is the
+**only** signal she has that there is nothing further — so the stop is load-bearing rather than
+conventional.
+
+**`SKIN-PHOTO-30` (MUST NOT)** — No photo can be deleted from the viewer. It offers no destructive action
+of any kind.
+
+Stated as a prohibition rather than left as an absence, following `DAY-SKIN-8a`'s precedent, because a
+trash button is the obvious convenience for an implementer to add. Deletion stays where `SKIN-PHOTO-11`
+and `SKIN-PHOTO-12` put it — on this screen's own thumbnails, with the mark-and-save flow — and
+`DAY-SKIN-11c`'s edit route is how she gets there from the day view.
+
+Two consequences this keeps: the **day view acquires no destructive action**, which would otherwise be its
+first, and `DAY-ROOT-7`'s undo affordance needs no story for photo deletion performed outside an editor.
+
+**`SKIN-PHOTO-31` (MUST NOT)** — The viewer offers no route into an editor **from this screen's gallery**.
+The observation is already open; a control opening it would point at the screen underneath.
+
+The day view's viewer *does* carry one (`DAY-SKIN-11c`) — the asymmetry is deliberate and is the only
+behavioural difference between the two callers besides the sequence.
+
+> **⚠ Divergence 16.** *PWA:* tapping a thumbnail in this screen's gallery opens the same single-photo
+> lightbox the day view uses — one photo, no paging, no zoom (`SkinPhotoGallery.svelte:111`,
+> `PhotoLightbox.svelte`). *iOS:* the shared viewer, paging across the observation's photos, with zoom.
+> *Why:* settled by [#740](https://github.com/jirigrill/eczema-helper/issues/740) alongside the day
+> view's half. Class: **resolved by #740**.
+
+**What was unspecified before this section existed.** The PWA has *two* thumbnail surfaces feeding one
+`PhotoLightbox`, and §5 previously specified attaching, atomicity, removal and sharing while never saying
+what tapping a thumbnail does. So tap-to-enlarge on this screen was an unspecified reference behavior
+rather than a settled one, and #740 closed it here rather than leaving a second `OPEN` behind.
+
+**One rendition, and what that obliges.** There is no thumbnail tier: `persistence-model.md`
+`DATA-PHOTO-2`/`-3` store one set of bytes per photo with its dimensions recorded. The viewer therefore
+displays the same bytes the grid does, scaled up. The spec deliberately states **no** resolution
+requirement — the pixel target is [#684](https://github.com/jirigrill/eczema-helper/issues/684)'s deferred
+decision, to be measured on a device — but whoever settles it should know that **full-screen display is
+now the binding fidelity case**, not the thumbnail: a target that reads well at 118 pt and falls apart at
+full width fails `SKIN-PHOTO-28`'s purpose.
+
 ---
 ## 6. Interaction
 
@@ -771,8 +869,9 @@ reviewer reads to check the port did not drift by accident.
 | 13 | §9.5 | No day-level severity exists at all | Owner's call — retires #677's regulatory surface |
 | 14 | §1.1 | Existence decided by awaiting the read, not a 500 ms timer | Defect fixed (silent false negative) |
 | 15 | §5.1 | Camera offered first; library one tap away | Owner's call — inverts the PWA's order |
+| 16 | §5.5 | A paging, zoomable photo viewer replaces the single-photo lightbox | Resolved by [#740](https://github.com/jirigrill/eczema-helper/issues/740) |
 
-Nine of the fifteen are the coherence default from
+Nine of the sixteen are the coherence default from
 [#690](https://github.com/jirigrill/eczema-helper/issues/690) doing its work: in each case the
 reference implementation did two different things and this document picks one. None of them was
 kept as a wart, so no named reasons are needed — which is itself the finding.
@@ -783,6 +882,14 @@ sharpest regulatory edge; 12 knowingly accepts its largest privacy concession, a
 recommendation, because an unreachable photo does not help a mother in a consulting room; 14 trades
 a spinner for correctness about whether her record exists; 15 reorders a picker to match the case
 that actually happens. Each was decided with its trade named. **No OPEN rules remain.**
+
+Divergence 16 arrived later and belongs with 12 and 15 as an owner's call made against a
+recommendation — but it differs from every other entry in one way worth stating: it does not resolve
+anything this document had recorded as open. §5 specified attaching, atomicity, removal and sharing
+and **never said what tapping a thumbnail does**, so this was an unspecified reference behavior
+rather than a question anyone had asked. It closed here because
+[#740](https://github.com/jirigrill/eczema-helper/issues/740) settled the day view's half and the two
+surfaces share one component; splitting them would have invited them to diverge for no reason.
 
 ---
 
@@ -802,6 +909,7 @@ repo at `582f662`.
 | §8 delete + undo | `page.test.ts:1022`–`:1288` | **Re-derive.** Divergences 8 and 9 change what the answer should be. |
 | §5.2 atomicity | `dexie-skin-observation-repository` tests | **Do not translate** — asserts a transaction iOS does not have. Replace with `SKIN-PHOTO-9`/`-10` tests. |
 | §9 day view | `src/routes/day/[date]/page.test.ts`, `SkinObservationCard` | Partly; §9 gets its own section. |
+| §5.5 the photo viewer | `SkinPhotoCard.test.ts:159-208` and the gallery's own lightbox tests — open, `×` close, backdrop close | **Do not translate.** All three pin the single-photo lightbox Divergence 16 replaces; the backdrop-close test in particular asserts a mechanism (`SKIN-PHOTO-27` swaps it for a swipe) that no longer exists. Re-derive entirely. |
 
 **Rules nothing verifies today.** Worth stating, because these are where a port inherits
 ambiguity if it assumes test coverage equals specification:
@@ -815,6 +923,12 @@ ambiguity if it assumes test coverage equals specification:
 - **`SKIN-PHOTO-16`** — one test acknowledges in a comment that it *cannot* verify the image
   survives its round trip in the test environment, and checks only that a value is present. The
   one property that matters is asserted nowhere.
+- **Everything in §5.5 beyond opening and closing.** The reference has no pager, no zoom, no chrome
+  toggle and no swipe dismissal, so `SKIN-PHOTO-24`..`-29` have no reference equivalent at all. Three
+  are prohibitions worth writing as regression guards: nothing deletes from the viewer
+  (`SKIN-PHOTO-30`), no editor route from the gallery's viewer (`SKIN-PHOTO-31`), and — the guard that
+  keeps a reasonable feature from creeping back — no position or extent indicator anywhere in it
+  (`DAY-SKIN-11b`).
 
 ### 11.1 Acceptance pass
 
@@ -860,6 +974,19 @@ of this screen. Each maps to rules above; each is a thing to *do* on a device, i
 19. Attach a photo from the library that was taken days ago, and save. It attaches like any other
     photo, and its own capture time is kept rather than rewritten to today. → `SKIN-PHOTO-22`,
     `SKIN-PHOTO-23`
+20. Open an observation holding three photos and tap the first thumbnail. It fills the screen, showing
+    its region. Swipe sideways: you reach the other two, and swiping past the third does **not** wrap
+    to the first. → `SKIN-PHOTO-24`, `SKIN-PHOTO-29` *(this fails on the PWA — Divergence 16; its
+    lightbox shows one photo and does not page)*
+21. Pinch to zoom in on the skin. Tap once: the caption and the close control disappear. Tap again:
+    they return. With them hidden, swipe **down** — the viewer closes. → `SKIN-PHOTO-26`,
+    `SKIN-PHOTO-27`, `SKIN-PHOTO-28` *(all fail on the PWA)*
+22. Look everywhere in the viewer for a way to delete the photo. There is none, on either surface. →
+    `SKIN-PHOTO-30`
+23. Mark a stored photo for removal, then tap it. It still opens, and is still shown as marked. →
+    `SKIN-PHOTO-25`
+24. From **this** screen's viewer, look for a control that opens the observation. There is none — you
+    are already in it. → `SKIN-PHOTO-31`
 
 ---
 ## 12. Open questions
