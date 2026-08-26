@@ -26,7 +26,8 @@ owns them. Area-local terms stay in each section's own §1 Vocabulary table.
 | [`day-view.md`](day-view.md) | Written; 4 **OPEN** rules — photo grid growth ([#738](https://github.com/jirigrill/eczema-helper/issues/738)), per-entry photo indicator ([#739](https://github.com/jirigrill/eczema-helper/issues/739)), thumbnail tap ([#740](https://github.com/jirigrill/eczema-helper/issues/740)), and time zones ([#728](https://github.com/jirigrill/eczema-helper/issues/728)). Photo placement is settled by [#727](https://github.com/jirigrill/eczema-helper/issues/727) |
 | First run and feeding stage | Not written; see [#712](https://github.com/jirigrill/eczema-helper/issues/712) |
 | [`settings.md`](settings.md) | Written — [#716](https://github.com/jirigrill/eczema-helper/issues/716) |
-| Persistence model (SwiftData + CloudKit) | Not written; carries the schema deadlines |
+| [`consent.md`](consent.md) | Written — [#737](https://github.com/jirigrill/eczema-helper/issues/737); no **OPEN** rules, but the consent copy is the owner's to draft and five questions are tabled for [#694](https://github.com/jirigrill/eczema-helper/issues/694)'s lawyer review |
+| Persistence model (SwiftData + CloudKit) | [`persistence-model.md`](persistence-model.md) — written; [#730](https://github.com/jirigrill/eczema-helper/issues/730). Carries the schema deadlines |
 
 The meal editor is the one area extracted **before** the template existed, and it lives on the
 frozen PWA repo beside the code it was read out of:
