@@ -9,7 +9,7 @@ sections — not by being important.
 **This is not a port of the Czech `UBIQUITOUS_LANGUAGE.md`**, which freezes in the reference repo
 ([#677](https://github.com/jirigrill/eczema-helper/issues/677)). That file is 696 lines of a
 different product's vocabulary. This one starts small and grows only when a second section reaches
-for the same word — the five entries below each earned their place that way, and two of them
+for the same word — the six entries below each earned their place that way, and two of them
 (*feeding stage*, *eligible actors*) were found by applying the rule to sections already written.
 
 **Domain invariants are not vocabulary.** `INV-1..14` live in
@@ -119,3 +119,30 @@ Two prohibitions travel with the term wherever it appears: it **deletes nothing*
 (`SKIN-PHOTO-30`), and it shows **no position and no extent** — no "3 of 40", no dots
 (`DAY-SKIN-11b`). Both are settled by
 [#740](https://github.com/jirigrill/eczema-helper/issues/740).
+
+## Calendar date, and instant
+
+The pair the app's whole treatment of time rests on, and they are **not interchangeable**.
+
+A **calendar date** is a day label — `2026-05-14` — with no time and no zone. It answers *which day
+does this belong to*. An **instant** is a fixed point in time, the same moment everywhere, which
+renders as a different wall clock in every zone. It answers *when exactly did this happen*.
+
+A record carries **both**, and they are set from the same moment but are not derived from each other
+afterwards. The calendar date is the day the mother filed the record under — the local date where she
+was standing when she wrote it — and it is a stored label, never recomputed
+(`day-view.md` `DAY-NAV-9`, `persistence-model.md` `DATA-MEAL-3`). The creation instant is a real
+instant (`DATA-MEAL-4`), immutable per
+[INV-8](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-8).
+
+**Why the distinction is load-bearing.** Storing the day as an instant would make the day a record
+appears under depend on the reader's zone, so a meal logged at 23:00 in Prague would move to the next
+day when read in Auckland — a day she may never have lived. That is the failure
+[#728](https://github.com/jirigrill/eczema-helper/issues/728) measured and rejected. The consequence
+runs the other way too: because the date is a label rather than a derivation, a **time of day** is
+rendered from the instant in the current zone (`DAY-NAV-9c`), so the same entry can show a different
+clock while showing the same day. Both halves are deliberate.
+
+Three sections reach for the pair: `day-view.md` §2 (which day a record shows under),
+`persistence-model.md` §5 (how each is stored and typed) and `skin-observation.md` (an observation's
+date and its time). None owns it.
