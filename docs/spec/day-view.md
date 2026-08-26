@@ -160,6 +160,70 @@ summary of that range.
 **`DAY-NAV-12` (MUST)** — On today, the header names the day as *Today*, without the date. On any
 other day it shows the date, exactly once.
 
+**`DAY-NAV-13` (MUST)** — A record dated **after today** is stored, synced and complete, and is
+**not reachable and not surfaced anywhere** until today reaches its date. `DAY-NAV-3` holds without
+exception: the forward edge does not bend for a record, no cell is added, no mark or message appears
+on any screen, and nothing distinguishes the app's state from having no such record at all. When
+today advances to that date, the record appears as an ordinary record on an ordinary day.
+
+This is the decision to do nothing, recorded because it is otherwise the default nobody picked —
+and the day view's back edge already bends for records (`DAY-NAV-4`), so a reader is entitled to ask
+why the forward edge does not.
+
+**Where the record lives: nowhere special.** There is no quarantine, no holding area, no pending
+state, and no field marking it. `DATA-MEAL-3` stores the calendar date as a **calendar-day label**
+whose reading "never involves a time zone", so the record is written under its date and stays there;
+`DATA-ARRIVE-7` makes it fully recorded the moment it is saved. Unreachability is a property of the
+**selector's range** (`DAY-NAV-4`), not of the record: the range is recomputed against today, and it
+simply does not include that date yet. Nothing releases the record when today advances — the range
+grows to meet it. This is why the resolution costs no schema change, and it is stated because an
+implementer must know the write path needs no special case.
+
+It is **not *pending work*** ([`GLOSSARY.md`](GLOSSARY.md)). That term asks whether leaving a screen
+would lose something she did — work not yet in storage. This record is entirely in storage. The two
+questions have different answers here, and borrowing the term would misfile a saved record as an
+unsaved one.
+
+**Nothing surfaces it, and that is part of the rule rather than an omission.** Every candidate
+surface is already prohibited: a selector cell indicating contents is `DAY-NAV-7`, "1 record ahead"
+is a count under `DAY-DERIVE-1`, and there is no date picker to reach it with (`DAY-NAV-11`). So the
+prohibition is not a new cost — no compliant surface exists to be given up. What makes the silence
+acceptable is the bound below, not the absence of a place to put a message.
+
+**The gap is at most one day, and it closes by itself.** Zone offsets span at most ~26 hours, so two
+local calendar dates can differ by at most one; under `DATA-MEAL-3`'s fixed label no record can ever
+be more than one day ahead of any device's today. The record becomes reachable when today ticks
+over, whatever the traveller does next.
+
+**This is not a travel rule, and must not be narrowed into one.** The rule is phrased over *a record
+dated after today* because the likeliest path involves no traveller at all in the reading device's
+frame: `INV-1` is void for iOS and sync is mandatory
+([#705](https://github.com/jirigrill/eczema-helper/issues/705)), so a meal logged abroad on the 18th
+arrives on a phone at home whose today is still the 17th. A westward flight departing after local
+midnight reaches the same state without crossing the date line, and a date-line crossing is the
+rarest of the three, not the defining one.
+
+The two shapes rejected, both against a one-day self-healing gap. **Bending the forward edge to the
+latest record**, mirroring `DAY-NAV-4`: the cell it creates is tappable and loggable unless
+separately suppressed, which is the mis-dated meal `DAY-NAV-3` exists to prevent — reintroduced to
+show a record that will arrive tomorrow anyway. **Reachable but not loggable**: a third day state
+the screen has nowhere else, its own empty-state and write-refusal behaviour, for the same one day.
+
+**Independent of [#728](https://github.com/jirigrill/eczema-helper/issues/728).** The spike measured
+this state under the fixed policy *and* the fixed-plus-zone policy; it is a property of the pair
+(`DAY-NAV-3`, a backwards-moving today) rather than of date resolution. The reinterpret policy avoids
+it only by moving records instead, trading an unreachable record for a silently relocated one. So
+`DAY-NAV-9` may resolve either way without disturbing this rule.
+
+**No new divergence.** The PWA has no such state to diverge from — its forward edge renders seven
+future cells, so a record dated ahead is reachable there by construction. That is **Divergence 1**
+already, and this rule is its consequence rather than a thirteenth entry.
+
+**Not the twice-lived date.** A date lived twice puts two real meals in one slot, which is a write
+problem this rule does not touch —
+[#744](https://github.com/jirigrill/eczema-helper/issues/744)'s. `DAY-NAV-13` governs only whether a
+stored record's day can be *reached*, and it neither creates nor resolves a collision.
+
 ---
 
 ## 3. Meals
@@ -793,6 +857,7 @@ real rather than incidental.
 | `DAY-NAV-6`, `-7` | `page.test.ts:298-321` (today ring carries no `data-recorded`) | **translate** — it is a regression guard against exactly the feature §2 prohibits |
 | `DAY-NAV-8` | `page.test.ts:166-205` (chip presence, absence on today, navigation, recentre signal) | **translate**, minus the store-counter assertion, which is an implementation detail with no DOM consequence |
 | `DAY-NAV-10`, `-11`, `-12` | `-12` only, via the header de-duplication tests `page.test.ts:207-257` | **translate** `-12`; `-10` and `-11` are **re-derive** |
+| `DAY-NAV-13` | none — the reference renders seven future cells, so a record dated after today is reachable there by construction and there is no unreachable state to assert | **re-derive** entirely. Three assertions, all new and all cheap because none needs a zone change: with a record written one day ahead, the selector's forward edge is still today and no cell exists for that date; no screen shows any mark, count or message about it; and advancing today to that date makes it render as an ordinary record. The second is the regression guard — it is what keeps a "1 record ahead" courtesy out |
 | `DAY-MEAL-1`, `-11` | `MealCard.test.ts:220` (all four types always render), `page.test.ts:398-428` | **translate** |
 | `DAY-MEAL-2`, `-3`, `-4` | `page.test.ts:432-574` pins the **opposite** rule — breastfed collapses to one row, solids to a baby-only row | **do not translate**; re-derive against the union rule, and keep the `mixed` cases, which still hold |
 | `DAY-MEAL-5` | none — the actor labels are never rendered, so nothing asserts them | **re-derive** |
@@ -823,6 +888,10 @@ This is the honest list, and it is long for this screen.
   tested in the strip's own unit tests; the page never asserts what it computed, and tapping a cell
   from the page is untested.
 - **Midnight rollover** (`DAY-NAV-10`) and **time zones** (`DAY-NAV-9`) — nothing anywhere.
+- **Records dated after today** (`DAY-NAV-13`) — nothing, and nothing could: the reference's forward
+  edge renders seven future cells, so the state the rule governs does not exist there. Worth
+  separating from `DAY-NAV-9` above, because unlike the time-zone question this one is testable
+  **without** a zone change at all — a record written a day ahead reaches the same state.
 - **The add control** (`DAY-ROOT-2`, `-3`) — layout-owned and absent from the day view's test file.
 - **The observation entry's return destination** and **notes on entries** (`DAY-SKIN-2`).
 - **Shape-valid impossible dates.** The reference's date validation is a regex, so `2025-02-31`
@@ -913,6 +982,12 @@ something.
 29. With the app open on today, add a record from a second device (or wait for one to arrive).
     It appears without you doing anything, and your position on the screen does not move
     (`DAY-LIVE-1`, `-2`).
+30. On a second device, set the clock forward a day, log a meal there, and let it sync. On **this**
+    phone the selector's forward edge is still today, there is no cell for tomorrow, and nothing
+    anywhere — selector, meal section, skin section, settings — hints that a record exists ahead
+    (`DAY-NAV-13`, `DAY-NAV-3`, `DAY-NAV-7`). Then set **this** phone forward a day: the meal is
+    there, on an ordinary day, indistinguishable from any other record. **✗ PWA** — the reference
+    renders and logs seven future cells, so the record was reachable all along (Divergence 1).
 
 ---
 
@@ -943,6 +1018,17 @@ iOS app exists**: it is judged by carrying a phone across a boundary. Worth stat
 this is **not** schema-deadlined, because an open question about dates reads like one under #679's
 additive-only promotion rule — the record already carries both a calendar date and a `createdAt`
 instant, so either resolution is expressible in the shape that ships.
+
+**~~What happens to a record dated after today.~~ Closed by
+[#743](https://github.com/jirigrill/eczema-helper/issues/743): nothing — it is unreachable and
+unsurfaced until today reaches its date (`DAY-NAV-13`).** Found by #728's spike and named by none of
+its cases. It is independent of `DAY-NAV-9`: the state appears under two of the three date policies
+and is a property of `DAY-NAV-3` meeting a backwards-moving today, so #728 may resolve either way
+without reopening it. Two findings from that resolution outlive it. The trigger is **not** travel —
+under mandatory sync a second device in another zone reaches the state with nobody crossing anything
+(#705), which is why the rule is phrased over the record's date rather than over a journey. And the
+gap is bounded at **one day** by the ~26-hour span of zone offsets, which is what makes the silence
+`DAY-NAV-7` and `DAY-DERIVE-1` already required acceptable rather than merely unavoidable.
 
 **~~Where a sync-health indicator would live.~~ Closed by
 [#723](https://github.com/jirigrill/eczema-helper/issues/723): no positive indicator exists, on any
