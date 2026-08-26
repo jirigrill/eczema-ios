@@ -34,9 +34,22 @@ frozen PWA repo beside the code it was read out of:
 [`docs/spec/meal-editor-state-machine.md`](https://github.com/jirigrill/eczema-helper/blob/main/docs/spec/meal-editor-state-machine.md).
 It documents three cooperating state machines, maps every rule to its current TypeScript test, and
 lists its own open questions. Reference it; do not copy it here. It predates this format — it has no
-rule ids, no strength marks and no disposition table, and five of its open questions were answered
-afterwards by [#690](https://github.com/jirigrill/eczema-helper/issues/690). Reformatting it is
-worthwhile but is nobody's task yet.
+rule ids, no strength marks and no disposition table.
+
+> **Read it as a description of the PWA, not as instruction to the port.** Because it has no
+> strength marks, nothing in its prose distinguishes a live requirement from one that was
+> reversed — and **six of its behaviors were overturned** by
+> [#690](https://github.com/jirigrill/eczema-helper/issues/690) (undone-delete timestamps,
+> unconfirmed-food dirtiness, outside-click, buffer ownership, failed-delete undo invalidation,
+> and the post-remount "done" state). Each is now corrected in place and marked as a **Port
+> rule** block at §3.3, §3.4, §4.4, §6.1, §9.3 and §9.5, and seven of its sixteen open questions
+> are struck through. Treat any wart it records *without* a Port rule block as **undecided** —
+> #690's coherence default governs it, but nobody has adjudicated it.
+
+Reformatting it into this format — rule ids, strength marks, disposition table, divergence index,
+verification verdicts — is worthwhile but is nobody's task yet
+([#731](https://github.com/jirigrill/eczema-helper/issues/731)).
+
 
 ## Open questions live on the map
 
