@@ -256,6 +256,21 @@ not construct, and cannot make meaningful. It is opaque.
 **`DATA-ID-2` (MUST)** — The natural key is a **field the app matches on**. It is not identity, and
 writing a meal into an occupied slot is therefore not an overwrite.
 
+That is a statement about the storage layer, and **no interface path reaches it**: `DAY-MEAL-8` in
+[`day-view.md`](day-view.md#34-entering-the-editor) opens every occupied slot in **edit**, so the write
+that would land beside an existing meal lands *into* it instead. Two records for one slot therefore
+arise from **arrival** — a record reaching the device from elsewhere — and never from her logging a
+meal. Do not read this rule as a hazard needing a guard: a confirm-the-overwrite prompt on save would
+protect nothing and would fire on ordinary re-editing, which is the flow she uses most
+([#744](https://github.com/jirigrill/eczema-helper/issues/744)).
+
+This is also what happens when a westward flight makes her live one calendar date twice. Both
+breakfasts claim `date:mealType:actor`, and the second opens the first in edit rather than colliding
+with it — one meal, holding the foods of both. Day-granularity
+([INV-3](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-3)) never promised to
+separate two meals inside one slot, and nothing on screen distinguishes them, since a user-facing meal
+time is forbidden. Accepted deliberately (#744).
+
 **`DATA-ID-3` (MUST NOT)** — The app never derives a record name from a record's content, and never
 attempts to make two devices mint the same record name for the same slot.
 
@@ -277,6 +292,13 @@ That last rule is the honest statement of what was traded. The reference impleme
 produce a duplicate and could silently overwrite; this one cannot silently overwrite and can produce a
 duplicate. A duplicate meal is visible on the day view, which is what makes it tolerable — she can see
 that something is wrong, and it corrects itself.
+
+The claim holds because `DATA-ID-2` leaves **arrival as the only route** to two records in one slot. A
+collision is therefore always the reinstall case, where `DATA-CONV-4`'s warrant applies exactly: the two
+records are the same record and the discarded content is identical to the kept content. It was asked
+whether a twice-lived calendar date breaks the claim, by putting two genuinely different breakfasts in
+one slot; it does not, because that case produces one record rather than two
+([#744](https://github.com/jirigrill/eczema-helper/issues/744)).
 
 ### 4.2 The tiebreak, and why it has a deadline
 
