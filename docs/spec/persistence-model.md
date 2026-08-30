@@ -4,7 +4,7 @@
 [#682](https://github.com/jirigrill/eczema-helper/issues/682) — see [`TEMPLATE.md`](TEMPLATE.md) for
 the rules, and [`skin-observation.md`](skin-observation.md) for the worked example. **Awaits the
 owner's confirmation.** Nine decisions were settled by the owner in the grilling session that produced
-this document (§14 records all nine); the rest carry through from closed tickets and are cited rather
+this document (§15 records all nine); the rest carry through from closed tickets and are cited rather
 than re-derived.
 **Behavior reference:** `jirigrill/eczema-helper` @ `582f662` (frozen PWA),
 `src/lib/domain/models.ts`, `src/lib/db/atopic-db.ts`,
@@ -26,7 +26,7 @@ patch release can change; this one carries deadlines, and §10 names which rules
 
 This document states what the app stores and what the mother can observe as a consequence, in
 English, without reference to Swift, SwiftUI, SwiftData, Svelte or Dexie. Swift tests are derived
-from the numbered rules; the owner's acceptance pass is derived from §12.
+from the numbered rules; the owner's acceptance pass is derived from §13.
 
 Five things are worth knowing before the rules make sense:
 
@@ -81,7 +81,7 @@ store-enforced, and the rest were already application code.
 | [INV-6](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-6) | _Per-region severity set, atomically saved with photos_ | **Holds, with one named loss** — the only invariant that genuinely weakens. The local write stays atomic; cross-device atomic *arrival* does not survive. `docs/spec/skin-observation.md` §5.2 records it; §5.2 and §6 here say what the app does about it. |
 | [INV-7](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-7) | _Calm regions persist; every save witnesses all nine_ | **Holds unchanged, and is now structurally guaranteed.** `DATA-SKIN-4` folds the nine regions into one value precisely so a partial arrival cannot represent a sparse observation (Divergence 3). |
 | [INV-8](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-8) | _`id` and `createdAt` immutable across edit, delete, undo_ | **Holds unchanged**, and this section is where it is enforced: `DATA-SKIN-2` makes `createdAt` write-once, and `DATA-CONV-3` must not let a convergence pass restamp it. |
-| [INV-9](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-9) | _Photos stored unencrypted at rest_ | **Void for iOS.** Field encryption ships from release one and §10.3 declares **every** encryptable attribute encrypted (`DATA-ENC-1`). `DATA-LOCK-4` is why that is not the whole story for photographs — a declared-encrypted field is silently **not** encrypted past §5.2's asset threshold — so `DATA-ENC-5` has the app encrypt photo bytes itself. Both halves of the invariant are therefore void, by two different mechanisms. The on-device store file is a separate question ([#752](https://github.com/jirigrill/eczema-helper/issues/752)). |
+| [INV-9](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-9) | _Photos stored unencrypted at rest_ | **Void for iOS.** Field encryption ships from release one and §10.3 declares **every** encryptable attribute encrypted (`DATA-ENC-1`). `DATA-LOCK-4` is why that is not the whole story for photographs — a declared-encrypted field is silently **not** encrypted past §5.2's asset threshold — so `DATA-ENC-5` has the app encrypt photo bytes itself. Both halves of the invariant are therefore void, by two different mechanisms. The on-device store file is settled separately in §11 ([#752](https://github.com/jirigrill/eczema-helper/issues/752)): it inherits `NSFileProtectionCompleteUntilFirstUserAuthentication`, measured, so the store is encrypted at rest without the app acting. |
 | [INV-10](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-10) | _Dexie/IndexedDB, normalized tables; photos in a dedicated table_ | **Void for iOS** as to mechanism — replaced wholesale. One clause outlives it by coincidence rather than inheritance: photos do keep their own record type (§5.1), for transport reasons that have nothing to do with normalization. |
 | [INV-11](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-11) | _The app is a Logging Tool_ | **Holds**, and constrains this section twice: no derived value is persisted (`DATA-ABSENT-2`), and no field exists whose only use would be to support a claim the app must not make. |
 | [INV-12](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-12) | _Records carry types, not display strings_ | **Holds, and is tightened into a schema deadline.** `DATA-ITEM-2` drops `MealItem.name` — the violation [#677](https://github.com/jirigrill/eczema-helper/issues/677) flagged — and [#703](https://github.com/jirigrill/eczema-helper/issues/703) already settled that no fallback label replaces it. |
@@ -102,7 +102,7 @@ port picks the coherent rule, and *keeping* a wart is what needs a named reason.
 Every divergence is marked inline as **⚠ Divergence** with (a) what the PWA does, (b) what the iOS
 app does, and (c) why. There are eleven, and they are unusual for this spec in that **most are not
 defects**: four are forced by the platform, because the reference implementation was built on a
-store that made guarantees this one does not. They are indexed in §11.
+store that made guarantees this one does not. They are indexed in §12.
 
 ---
 ## 1. Vocabulary
@@ -445,7 +445,7 @@ travel with their parent or not at all.
 inferred: written from a physical device and read back as a raw server record, the nine regions arrive as
 **one** field holding JSON bytes, with all nine members and their order intact. The decomposed
 representation that would have defeated this rule does not occur, so `DATA-SKIN-4` stands as written and
-§13.1's fallback is closed. The stored value is opaque to the server — it cannot be queried into, and the
+§14.1's fallback is closed. The stored value is opaque to the server — it cannot be queried into, and the
 same is true of a dictionary or an app-encoded blob, so `DATA-SKIN-5`'s app-side ordering is the only
 ordering there is.
 
@@ -650,7 +650,7 @@ behavior only** — [#713](https://github.com/jirigrill/eczema-helper/issues/713
 it is real, but no primary source states it, and the vendor's own documentation names only *required
 relationships*, never required attributes. It is stated here as a rule because the measurement is
 trustworthy and the consequence of getting it wrong is a store that will not open; it must not be
-attributed to documentation. §13.3 records this as an open question against the source.
+attributed to documentation. §14.3 records this as an open question against the source.
 
 ---
 ## 8. What lives outside the store
@@ -829,7 +829,7 @@ settled in §10.3 ([#714](https://github.com/jirigrill/eczema-helper/issues/714)
 statement that the declaration used here carries those rules, because none exists.
 
 `DATA-LOCK-5` records a gap rather than a hazard, and it exists so nobody cites documentation that is not
-there — the same discipline §13.3 applies. The vendor documents the encryption restrictions on the
+there — the same discipline §14.3 applies. The vendor documents the encryption restrictions on the
 *previous* framework's attribute description, in an SDK header:
 
 > Attributes to be encrypted must be new additions to the CloudKit schema. Attributes that already exist
@@ -1002,7 +1002,99 @@ the moment it is written is decoding every photo the mother owns, and because th
 chance to record it cheaply.
 
 ---
-## 11. Divergence index
+## 11. The store file on disk
+
+Everything in §10 is frozen at production schema promotion. **Nothing in this section is.** A file's
+protection class is an attribute of a file, changeable in any release, which is why
+[#752](https://github.com/jirigrill/eczema-helper/issues/752) was split out of
+[#714](https://github.com/jirigrill/eczema-helper/issues/714) rather than settled under its deadline.
+§10.3 governs what the *server* stores; this section governs what sits on the phone.
+
+The two are independent, and the SDK says so in as many words — `NSAttributeDescription.h` line 67,
+iOS 27.0 SDK, a passage the rendered documentation page drops entirely:
+
+> Note: This property does not affect the data in the persistent store. Local file encryption should
+> continue to be managed by using `NSFileProtection` and other standard platform security mechanisms.
+
+**`DATA-FILE-1` (MUST)** — The app sets **no** protection class on the store file. It relies on the
+inherited default, which is `NSFileProtectionCompleteUntilFirstUserAuthentication`.
+
+**`DATA-FILE-2` (fact, measured)** — The store file and **both** its SQLite sidecars — `-wal` and `-shm` —
+each carry `NSFileProtectionCompleteUntilFirstUserAuthentication`. The sidecars are stated separately
+because a class on the main store file says nothing about them, and the `-wal` is where recently written
+rows live before a checkpoint. Measured, not assumed: see *Provenance* below.
+
+**`DATA-FILE-3` (MUST NOT)** — The app does **not** raise the class to `NSFileProtectionComplete`. That
+class means the file "cannot be read from or written to while the device is locked or booting"
+(`NSFileManager.h:1307`), and CloudKit mirroring is driven by silent remote notifications — i.e. it works
+while the phone is locked. Apple's guidance, quoted from
+[#752](https://github.com/jirigrill/eczema-helper/issues/752)'s research rather than re-verified here — the
+rendered *Encrypting your app's files* page served no body text when re-fetched, so this one line is the
+section's only citation not checked against a local SDK header: *"If your app supports background
+capabilities … assign a different protection level for files that you might access while in the
+background."* The rule does not rest on it — `NSFileManager.h:1307` alone is sufficient grounds.
+
+**`DATA-FILE-4` (MUST NOT)** — Nor does the app use `NSFileProtectionCompleteUnlessOpen`. Files under that
+class "can be created while the device is locked, but once closed, cannot be opened again until the device
+is unlocked" (`NSFileManager.h:1311`). Mirroring wakes at arbitrary times and would need to *open* a
+closed store, so this class is a worse fit than the default, not a safer one.
+
+**`DATA-FILE-5` (MUST NOT)** — Nor `NSFileProtectionCompleteWhenUserInactive` (iOS 17+, iOS-only,
+`NSFileManager.h:1317`). It is stricter than the default and reintroduces exactly the background-write
+exposure `DATA-FILE-3` avoids.
+
+**`DATA-FILE-6` (MUST NOT)** — No `applicationProtectedDataWillBecomeUnavailable(_:)` /
+`applicationProtectedDataDidBecomeAvailable(_:)` handling. Apple documents that pair for `.complete`
+files, which `DATA-FILE-3` rules out; under the default class, protected data does not become unavailable
+after first unlock.
+
+**`DATA-FILE-7` (fact)** — There is **no SwiftData API** for this. `ModelConfiguration` exposes no
+protection-class parameter, and the string `protection` does not occur anywhere in
+`SwiftData.swiftmodule/arm64e-apple-ios.swiftinterface` (iOS 27.0 SDK). Were a class ever to be set, the
+routes are `setResourceValue(_:forKey:)` with `fileProtectionKey` on the file, or
+`NSPersistentStoreFileProtectionKey` — the latter iOS-only (`API_UNAVAILABLE(macosx)`), relevant only if a
+Mac target ever shares the store.
+
+**`DATA-FILE-8` (implementation note)** — Read a class with `URL.resourceValues(forKeys:)`, **not**
+`FileManager.attributesOfItem(atPath:)`. The two documented routes disagree: in the #752 measurement the
+`URL` route returned the class on all three files while `attributesOfItem` returned `nil` for every one.
+Any test asserting a protection class must use the `URL` route or it will assert `nil`.
+
+### Why the default is left alone
+
+The threat is a device seized or lost while locked with the passcode unknown. The default already means the
+file "is stored in an encrypted format on disk and cannot be accessed until after the device has booted"
+(`NSFileManager.h:1313`), so the store is encrypted at rest without any action. The residual gap —
+a device powered on and unlocked at least once, then locked — is not closed by any class compatible with
+background mirroring, so the choice is not *default vs. safer* but *default vs. broken sync*.
+
+Full-device encryption covers the powered-off case, and the photo bytes carry a second, app-level layer
+(`DATA-ENC-5`). The protection class of the **keychain item** holding that photo key is a separate question
+and is not settled here.
+
+### Provenance
+
+`DATA-FILE-2` is measured, because the Core Data default is documented in a header while SwiftData's
+inheritance of it is documented nowhere. The header, `NSPersistentStoreCoordinator.h:131`, iOS 27.0 SDK —
+no web URL exists for this passage:
+
+> The default value of `NSPersistentStoreFileProtectionKey` is
+> `NSFileProtectionCompleteUntilFirstUserAuthentication` for all applications built on or after iOS5. The
+> default value for all older applications is `NSFileProtectionNone`.
+
+The probe is `eczema-ios-spikes/probe-fileprotection-752/`. It builds a SwiftData store with no CloudKit
+container, reads all three files by both documented routes, and **writes a control file with an explicitly
+set class first** — data protection is not enforced on the simulator, so without the control a `nil`
+reading could not be distinguished from an unprotected file. The control round-tripped, so the readings
+stand.
+
+**Two limits of the measurement, stated rather than papered over:** it ran on the simulator, so it
+establishes the class the framework *assigns*, not that the kernel *enforces* it; and it ran without
+mirroring enabled. Neither was the doubtful part — the doubt was whether SwiftData inherits the Core Data
+default at all, and it does — but a device run with `cloudKitDatabase:` set would close both.
+
+---
+## 12. Divergence index
 
 | # | Section | Summary | Class |
 | --- | --- | --- | --- |
@@ -1033,7 +1125,7 @@ degradation [#703](https://github.com/jirigrill/eczema-helper/issues/703) alread
 refusing is permanent and is recorded in §10.1 rather than glossed.
 
 ---
-## 12. Verification
+## 13. Verification
 
 ### Where each rule is verified today
 
@@ -1056,6 +1148,8 @@ For a port translating the existing tests rather than writing fresh ones. Paths 
 | §7.2 `DATA-ARRIVE-10` | **none** | New, and the cheapest test in the suite: load the real schema with mirroring enabled and assert it opens. |
 | §8 outside the store | `settings.svelte.ts` tests | **Do not translate.** They test a store row that no longer exists; the singleton moves out entirely. |
 | §9 history, §10 promotion | **none, and none possible** | Nothing to translate, and mostly nothing testable — see below. |
+| §11 `DATA-FILE-1`, `-2` | **none in either repo, but already measured** — `eczema-ios-spikes/probe-fileprotection-752/` | **Re-derive as a Swift test**, and it is nearly free: open the container, read `fileProtectionKey` off the store and both sidecars, assert `completeUntilFirstUserAuthentication`. Two constraints or the test lies. It must use the **`URL`** route (`DATA-FILE-8`) — `attributesOfItem` returns `nil` and an assertion against it would pass vacuously; and it must assert a **control** file whose class the test sets itself, because data protection is unenforced on the simulator, so without a control a green run proves nothing. |
+| §11 `DATA-FILE-3`..`-7` | **none, and none wanted** | Prohibitions on code that does not exist. A test asserting the app never calls `setResourceValue(_:forKey:)` is a lint rule, not a behavior test. |
 
 **Rules nothing verifies today.** The list is unusually long for this spec, and its length is the finding:
 **most of this document specifies behavior the reference implementation could not exhibit**, so absence of
@@ -1157,7 +1251,7 @@ really checking is the end state — one meal per slot — so treat a clean day 
 and a persistent duplicate as the failure.
 
 ---
-## 13. Open questions
+## 14. Open questions
 
 Recorded rather than guessed, per the map's cite-or-don't-claim rule. Each is a candidate ticket. **Two
 carry a schema deadline** and are marked as such — they are the only ones that cannot wait, because
@@ -1210,14 +1304,14 @@ start time is the conservative choice, being always the earlier of the two.
 
 **13.6 — Whether anything should ever be recorded about which device wrote a record.**
 `DATA-ABSENT-5` forbids a device identifier, and that is the right default for a single-user private
-journal. But it interacts with §13.4: the vendor's convergence blueprint distinguishes local writes from
+journal. But it interacts with §14.4: the vendor's convergence blueprint distinguishes local writes from
 arrivals using framework-level metadata, and if that metadata proves unavailable in this framework, an
 app-level equivalent would be the fallback — and would be a **new field**, deadlined. Recorded so the
 dependency is visible: if 13.4's spike finds no author filter, this question becomes urgent rather than
 theoretical.
 
 ---
-## 14. What the owner settled
+## 15. What the owner settled
 
 Nine questions were put to the owner in the grilling session that produced this document, each with a
 recommendation. **All nine were settled in agreement with the recommendation**, so no rule below carries
@@ -1251,7 +1345,8 @@ feeding stage's, since the record holds no health data — only that she consent
 encryptable attribute rather than a chosen list (`DATA-ENC-1`), include the timestamp row #693 had left
 explicitly to the owner (`DATA-ENC-2`), encrypt photo bytes in the app rather than keeping them small
 (`DATA-ENC-5`), and treat the on-device store file as a separate, undeadlined question rather than settling
-it under the same deadline ([#752](https://github.com/jirigrill/eczema-helper/issues/752)). Each was settled
+it under the same deadline ([#752](https://github.com/jirigrill/eczema-helper/issues/752), now settled in
+§11 — the default class is inherited and nothing is set). Each was settled
 in agreement with the recommendation put to the owner, so as with the nine above, no rule carries a
 "decided against advice" mark.
 
@@ -1266,7 +1361,12 @@ in agreement with the recommendation put to the owner, so as with the nine above
   shape.
 - **The photo-encryption key's lifecycle** — where the key `DATA-ENC-5` implies lives, whether it syncs,
   and what happens to it on restore to a new device. §10.3 settles that the app encrypts the bytes and
-  states the total-loss risk that follows; the mechanism is implementation.
+  states the total-loss risk that follows; the mechanism is implementation. **§11 narrows this by one
+  question without closing it:** the keychain item's own accessibility class is the direct analogue of
+  `DATA-FILE-1`, and the same background constraint applies — a key the mirroring layer cannot read while
+  the phone is locked is a key that cannot decrypt a photo arriving in the background. `DATA-FILE-*` is the
+  precedent to argue from when it is settled, and §11 is where the answer belongs, since it is likewise
+  undeadlined.
 - **Migration mechanics** — how a later release adds a field, and what the local migration does. Out of
   scope by the ticket, and §10.2's `DATA-LOCK-3` states the only part that carries behavior.
 - **Console configuration**, environment management, and how promotion is performed.
