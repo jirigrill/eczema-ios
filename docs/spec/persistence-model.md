@@ -81,7 +81,7 @@ store-enforced, and the rest were already application code.
 | [INV-6](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-6) | _Per-region severity set, atomically saved with photos_ | **Holds, with one named loss** — the only invariant that genuinely weakens. The local write stays atomic; cross-device atomic *arrival* does not survive. `docs/spec/skin-observation.md` §5.2 records it; §5.2 and §6 here say what the app does about it. |
 | [INV-7](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-7) | _Calm regions persist; every save witnesses all nine_ | **Holds unchanged, and is now structurally guaranteed.** `DATA-SKIN-4` folds the nine regions into one value precisely so a partial arrival cannot represent a sparse observation (Divergence 3). |
 | [INV-8](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-8) | _`id` and `createdAt` immutable across edit, delete, undo_ | **Holds unchanged**, and this section is where it is enforced: `DATA-SKIN-2` makes `createdAt` write-once, and `DATA-CONV-3` must not let a convergence pass restamp it. |
-| [INV-9](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-9) | _Photos stored unencrypted at rest_ | **Void for iOS, but not unconditionally.** Field encryption ships from release one; the field list is [#714](https://github.com/jirigrill/eczema-helper/issues/714)'s, decided against this section's schema. `DATA-LOCK-4` is the limit: a declared-encrypted field is silently **not** encrypted once its value passes §5.2's asset-promotion threshold, so for photo bytes specifically the guarantee holds only below it. |
+| [INV-9](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-9) | _Photos stored unencrypted at rest_ | **Void for iOS.** Field encryption ships from release one and §10.3 declares **every** encryptable attribute encrypted (`DATA-ENC-1`). `DATA-LOCK-4` is why that is not the whole story for photographs — a declared-encrypted field is silently **not** encrypted past §5.2's asset threshold — so `DATA-ENC-5` has the app encrypt photo bytes itself. Both halves of the invariant are therefore void, by two different mechanisms. The on-device store file is a separate question ([#752](https://github.com/jirigrill/eczema-helper/issues/752)). |
 | [INV-10](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-10) | _Dexie/IndexedDB, normalized tables; photos in a dedicated table_ | **Void for iOS** as to mechanism — replaced wholesale. One clause outlives it by coincidence rather than inheritance: photos do keep their own record type (§5.1), for transport reasons that have nothing to do with normalization. |
 | [INV-11](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-11) | _The app is a Logging Tool_ | **Holds**, and constrains this section twice: no derived value is persisted (`DATA-ABSENT-2`), and no field exists whose only use would be to support a claim the app must not make. |
 | [INV-12](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-12) | _Records carry types, not display strings_ | **Holds, and is tightened into a schema deadline.** `DATA-ITEM-2` drops `MealItem.name` — the violation [#677](https://github.com/jirigrill/eczema-helper/issues/677) flagged — and [#703](https://github.com/jirigrill/eczema-helper/issues/703) already settled that no fallback label replaces it. |
@@ -353,6 +353,19 @@ to the winner.
 
 **`DATA-CONV-9` (MUST)** — A record is marked superseded **once**. A record already marked is never
 re-marked, and its marking instant never moves.
+
+**`DATA-SUPER-1` (MUST)** — The mark is a **stored field on every record type that can be superseded** —
+an optional instant, absent on every record until it loses a convergence. Absent means "not superseded",
+and it is the same field `DATA-CONV-9` forbids moving and `DATA-CONV-10` reads.
+
+`DATA-SUPER-1` exists because the rules above describe the mark's behavior without ever saying it is a
+field, and §3.1 and §5.1 do not list it — an omission found while settling
+[#714](https://github.com/jirigrill/eczema-helper/issues/714), which had to give every field an encryption
+state and so had to enumerate them all. It is stated separately rather than folded into those two lists
+because it belongs to convergence rather than to either record's subject matter, and because it is
+**deadlined and unbackfillable in the way `DATA-CONV-1` is**: a record written without it cannot be
+converged safely later, and additive-only promotion means the field could be added but would be absent on
+exactly the reinstall population §4 exists for.
 
 **`DATA-CONV-10` (MUST)** — A superseded record is erased only after **both** an upload and a download
 have completed successfully since it was marked, and then only if it was marked sufficiently long ago
@@ -664,8 +677,9 @@ read changes whether the baby is a loggable actor. A key is a key, which makes t
 unrepresentable rather than merely swept.
 
 **Two costs, accepted knowingly.** The key-value store is documented as unencrypted on disk, so the
-feeding stage sits outside whatever [#714](https://github.com/jirigrill/eczema-helper/issues/714)
-decides — by construction, not by choice. And it is a *second* synchronisation mechanism with its own
+feeding stage sits outside §10.3's encryption — by construction, not by choice, and the exclusion is now
+sharper than it was: §10.3 encrypts every attribute it can reach, so this is one of exactly two values the
+mother creates that are not encrypted at all. And it is a *second* synchronisation mechanism with its own
 availability behavior, so `SET-STAGE-*` must state what the stage does in each degraded account state,
 since it no longer travels with the records it governs.
 
@@ -778,7 +792,7 @@ version.
 > an older app cannot read, and hiding a mother's own records from her, silently, is a worse failure than
 > the display degradation [#703](https://github.com/jirigrill/eczema-helper/issues/703) already accepted.
 > Because the advice must be taken before promotion or not at all, declining it is itself a deadlined
-> decision (§10.3).
+> decision (§10.4).
 
 These are numbered rather than left as omissions because each is a field a well-meaning implementer would
 add. The first is
@@ -807,9 +821,35 @@ synchronised schema accepts it.
 
 `DATA-LOCK-2` is stated as its own rule because the vendor's framing makes the consequence easy to
 misjudge: encryption is not a special case with its own rules, it is a **field type**, and field types are
-immutable in production. That is why the lock runs in both directions.
-[#714](https://github.com/jirigrill/eczema-helper/issues/714) owns which fields are encrypted and decides
-it against this section's schema.
+immutable in production. That is why the lock runs in both directions. Which fields are encrypted is
+settled in §10.3 ([#714](https://github.com/jirigrill/eczema-helper/issues/714)).
+
+**`DATA-LOCK-5` (MUST)** — The immutability in `DATA-LOCK-1` and `DATA-LOCK-2` is a property of the
+**synchronised schema**, not of the API that declared it. No implementation relies on a documented
+statement that the declaration used here carries those rules, because none exists.
+
+`DATA-LOCK-5` records a gap rather than a hazard, and it exists so nobody cites documentation that is not
+there — the same discipline §13.3 applies. The vendor documents the encryption restrictions on the
+*previous* framework's attribute description, in an SDK header:
+
+> Attributes to be encrypted must be new additions to the CloudKit schema. Attributes that already exist
+> in the production schema cannot be changed to support encryption.
+>
+> Attributes cannot (ever) change their encryption state in the CloudKit schema. Once something is
+> encrypted (or not) it will forever be so.
+
+— `NSAttributeDescription.h` lines 64–65, iOS 27.0 SDK. **This passage has no web URL**: the rendered
+documentation page drops the surrounding note entirely, so the header path and SDK version are the
+citation.
+
+Nothing ties those sentences to the framework this app uses: its encryption option has no discussion page
+and no doc comment in the shipped module interface. The rules nevertheless bind, for two reasons that do
+not depend on documentation. The quoted restriction is scoped to *the CloudKit schema*, which the server
+owns and enforces whichever layer declared the field. And the option was **measured** producing a real
+encrypted server field through this framework
+([#748](https://github.com/jirigrill/eczema-helper/issues/748)), on the same records that measured
+`DATA-LOCK-4`. So this is settled by construction plus measurement, and an implementer should know that is
+what it rests on.
 
 **`DATA-LOCK-4` (MUST NOT)** — A field declared encrypted is never relied on to be encrypted once its
 value can exceed the asset-promotion threshold. Field encryption and automatic asset promotion do not
@@ -840,18 +880,102 @@ there is **no deliberate promotion step to act just before**: SwiftData exposes 
 Data's `initializeCloudKitSchema`, so the development schema is created as a side effect of the **first
 write**. `DATA-LOCK-3`'s trap and this one share that timing.
 
-**The remedy is still open** and belongs to [#714](https://github.com/jirigrill/eczema-helper/issues/714)
-with [#705](https://github.com/jirigrill/eczema-helper/issues/705)'s mandatory-sync pairing: keep photo
-bytes under the threshold by construction, keep them out of mirrored attributes, or encrypt them in the
-app before storage so the asset carries ciphertext and the platform's field encryption is irrelevant.
-This section records what is true of the platform, not which of those is chosen.
+**The remedy is settled in §10.3** (`DATA-ENC-5`): the bytes are encrypted by the app before they are
+stored, so the asset carries ciphertext and the platform's field encryption is irrelevant to them. The two
+alternatives — keeping the bytes under the threshold by construction, or out of mirrored attributes
+altogether — are recorded there as rejected, with the reason.
 
 `DATA-LOCK-3` names a specific trap: the local store and the synchronised schema migrate by different
 mechanisms, and a local migration succeeding says nothing about the other accepting it. The observable
 failure is an app that works in development and fails only in a distributed build, reporting that a field
 cannot be created in the production schema.
 
-### 10.3 The deadlined decisions, in one place
+### 10.3 Which fields are encrypted
+
+Settled by [#714](https://github.com/jirigrill/eczema-helper/issues/714), owner-confirmed, against the
+schema this document defines rather than against an earlier field list. Every rule here is deadlined by
+`DATA-LOCK-2`.
+
+**`DATA-ENC-1` (MUST)** — **Every attribute the platform is capable of encrypting is declared encrypted.**
+There is no field-by-field judgement, and no attribute is exempted on the grounds that its value is
+unremarkable.
+
+**`DATA-ENC-2` (MUST)** — This includes the calendar-day labels, the creation and last-edit instants, the
+capture instant, the tiebreak, the supersession marking instant, and the photo's byte size, format and
+dimensions — every field whose value would, read alone, look banal.
+
+**`DATA-ENC-3` (MUST NOT)** — No rule anywhere depends on a mirrored attribute being server-readable. In
+particular, no read path, convergence step or sweep may be implemented as a server-side query.
+
+**`DATA-ENC-4` (MUST NOT)** — The app never represents its storage to the mother as encrypted without
+qualification, and never as end-to-end encrypted.
+
+**`DATA-ENC-5` (MUST)** — Photo bytes are encrypted **by the app, before they are stored**. Their
+confidentiality never depends on the platform's field-encryption declaration.
+
+**`DATA-ENC-6` (MUST)** — Record names, zone names, relationship fields, and the server's own creation and
+modification timestamps are **permanently plaintext**. Every rule in this document is written so that
+nothing sensitive is inferable from them alone.
+
+**Why a blanket rule and not a field list.** The earlier analysis
+([#693](https://github.com/jirigrill/eczema-helper/issues/693)) sorted the fields into clinical content,
+banal-but-correlated values, and an arguable timestamp row. Deciding them individually was rejected, for
+three reasons. Encrypting costs this product **nothing measurable**: all three of the reference
+implementation's query shapes are local, and the vendor states the flag "does not affect the data in the
+persistent store", so local predicates, sorting, indexing and relationship traversal are untouched — the
+usual argument against encrypting is scoped to server-side queries this app never issues. The banal fields
+are not banal *here*: the record type names are permanently plaintext (`DATA-ENC-6`) and they say what this
+store is, so a plaintext meal type on a record whose type name is an eczema diary is a correlation, not a
+neutral value. And a blanket rule is **one decision instead of eleven**, each of which would otherwise be
+re-argued whenever a field is added — under a deadline where getting it wrong is permanent.
+
+**The timestamp row, decided the same way.** #693 left the calendar day and the instants explicitly to the
+owner, because the server's own `creationDate` leaks the timeline whatever the app does. That is true, and
+it is an argument that encrypting these fields *gains little* — not that it costs anything. The counter-case
+was recoverability: a keychain reset makes encrypted values permanently unrecoverable, where plaintext ones
+would survive. What would survive is dates and meal types with no severities, no notes and no foods, which
+is worthless as a recovery artifact; and with no export ([#683](https://github.com/jirigrill/eczema-helper/issues/683))
+the phone is the only real recovery source regardless. The asymmetry decides it: leaving a value plaintext
+is permanent, and so is encrypting it, but only one of them can be wrong in a way that matters.
+
+**The tiebreak is encrypted, and this corrects a plausible misreading.** It looks like a field that must
+stay readable, because convergence sorts on it. It need not: `DATA-CONV-3` converges over the records that
+*arrived*, on-device, and `DATA-ENC-3` forbids doing it any other way. Nothing in this schema stays
+plaintext by choice — only the four things `DATA-ENC-6` names, which stay plaintext by force.
+
+**Why the photo bytes are app-encrypted rather than kept small.** `DATA-LOCK-4` measured the platform
+silently dropping the encryption declaration once a value is promoted to an asset, which is exactly the
+case photographs reach. Of the three available remedies, keeping the bytes under the threshold by
+construction was rejected because it makes confidentiality depend on the compression constants
+[#684](https://github.com/jirigrill/eczema-helper/issues/684) deliberately deferred to on-device
+measurement — coupling a revisable decision to an irrevocable one, which is the precise thing §5.2 shaped
+the record split to avoid. Keeping them out of mirrored attributes was rejected because
+[#705](https://github.com/jirigrill/eczema-helper/issues/705) makes sync mandatory with no opt-out, so
+photographs that do not sync are photographs that do not survive a reinstall. App-encryption is the only
+remedy that holds regardless of image size.
+
+**Its cost, accepted knowingly.** App-encryption means the app holds a key, and the only defensible home
+for one is the keychain — which makes keychain loss a **total loss of photographs**, adding a fourth
+silent-loss path to the three already accepted (#683, #687, and the keychain-reset path #693 identified).
+The alternative was confidentiality that varies with image size, in the direction where the more detailed
+photograph of an affected area is the one that loses protection. The key's own lifecycle — where it lives,
+whether it syncs, what happens on restore to a new device — is implementation, and is not specified here.
+
+**What this does not cover.** Two things sit outside these rules by construction, not by choice. The
+feeding stage and the consent record live in the ubiquitous key-value store (§8.1, §8.2), which is
+documented as unencrypted on disk, so `DATA-ENC-1` does not reach them; §8 states that price where it is
+paid. And the on-device store file is untouched by any rule here — the vendor's own note directs local
+protection to a separate mechanism, which is
+[#752](https://github.com/jirigrill/eczema-helper/issues/752)'s and is deliberately not decided here
+because, unlike everything else in this section, it is **not deadlined**: a file's protection class is
+changeable in any release.
+
+`DATA-ENC-4` is a drafting constraint with a regulatory edge, and `settings.md` §5 and `consent.md`
+already carry it: field encryption protects **values, never structure**, and it is not end-to-end without a
+platform feature the app can neither require nor detect (#693). "Your data is encrypted" would overclaim
+on both counts.
+
+### 10.4 The deadlined decisions, in one place
 
 Every rule in this document that cannot be revised after promotion. This table is the reason the section
 exists, and it is what a reviewer should check before release one ships.
@@ -867,7 +991,9 @@ exists, and it is what a reviewer should check before release one ships.
 | Calendar day as a label, not an instant | `DATA-MEAL-3` | Retyping is prohibited; a new field plus a rewrite of every meal |
 | Last-edit instant absent-when-unedited | `DATA-MEAL-5` | The distinction is unrecoverable once lost |
 | Every relationship optional | `DATA-ARRIVE-4` | The store will not open |
-| Each field's encryption state | `DATA-LOCK-2` | Permanent, in both directions |
+| Each field's encryption state | `DATA-LOCK-2`, `DATA-ENC-1` | Permanent, in both directions |
+| Photo bytes encrypted by the app | `DATA-ENC-5` | Every existing photo is plaintext on the server and must be rewritten to fix it |
+| The supersession marking instant | `DATA-CONV-7`, `DATA-SUPER-1` | Convergence cannot defer erasure for records already written — the documented data-loss sequence returns |
 | No version attribute | `DATA-ABSENT-5` | The strategy becomes unavailable forever |
 
 The three fields on the photo record are the clearest case of a deadline that looks like a nicety.
@@ -954,11 +1080,14 @@ content-derived identity.
   likely to drift, because the natural implementation reads the size of the *original* image before
   compression. A test that compresses a known image and asserts the recorded size equals the stored
   length is cheap and worth writing.
-- **Everything in §10.2.** Promotion, encryption locks, and the local-versus-remote migration trap cannot
-  be tested from a test suite at all — they are properties of a deployment. `DATA-ARRIVE-10` catches the
-  one failure that *is* catchable; the rest are a release checklist. §13.2's asset-encryption question is
-  now answered — `DATA-LOCK-4` — and what remains on that checklist is the remedy it forces, which is the
-  item that can still change a decision.
+- **Everything in §10.2 and §10.3.** Promotion, encryption locks, and the local-versus-remote migration trap
+  cannot be tested from a test suite at all — they are properties of a deployment. `DATA-ARRIVE-10` catches
+  the one failure that *is* catchable; the rest are a release checklist, and it is now a checklist of
+  *settled* items rather than open ones. Two parts of §10.3 are nonetheless testable and worth writing,
+  because both fail silently: that a photo's stored bytes are **not** readable as an image without the app's
+  key (`DATA-ENC-5`), and that no query in the codebase is server-side (`DATA-ENC-3`) — the second is a
+  review or a lint, not a test. Whether a field actually arrived encrypted is only observable by reading the
+  raw server record, which is what the #747/#748 probe harness does and no unit test can.
 
 ### Acceptance pass
 
@@ -1051,10 +1180,9 @@ Measured on a real container from a physical device and recorded as `DATA-LOCK-4
 `@Attribute(.allowsCloudEncryption)` arrives encrypted below §5.2's ~750 KB threshold and, above it, is
 renamed to a `_ckAsset` field and carries **no** encrypted value — silently, with no error. So a photo is
 encrypted while small and unencrypted once it grows: the confidentiality of an image varies with its size.
-What remains open is only the **remedy**, owned jointly with
-[#714](https://github.com/jirigrill/eczema-helper/issues/714) — keep the bytes under the threshold, keep
-them out of mirrored attributes, or app-encrypt before storage. Still deadlined: `DATA-LOCK-2` makes the
-choice uncorrectable after promotion.
+The **remedy is now settled too** — `DATA-ENC-5`, §10.3: the app encrypts the bytes before storing them, so
+the asset carries ciphertext and the declaration's behavior stops mattering for photographs. Nothing about
+this question remains open.
 
 **13.3 — The optional-or-defaulted rule for attributes has no primary source.**
 `DATA-ARRIVE-9` states it and `DATA-ARRIVE-10` tests for it, on the strength of
@@ -1113,10 +1241,19 @@ Two of these deserve a second glance from the owner at confirmation time, becaus
 rather than avoiding one. Decision 7 destroys the losing edit with no notice and, under mandatory sync
 with no export, unrecoverably — tolerable only because the realistic collision is the reinstall case, one
 phone writing sequentially, not two people editing at once. Decision 3 places the consent record in
-storage documented as **unencrypted on disk**, which puts its timestamp and revision id outside whatever
-[#714](https://github.com/jirigrill/eczema-helper/issues/714) decides; that is a weaker concession than
-the feeding stage's, since the record holds no health data — only that she consented, when, and to which
-text.
+storage documented as **unencrypted on disk**, which puts its timestamp and revision id outside §10.3's
+blanket encryption — now that §10.3 encrypts *everything* it can, this is one of only two values the mother
+creates that are not covered (the feeding stage is the other). That is still a weaker concession than the
+feeding stage's, since the record holds no health data — only that she consented, when, and to which text.
+
+**Four further decisions were settled by the owner after this table was written**, in
+[#714](https://github.com/jirigrill/eczema-helper/issues/714), and all four are deadlined: encrypt every
+encryptable attribute rather than a chosen list (`DATA-ENC-1`), include the timestamp row #693 had left
+explicitly to the owner (`DATA-ENC-2`), encrypt photo bytes in the app rather than keeping them small
+(`DATA-ENC-5`), and treat the on-device store file as a separate, undeadlined question rather than settling
+it under the same deadline ([#752](https://github.com/jirigrill/eczema-helper/issues/752)). Each was settled
+in agreement with the recommendation put to the owner, so as with the nine above, no rule carries a
+"decided against advice" mark.
 
 ---
 ## Appendix: what this section does not contain
@@ -1127,9 +1264,9 @@ text.
   [#684](https://github.com/jirigrill/eczema-helper/issues/684) deferred them to implementation, to be
   measured on a device. §5.2 is deliberately written so that no constant it picks can change the record
   shape.
-- **Which fields are encrypted.** [#714](https://github.com/jirigrill/eczema-helper/issues/714)'s, decided
-  against this schema. §10.2 states the lock's timing and, in `DATA-LOCK-4`, the one case where a
-  declaration does not survive — which constrains that list without settling it.
+- **The photo-encryption key's lifecycle** — where the key `DATA-ENC-5` implies lives, whether it syncs,
+  and what happens to it on restore to a new device. §10.3 settles that the app encrypts the bytes and
+  states the total-loss risk that follows; the mechanism is implementation.
 - **Migration mechanics** — how a later release adds a field, and what the local migration does. Out of
   scope by the ticket, and §10.2's `DATA-LOCK-3` states the only part that carries behavior.
 - **Console configuration**, environment management, and how promotion is performed.
