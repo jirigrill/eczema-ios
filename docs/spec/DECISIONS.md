@@ -1,0 +1,263 @@
+# Product decisions
+
+The handful of decisions that shape the whole product, each readable here without opening a link.
+
+## What this file is for
+
+The spec's rules say **what the app does**. This file says **why the product is shaped this way** —
+for the small number of decisions that a reader would otherwise mistake for an oversight, an
+accident, or something safe to revise.
+
+It exists because the arguments behind these decisions were had on an issue tracker in a **different
+repository** — the frozen PWA repo's [Wayfinder map](https://github.com/jirigrill/eczema-helper/issues/672).
+Those issues are permanent and are cited here as provenance, but **this repo does not depend on them
+to be understood.** Every entry below states its own decision, its own cost, and its own
+irreversibility in full. If a link here is the only way to learn what was decided, the entry is
+written wrong.
+
+## What belongs here
+
+An entry earns its place by passing all three:
+
+1. **Hard to reverse** — permanently, or only at a cost the reader should know before touching it.
+2. **Surprising without context** — a competent implementer would otherwise read it as a bug, a
+   missing feature, or an invitation to improve.
+3. **The result of a real trade-off** — something was knowingly given up.
+
+Anything failing all three is just a spec rule; it lives in its section and nowhere else. This file
+is **not** a changelog, not a decision *log* of everything settled, and not a second home for rules.
+
+## How to read an entry
+
+Each entry is one paragraph of substance: **the call**, **what it cost**, and **what it would take to
+undo**. Then two pointers — the spec rules that implement it, and the issue that argued it. The rules
+are authoritative on behavior; if this file and a rule ever disagree, **the rule wins** and this file
+is stale.
+
+---
+
+## 1. Sync is mandatory, and there is no way to turn it off
+
+CloudKit sync is always on. There is no toggle, no opt-out, and no way to withdraw from sync while
+continuing to keep a diary. The app's own definition is a *synced* diary, not a local one with a cloud
+feature attached.
+
+**What it cost.** Under the GDPR, one consent now covers both keeping a local record and copying an
+infant's skin photographs to a cloud provider, where two separate consents would have been the more
+cautious design. More seriously, the right to withdraw consent is satisfied only *mechanically*: the
+in-app delete-all-my-data control is one tap, free, and always available, but exercising it destroys
+her entire diary, because nothing is exported and nothing is backed up (see §3). Whether that counts
+as withdrawal "without detriment" is genuinely unresolved — no regulatory source addresses the case
+where the withdrawn processing *is* the product. That exposure was priced in and accepted, not
+overlooked. Accepted alongside it: the cloud provider is a recipient of special-category data for
+100% of users, with no local-only population left to argue otherwise.
+
+**What was gained.** The ePrivacy consent story is stronger, not weaker: because the service *is* a
+synced diary, sync sits inside what the user asked for. An optional sync toggle would have proved the
+app works without sync, making sync separate functionality needing its own separate consent. The
+engineering case pointed the same way — the platform does not document local-only ↔ cloud-backed as a
+supported transition, two store configurations would have forced a schema partition this app's
+related records cannot tolerate, and there is no documented way to upload a back-catalogue for
+someone who logs for months and only then enables sync.
+
+**To undo.** Adding a toggle later is not a settings change. It requires a supported store transition
+the platform does not document, and the back-catalogue upload problem above. Treat it as a new
+product, not a feature.
+
+- **Rules:** `SET-SYNC-1` (no positive sync indicator anywhere), `SET-SYNC-2`…`-12` in
+  [`settings.md`](settings.md) §4.1; `SET-ABSENT-1` (no toggle, no way to turn sync off);
+  `SET-DELETE-1`…`-21` §3 (the delete-all-my-data control, including its degraded behavior);
+  `CONSENT-GATE-1`…`-7` in [`consent.md`](consent.md); `INV-1` is **void for iOS** — see the
+  disposition table in [`persistence-model.md`](persistence-model.md).
+- **Argued in:** [#705](https://github.com/jirigrill/eczema-helper/issues/705).
+
+## 2. Every field that can be encrypted is encrypted, and that choice is permanent
+
+Every attribute the platform is capable of encrypting is declared encrypted — with no field-by-field
+judgement and no exemption for values that look banal. That includes the timestamps and the calendar
+dates. Photograph bytes are additionally encrypted **by the app itself** before they are stored, so
+the app holds its own key.
+
+**Why a blanket rule rather than a considered list.** A per-field list has to be re-derived every time
+the schema moves, and it had already gone stale in three rows while the decision sat blocked. A
+blanket rule cannot go stale. It also costs nothing measurable: every query this app issues is local,
+and the encryption declaration does not affect the local store, so local predicates, sorting,
+indexing and relationship traversal are untouched. The usual argument against encrypting fields is
+about server-side queries, which this app never issues. And the "banal" fields are not banal here —
+record *type names* are permanently plaintext and they say what this store is, so a plaintext meal
+type on a record type named for an eczema diary is a correlation rather than a neutral value.
+
+**Why the app encrypts photographs separately.** Platform field encryption and automatic promotion of
+large values to attachments **do not compose**: past roughly 750 KB the field is silently renamed and
+the encryption request is dropped, with no error and no warning. This was measured on a physical
+device against a real container, not inferred. For photographs the failure runs in the worst possible
+direction — a detailed photograph of an affected area is *more* likely to cross the threshold than a
+plain one, so the images most worth protecting were exactly the ones losing protection. App-side
+encryption is the only remedy that holds regardless of image size. The two alternatives were
+rejected: keeping bytes under the threshold would make confidentiality depend on compression
+constants deliberately deferred to on-device measurement, and keeping bytes out of synced attributes
+would mean photographs that do not survive a reinstall, which §1 forbids.
+
+**What it cost.** The app now holds an encryption key, and the only defensible home for it is the
+keychain — so **losing the keychain is a total loss of every photograph.** That is a real silent-loss
+path, accepted knowingly, and it sits beside the platform's own hazard: an iCloud Keychain reset
+permanently destroys encrypted synced data, and the documented remedy is re-uploading from the local
+cache, which is the *only* remedy for an app with no export. Encryption also protects values and
+never structure: relationships are stored as plaintext foreign keys and cannot be encrypted, so
+*which observation belongs to which meal* stays visible to the server, and the server's own record
+timestamps mean **logging timing is permanently observable** whatever this app declares.
+
+**To undo.** You cannot. A field's encryption state is fixed when the schema is promoted to
+production and can never change in either direction — an unencrypted field can never become
+encrypted, and an encrypted field can never become unencrypted. There is also no deliberate promotion
+step to act just before: the development schema is created as a side effect of the **first write**.
+Note that the platform vendor documents this immutability rule only in an SDK header
+(`NSAttributeDescription.h`, iOS 27.0 SDK) with **no web URL**, and never ties it to the framework
+this app actually uses; the rule binds by construction plus measurement, not by documentation.
+
+- **Rules:** `DATA-ENC-1`…`-6` and `DATA-LOCK-1`…`-5` in [`persistence-model.md`](persistence-model.md)
+  §10.2–§10.3, which also carry the deadline table.
+- **Argued in:** [#714](https://github.com/jirigrill/eczema-helper/issues/714), measured in
+  [#748](https://github.com/jirigrill/eczema-helper/issues/748); the earlier field-by-field attempt is
+  [#693](https://github.com/jirigrill/eczema-helper/issues/693).
+
+## 3. Nothing is exported, and sync is the only durability
+
+There is no export, no import, no PDF, and no share-my-record control in v1. Durability rests entirely
+on CloudKit sync. The mother cannot get her data out of the app in any form.
+
+**What it cost.** Every silent-loss path in this product traces back here. Withdrawal of consent is
+destructive because there is nothing to withdraw *to* (§1). The keychain hazards in §2 are total
+losses rather than recoverable ones, because the phone is the only recovery source. If the iCloud
+storage allowance fills, the developer has no lever. The exposure was stated explicitly and accepted
+by the owner **against the recommendation** — this is the one entry here that the person writing the
+spec argued the other way.
+
+**A known conflict, deliberately left standing.** Apple's own guidance says apps integrating with
+CloudKit *"need to provide users with a way to view and export their data."* This decision does not
+comply, and the conflict was found *after* the decision was made rather than before. It is recorded in
+the spec at the rule itself rather than quietly resolved, because it is a submission risk somebody
+should weigh with current information rather than inherit as settled.
+
+**Related, and separate:** a clinician-facing PDF report — and data sharing generally — is not merely
+unbuilt but deliberately out of scope, partly because a document arranging meals against flare-ups
+edges toward regulated medical-device territory (see §5).
+
+**To undo.** Adding export later is straightforward and breaks nothing. This is the least irreversible
+entry in the file; it is here because the *absence* is easy to mistake for an oversight, and because
+so much else in the spec is shaped by it.
+
+- **Rules:** `SET-ABSENT-2` in [`settings.md`](settings.md), with the Apple-guidance conflict recorded
+  in that section's open questions; `INV-2` is **void for iOS** as to durability — sync carries it —
+  while the no-rollback half still holds.
+- **Argued in:** [#683](https://github.com/jirigrill/eczema-helper/issues/683).
+
+## 4. Refusing consent is a terminal state, in an app she has already paid for
+
+The app is gated on consent before anything is recorded. Declining writes **nothing at all** — no
+consent record, no feeding stage, not even a marker that she declined — and lands on a refusal screen
+that is the end of the road. There is no reduced, local-only, or read-only mode to fall back to.
+
+**Why there is no fallback mode.** It follows directly from §1 and §2. Because sync is mandatory and
+the app's lawful basis for handling an infant's health data *is* her explicit consent, an app running
+without that consent has no basis to record anything. A local-only degraded mode would be exactly the
+"the app works fine without sync" proof that §1 was designed not to give.
+
+**What it cost.** She has already paid — v1 is a paid app with no free tier — so the refusal path
+invites refund requests, and that is the honest price of the structure rather than a defect in it.
+Note also what a *later* withdrawal costs: it is not a return to this screen but a destruction of her
+diary (§3).
+
+**To undo.** The gate itself is soft — nothing is persisted, so removing or relaxing it changes no
+stored data. But it cannot be relaxed while §1 and §2 stand, because the consent is what makes the
+recording lawful at all. Reopen this only together with §1.
+
+**What is deliberately still open.** The *copy* on both the consent screen and the refusal screen is
+the owner's to draft, with several questions tabled for a lawyer's review. That is prose and legal
+opinion, not behavior — which is why the consent section is the one part of the spec with no open
+behavioral rules.
+
+- **Rules:** `CONSENT-NO-1`…`-8` (the refusal path) and `CONSENT-GATE-1`…`-7` in
+  [`consent.md`](consent.md); `RUN-GATE-*` and `RUN-CONSENT-*` in [`first-run.md`](first-run.md).
+- **Argued in:** [#737](https://github.com/jirigrill/eczema-helper/issues/737), with the structural
+  reasoning in [#705](https://github.com/jirigrill/eczema-helper/issues/705) §6.2.
+
+## 5. The app records; it never finds. Nothing is derived, anywhere
+
+No stored record holds a suspected cause, a trigger, a correlation, or a score. Nothing derived from
+her records is displayed on any screen — no day-overall severity, no pattern, no suggestion, no
+"foods to watch". The elimination-protocol engine that the PWA once had is parked and is not part of
+this product.
+
+**This is the boundary the whole product rests on.** An app that *finds* which foods cause flare-ups
+is software intended to support a diagnostic decision, which puts it in regulated medical-device
+territory with a conformity burden a single individual cannot carry. An app that *records* what was
+eaten and how the skin looked is not. The distinction is not in the code — it is in what the app
+claims to do, which means **marketing copy is a regulatory tripwire**: "discover which foods trigger
+flare-ups" re-qualifies this app as a medical device with no code change whatsoever. Describe
+recording, never finding, everywhere the product speaks about itself.
+
+**What it cost.** The obviously useful feature — telling her what her own data suggests — is
+unavailable, permanently, and it is the feature a well-meaning contributor will reach for first. Users
+will ask for it.
+
+**Why the absences are numbered rules.** Each is a field or a screen element a competent implementer
+would add without thinking, so the spec numbers the prohibitions rather than leaving them as
+omissions. A stored suspected-cause field is not a small convenience; it is the line between two
+regulatory categories.
+
+**To undo.** Not a code decision. It requires accepting a medical-device conformity route, and the
+owner's position is that the engine would be rewritten from scratch if ever revived rather than
+ported.
+
+- **Rules:** `DATA-ABSENT-1`…`-5` in [`persistence-model.md`](persistence-model.md) §10.1;
+  `DAY-DERIVE-1` in [`day-view.md`](day-view.md); `SET-ABSENT-4` in [`settings.md`](settings.md);
+  `CAT-ABSENT-1`…`-2` in [`catalog.md`](catalog.md) (no ladder, dose schedule or protocol on any
+  allergen or food);
+  [`CONTEXT.md#inv-5`](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-5)
+  (*causation is derived, not recorded*) **holds unchanged**, as an absence.
+- **Argued in:** carried from the PWA's descaling to a logging-only tool
+  ([#613](https://github.com/jirigrill/eczema-helper/issues/613)); day-level severity retired by
+  [#717](https://github.com/jirigrill/eczema-helper/issues/717).
+
+## 6. Newly captured photographs are still offered to the camera roll
+
+After a skin observation is saved, the photographs just taken are offered to the system share sheet.
+This is the app's **largest deliberate privacy concession**, and it survived the port on purpose.
+
+**Why it is surprising.** On the web this was a *durability* workaround: browser storage is opaque and
+fragile, so pushing a copy somewhere the user controls was the only backup available. On iOS that
+rationale is gone — the store is durable and it syncs (§1) — so the feature was retained for a
+different reason than the one that created it, and the owner retained it **against the
+recommendation**. An implementer reading only the PWA would assume it came across by inertia. It did
+not; it was re-decided.
+
+**What it cost.** Photographs of an infant's skin leave the app's encrypted store (§2) and land in a
+general-purpose photo library that syncs, shares and backs up on its own terms, outside anything this
+app's rules can govern. Every confidentiality guarantee in §2 stops at that boundary.
+
+**To undo.** Trivial in code; it removes a capability the owner asked for twice. Raise it with the
+owner, not in a refactor.
+
+- **Rules:** `SKIN-PHOTO-18` (MUST) in [`skin-observation.md`](skin-observation.md).
+- **Argued in:** raised and resolved on the map — see the Decisions-so-far entry on camera-roll
+  sharing in [#672](https://github.com/jirigrill/eczema-helper/issues/672).
+
+---
+
+## What is deliberately not in this file
+
+**No ADR series, and no decisions log.** Both were considered and declined. The spec sections already
+carry each decision's trade-off, rejected alternatives, accepted costs and irreversibility at the rule
+itself — an ADR would restate them in a second place and go stale there. A numbered series would also
+collide with the frozen PWA repo's own `docs/adr/`, where a second `0001` is a citation hazard.
+
+**The frozen repo's ADRs are not this repo's.** `ADR-0001` (single device, no sync) and `ADR-0029` (no
+cryptography, no backup) remain true of the PWA and were both decided **the other way here** — read
+them for the trade-offs they record, never as guidance. `ADR-0028` (food-level preparations) is a
+domain rule the platform change does not touch and it ports intact; it is cited from
+[`catalog.md`](catalog.md).
+
+**Everything still undecided lives on the map**, not here:
+[Map: PWA → native iOS](https://github.com/jirigrill/eczema-helper/issues/672). This file records what
+is settled and shaping; open questions are the map's job, or an `OPEN` rule in a spec section.
