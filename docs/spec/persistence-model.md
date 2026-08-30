@@ -81,7 +81,7 @@ store-enforced, and the rest were already application code.
 | [INV-6](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-6) | _Per-region severity set, atomically saved with photos_ | **Holds, with one named loss** — the only invariant that genuinely weakens. The local write stays atomic; cross-device atomic *arrival* does not survive. `docs/spec/skin-observation.md` §5.2 records it; §5.2 and §6 here say what the app does about it. |
 | [INV-7](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-7) | _Calm regions persist; every save witnesses all nine_ | **Holds unchanged, and is now structurally guaranteed.** `DATA-SKIN-4` folds the nine regions into one value precisely so a partial arrival cannot represent a sparse observation (Divergence 3). |
 | [INV-8](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-8) | _`id` and `createdAt` immutable across edit, delete, undo_ | **Holds unchanged**, and this section is where it is enforced: `DATA-SKIN-2` makes `createdAt` write-once, and `DATA-CONV-3` must not let a convergence pass restamp it. |
-| [INV-9](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-9) | _Photos stored unencrypted at rest_ | **Void for iOS.** Field encryption ships from release one; the field list is [#714](https://github.com/jirigrill/eczema-helper/issues/714)'s, decided against this section's schema. §10.2 records the one unclosed risk in that pairing. |
+| [INV-9](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-9) | _Photos stored unencrypted at rest_ | **Void for iOS, but not unconditionally.** Field encryption ships from release one; the field list is [#714](https://github.com/jirigrill/eczema-helper/issues/714)'s, decided against this section's schema. `DATA-LOCK-4` is the limit: a declared-encrypted field is silently **not** encrypted once its value passes §5.2's asset-promotion threshold, so for photo bytes specifically the guarantee holds only below it. |
 | [INV-10](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-10) | _Dexie/IndexedDB, normalized tables; photos in a dedicated table_ | **Void for iOS** as to mechanism — replaced wholesale. One clause outlives it by coincidence rather than inheritance: photos do keep their own record type (§5.1), for transport reasons that have nothing to do with normalization. |
 | [INV-11](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-11) | _The app is a Logging Tool_ | **Holds**, and constrains this section twice: no derived value is persisted (`DATA-ABSENT-2`), and no field exists whose only use would be to support a claim the app must not make. |
 | [INV-12](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-12) | _Records carry types, not display strings_ | **Holds, and is tightened into a schema deadline.** `DATA-ITEM-2` drops `MealItem.name` — the violation [#677](https://github.com/jirigrill/eczema-helper/issues/677) flagged — and [#703](https://github.com/jirigrill/eczema-helper/issues/703) already settled that no fallback label replaces it. |
@@ -428,6 +428,14 @@ five calm regions. That is a **wrong severity reading of an infant's skin**, pro
 nothing anywhere reporting an error. Folding the nine into one value makes it unrepresentable: they
 travel with their parent or not at all.
 
+**Verified against a real container** ([#747](https://github.com/jirigrill/eczema-helper/issues/747)), not
+inferred: written from a physical device and read back as a raw server record, the nine regions arrive as
+**one** field holding JSON bytes, with all nine members and their order intact. The decomposed
+representation that would have defeated this rule does not occur, so `DATA-SKIN-4` stands as written and
+§13.1's fallback is closed. The stored value is opaque to the server — it cannot be queried into, and the
+same is true of a dictionary or an app-encoded blob, so `DATA-SKIN-5`'s app-side ordering is the only
+ordering there is.
+
 `DATA-SKIN-5` closes the other half. The platform has no notion of a stored order for a related
 collection at all — there is no ordered-relationship facility to ask for — so an implementation that
 reads regions positionally is relying on an accident. For nine fixed regions this costs nothing, since
@@ -462,7 +470,9 @@ written at the same moment as the bytes, and are never recomputed afterwards.
 **The separation is not about asset promotion, and the reason it was originally proposed was wrong.**
 The platform maps a large value to an external asset **automatically, by size at the moment of
 serialization** — above roughly 750 KB for one value, or whenever the whole record exceeds 1 MB — and
-that behavior is not something a schema opts into. Two live reasons survive. First, a record type is
+that behavior is not something a schema opts into. That threshold carries a consequence beyond storage
+layout: crossing it also **silently voids a field's encryption declaration** (`DATA-LOCK-4`, §10.2), which
+is why the figure matters to confidentiality and not only to field budgeting. Two live reasons survive. First, a record type is
 limited to 256 fields, and the platform generates a *second* field for every variable-length attribute
 to hold its asset counterpart, so binary fields cost double against that limit; keeping them on a record
 of their own keeps the observation's record shape unaffected by them. Second, and more practically for
@@ -801,14 +811,40 @@ immutable in production. That is why the lock runs in both directions.
 [#714](https://github.com/jirigrill/eczema-helper/issues/714) owns which fields are encrypted and decides
 it against this section's schema.
 
-**One unclosed risk that pairing must resolve, recorded here because this section is where it is
-visible.** Whether encryption covers externally stored assets is **undocumented in both directions** — the
-vendor's own material on field encryption discusses only ordinary attributes and never mentions assets.
-Combined with §5.2's finding that a large value is promoted to an asset *automatically and by size*, the
-unresolved possibility is that a photo could be encrypted while small and unencrypted once it grows past
-roughly 750 KB — a confidentiality property that varies with image content. This is a gap in the sources,
-not a finding, and it is testable on a real container before promotion. It is the one item in this
-section that could invalidate a decision made elsewhere on the map.
+**`DATA-LOCK-4` (MUST NOT)** — A field declared encrypted is never relied on to be encrypted once its
+value can exceed the asset-promotion threshold. Field encryption and automatic asset promotion do not
+compose: past the threshold the declaration is silently ignored.
+
+This was the one unclosed risk in the pairing above, and it is now **measured and closed adversely**
+([#748](https://github.com/jirigrill/eczema-helper/issues/748)). One model with a single field declared
+`@Attribute(.allowsCloudEncryption)`, two rows straddling §5.2's ~750 KB single-value threshold, written
+to a real private container from a physical device; the raw `CKRecord` was read back from the server.
+Bytes were incompressible random data, so the serializer could not shrink the large row under the
+threshold and produce a false reassurance.
+
+| | Below the threshold (200 KB) | Above it (3 MB) |
+| --- | --- | --- |
+| Field name on the server | `CD_bytes` | **`CD_bytes_ckAsset`** |
+| Plain value | absent | `CKAsset` |
+| Fields in `encryptedValues` | **1** — the value | **0** |
+
+Same model, same declaration, same run: the only difference is size. On promotion to an asset the field
+is **renamed** and the encryption request is **dropped with no error and no warning**. So the feared
+behaviour — a photo encrypted while small and unencrypted once it grows — is what the platform actually
+does, and for photographs it means confidentiality varies with image size and therefore with image
+content: a detailed photograph of an affected area is *more* likely to cross the threshold than a plain
+one, so the values most worth protecting are the ones that lose protection.
+
+Two consequences for the deadline itself. `DATA-LOCK-2` makes this uncorrectable after promotion, and
+there is **no deliberate promotion step to act just before**: SwiftData exposes no equivalent of Core
+Data's `initializeCloudKitSchema`, so the development schema is created as a side effect of the **first
+write**. `DATA-LOCK-3`'s trap and this one share that timing.
+
+**The remedy is still open** and belongs to [#714](https://github.com/jirigrill/eczema-helper/issues/714)
+with [#705](https://github.com/jirigrill/eczema-helper/issues/705)'s mandatory-sync pairing: keep photo
+bytes under the threshold by construction, keep them out of mirrored attributes, or encrypt them in the
+app before storage so the asset carries ciphertext and the platform's field encryption is irrelevant.
+This section records what is true of the platform, not which of those is chosen.
 
 `DATA-LOCK-3` names a specific trap: the local store and the synchronised schema migrate by different
 mechanisms, and a local migration succeeding says nothing about the other accepting it. The observable
@@ -920,8 +956,9 @@ content-derived identity.
   length is cheap and worth writing.
 - **Everything in §10.2.** Promotion, encryption locks, and the local-versus-remote migration trap cannot
   be tested from a test suite at all — they are properties of a deployment. `DATA-ARRIVE-10` catches the
-  one failure that *is* catchable; the rest are a release checklist, and §13.2's open question about the
-  asset-encryption gap is the item on it that could change a decision.
+  one failure that *is* catchable; the rest are a release checklist. §13.2's asset-encryption question is
+  now answered — `DATA-LOCK-4` — and what remains on that checklist is the remedy it forces, which is the
+  item that can still change a decision.
 
 ### Acceptance pass
 
@@ -997,25 +1034,27 @@ Recorded rather than guessed, per the map's cite-or-don't-claim rule. Each is a 
 carry a schema deadline** and are marked as such — they are the only ones that cannot wait, because
 additive-only promotion means a field never recorded cannot be backfilled.
 
-**13.1 — Does an array of composite values mirror, and as what? ⏳ SCHEMA DEADLINE.**
-`DATA-SKIN-4` stores the nine regions as one value on the observation. That the platform *persists* such
-a value is documented; whether and how it **mirrors** is not documented anywhere, in either direction.
-The two plausible representations have materially different consequences: as a single binary blob it
-inherits §5.2's automatic size-driven asset promotion, while decomposed into one field per member it
-consumes nine or eighteen of the 256 fields a record type allows. Nine regions is far from that limit, so
-the risk is not the limit itself — it is that a decomposed representation would arrive **field by field**,
-which is precisely the partial arrival `DATA-SKIN-4` exists to make impossible. This needs an empirical
-test against a real container, not a citation, and it must happen before promotion: if the value does not
-mirror as one unit, the fallback is nine discrete named attributes on the observation, which is a
-different schema. Marked `OPEN` at the rule if the test has not been run when a Swift implementation
-begins.
+**13.1 — Does an array of composite values mirror, and as what? ✅ ANSWERED: yes, as one opaque blob.**
+Measured on a real container from a physical device ([#747](https://github.com/jirigrill/eczema-helper/issues/747)),
+recorded at `DATA-SKIN-4` in §5.1. The composite mirrors as **one** field, not decomposed field by field,
+so the partial arrival the rule exists to prevent is unrepresentable and the fallback to nine discrete
+named attributes is **not** required. Two findings the question did not anticipate. First, the value
+arrives as an opaque `Data` blob whichever way it is declared — a `Codable` array, a dictionary, and an
+app-encoded `Data` field all land as JSON bytes — so the "explicit blob" fallback buys nothing on the
+server side, and the choice is an app-side one. Second, because it is a blob it does inherit §5.2's
+size-driven asset promotion, as this section anticipated; nine regions are ~221 bytes, so the threshold is
+not in reach, but the inheritance is real and `DATA-LOCK-4` is what it would run into.
 
-**13.2 — Are externally stored assets covered by field encryption? ⏳ SCHEMA DEADLINE.**
-Recorded in §10.2 and repeated here because it is the one open question that could invalidate a decision
-taken elsewhere on the map. Undocumented in both directions; combined with automatic size-driven
-promotion, a photo could plausibly be encrypted below roughly 750 KB and not above it. Owned jointly with
-[#714](https://github.com/jirigrill/eczema-helper/issues/714), which cannot finish its field list without
-the answer. Testable before promotion, and only before.
+**13.2 — Are externally stored assets covered by field encryption? ✅ ANSWERED: no.**
+Measured on a real container from a physical device and recorded as `DATA-LOCK-4` in §10.2
+([#748](https://github.com/jirigrill/eczema-helper/issues/748)). A field declared
+`@Attribute(.allowsCloudEncryption)` arrives encrypted below §5.2's ~750 KB threshold and, above it, is
+renamed to a `_ckAsset` field and carries **no** encrypted value — silently, with no error. So a photo is
+encrypted while small and unencrypted once it grows: the confidentiality of an image varies with its size.
+What remains open is only the **remedy**, owned jointly with
+[#714](https://github.com/jirigrill/eczema-helper/issues/714) — keep the bytes under the threshold, keep
+them out of mirrored attributes, or app-encrypt before storage. Still deadlined: `DATA-LOCK-2` makes the
+choice uncorrectable after promotion.
 
 **13.3 — The optional-or-defaulted rule for attributes has no primary source.**
 `DATA-ARRIVE-9` states it and `DATA-ARRIVE-10` tests for it, on the strength of
@@ -1089,7 +1128,8 @@ text.
   measured on a device. §5.2 is deliberately written so that no constant it picks can change the record
   shape.
 - **Which fields are encrypted.** [#714](https://github.com/jirigrill/eczema-helper/issues/714)'s, decided
-  against this schema. §10.2 states only the lock's timing and its one unclosed risk.
+  against this schema. §10.2 states the lock's timing and, in `DATA-LOCK-4`, the one case where a
+  declaration does not survive — which constrains that list without settling it.
 - **Migration mechanics** — how a later release adds a field, and what the local migration does. Out of
   scope by the ticket, and §10.2's `DATA-LOCK-3` states the only part that carries behavior.
 - **Console configuration**, environment management, and how promotion is performed.
