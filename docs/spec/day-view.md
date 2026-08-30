@@ -62,7 +62,7 @@ citation cannot import a contradiction.
 | [INV-8](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-8) | _`id` and `createdAt` immutable across edit, delete, undo_ | **Holds unchanged.** It is what makes ordering observations by `createdAt` stable across edits (`SKIN-VIEW-1`). |
 | [INV-10](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-10) | _Dexie/IndexedDB; reactive UI via `liveQuery`_ | **Void for iOS** as to storage; the *reactivity* it describes is retained as behavior in `DAY-LIVE-1`. |
 | [INV-11](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-11) | _The app is a Logging Tool_ | **Holds**, and is the governing invariant of this section. All of §6, and the unmarked-row rule `DAY-MEAL-3`. |
-| [INV-12](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-12) | _Records carry types, not display strings_ | **Holds.** The day view resolves every label at render; note the PWA's `MealItem.name` violation ([#677](https://github.com/jirigrill/eczema-helper/issues/677)) must not be inherited by the row rendering in `DAY-MEAL-6`. |
+| [INV-12](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-12) | _Records carry types, not display strings_ | **Holds, and is now binding rather than advisory.** The day view resolves every label at render; the PWA's `MealItem.name` violation ([#677](https://github.com/jirigrill/eczema-helper/issues/677)) must not be inherited by the row rendering in `DAY-MEAL-6`. [#703](https://github.com/jirigrill/eczema-helper/issues/703) Q1 settled that `MealItem` carries `foodId` and no label, which is what leaves nothing to fall back to and forces `DAY-MEAL-12`. |
 | [INV-14](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-14) | _Every meal has an eligible actor_ | **Holds, and is read precisely.** It binds **at log time**. That is exactly what licenses `DAY-MEAL-2`/`-3`: a later stage change does not retro-invalidate a meal, so the day view must still show it. |
 
 `CONTEXT.md` also holds invariant-shaped rules **unnumbered**, in glossary prose. Two bear on this
@@ -73,8 +73,8 @@ rules (both under § _Glossary_).
 
 This is not a 1:1 port. Per [#690](https://github.com/jirigrill/eczema-helper/issues/690),
 **coherence is presumed right**: where the reference implementation does two different things, the
-port takes the coherent rule, and *keeping* a wart needs a named reason. There are **eight**,
-marked inline and indexed in §8. Two of them fix defects that are live in the shipped PWA today.
+port takes the coherent rule, and *keeping* a wart needs a named reason. There are **thirteen**,
+marked inline and indexed in §8. Three of them fix defects that are live in the shipped PWA today.
 
 ---
 
@@ -364,6 +364,58 @@ the reference implementation persists Czech display text onto `MealItem.name` �
 [#677](https://github.com/jirigrill/eczema-helper/issues/677). This row must resolve names from
 the catalog at render, never from a string stored on the record.
 
+Resolving at render is what makes an **unresolvable item** possible: a `foodId` the bundled catalog
+does not contain, which `catalog.md` `CAT-VER-3` makes an ordinary state under mandatory sync — an
+older phone holding a record written by a newer one. `CAT-VER-8` fixes it as a recoverable display
+condition and `CAT-VER-9` forbids the catalog layer from repairing it; the next three rules are what
+this screen does with it, settled by
+[#703](https://github.com/jirigrill/eczema-helper/issues/703).
+
+**`DAY-MEAL-12` (MUST)** — An item whose `foodId` does not resolve against the bundled catalog is
+**not rendered**: no raw id, no humanised id, no placeholder, no ellipsis, no count of what is
+missing.
+
+**`DAY-MEAL-13` (MUST)** — A meal whose items are **all** unresolvable renders as a row that holds a
+meal, with an empty food run. It is visibly occupied, it is tappable, and it shows no food names.
+
+**`DAY-MEAL-14` (MUST NOT)** — A row under `DAY-MEAL-12` or `-13` carries no marker of the
+condition: no badge, no icon, no dimming, no explanatory sentence.
+
+`DAY-MEAL-12` is the consequence of a decision `DAY-MEAL-6` half-states. #703 Q1 refuses a
+denormalised label on the record — decided against `INV-12`, `CONTEXT.md:284-296`, and `DAY-MEAL-6`
+itself, which was already written and owner-confirmed when the question was put — so at render there
+is nothing to fall back **to**. Hiding is what remains once the alternatives are refused.
+
+The blank occupied row is **load-bearing against a data-loss shape**, not a cosmetic call. A blank row routed
+into the meal section's empty state would present as an empty slot, offer a compose, and let her log
+a *new* meal into a slot that already holds one — which is
+[#712](https://github.com/jirigrill/eczema-helper/issues/712)'s loss arriving from a third
+direction. `DAY-EMPTY-1` and `DAY-EMPTY-3` govern the empty case and this row is not it; §5 carries
+the pointer.
+
+**Hiding is only safe paired with `DAY-MEAL-15`, and neither rule may be implemented alone.** The
+objection to hiding is the reference implementation's own, at `working-meal.ts:337-343` —
+*"Dropping the item would silently shrink a meal she logged, which is the one outcome worse than
+failing to open it"* — and it holds for hidden *plus editable*, which is not what was decided. Under
+read-only the `foodId` stays on disk untouched (`CAT-VER-9`), no save path can overwrite the meal it
+belongs to, and the item reappears in full when the app updates. So this is a display loss with a
+self-healing end state, not the destructive drop that comment describes. An implementer who finds
+`DAY-MEAL-12` and stops has shipped the destructive version — hiding is the visible half, and it is
+what a naive renderer does anyway when a lookup returns nil.
+
+**The cost `DAY-MEAL-13` carries, stated plainly:** most meals hold few items, so a blank occupied
+row is the *typical* presentation of skew rather than a rare one. A one-food meal renders as a row
+that says nothing at all.
+
+**A second route to a blank label is deliberately not specified here.** A food the catalog *does*
+contain, but whose label is missing from one dialect's table, would also render blank — Swift has no
+`satisfies` equivalent, and measurement on Swift 6.4 confirmed `xcstringstool` does not backfill an
+entry present in `en` but missing from `en-US`, so an incomplete table draws no compile-time
+diagnostic. That is **not** an unresolvable id and `DAY-MEAL-12` does not cover it: `catalog.md`
+`CAT-LOC-7` fails the build on a missing label, so the condition never reaches a device. Stated
+rather than left implicit because a reader who knows the failure mode will otherwise look for a
+display rule here and, not finding one, invent a fallback that reverses #703 Q1.
+
 ### 3.4 Entering the editor
 
 **`DAY-MEAL-7` (MUST)** — A row holding no meal is tappable and opens the meal editor in **compose**
@@ -378,6 +430,39 @@ The editor itself is specified by
 [`meal-editor-state-machine.md`](https://github.com/jirigrill/eczema-helper/blob/main/docs/spec/meal-editor-state-machine.md); its §1.1 fixes meal type and date
 at entry and defines the `returnTo` contract this rule satisfies. This section owns the *list*, not
 the editor.
+
+**`DAY-MEAL-15` (MUST)** — A row holding a meal with one or more unresolvable items still opens the
+editor in **edit** under `DAY-MEAL-8`, and the editor it opens is **read-only-degraded**: the meal
+displays and cannot be saved. Reachability is unconditional; the refusal is the editor's.
+
+> **⚠ Divergence 13.** *PWA:* rehydrating a meal whose `foodId` is not in the catalog **throws** —
+> `working-meal.ts:337-343`, at both call sites in `meal-editor.svelte.ts` (`:178` on open, `:244` on
+> undo-restore) — so the meal cannot be opened at all. *iOS:* it opens and degrades. *Why:* the
+> throw was tenable only because it was unreachable. `atopic-db.ts` v12's `.upgrade()` bulk-deletes
+> every meal holding a stale id (`:186-196`), and the throw and the wipe were a pair: the wipe
+> guaranteed the throw never fired. The wipe policy does not carry over, and under CloudKit there is
+> no migration hook to hang it on — a device cannot rewrite another device's rows. Porting the throw
+> alone, which a faithful translation of `fromMealItems` would do, ships the guard without the thing
+> that made it safe. Class: **settled by #703**.
+
+This screen owns only *entering*. The refusal on save, and what the editor shows while degraded,
+belong to the meal editor — [`meal-editor-state-machine.md`](https://github.com/jirigrill/eczema-helper/blob/main/docs/spec/meal-editor-state-machine.md)
+§1, cited by section because that document carries no rule ids yet
+([#746](https://github.com/jirigrill/eczema-helper/issues/746) corrects it without adding them). The
+boundary is drawn here rather than there because `DAY-MEAL-8` would otherwise read as opening an
+editor the reference cannot open, and because a row that refuses to open is the one degradation #703
+ruled out.
+
+**The refusal states no reason** (#703 Q5/Q7, held twice, the second time knowingly against a
+recommendation). She sees a meal with fewer foods than she logged, cannot edit it, and is told
+nothing about either cause. From her side read-only is indistinguishable from a broken editor. A
+reason-stating refusal was offered — it would have left Q5's no-marker rule intact — and declined.
+
+**One unresolvable item freezes the whole slot.** The meal's note and its *other*, perfectly
+resolvable foods become uneditable too, until the app updates. With sync mandatory
+([#705](https://github.com/jirigrill/eczema-helper/issues/705)) an older device can sit in that state
+indefinitely. Accepted knowingly: it is the conservative form of the same instinct as the PWA's
+throw, refusing the edit rather than risking the item through a save round trip.
 
 **`DAY-MEAL-10` (MUST NOT)** — No meal can be deleted from the day view. Deletion is reachable only
 from inside the editor that owns the record.
@@ -784,6 +869,13 @@ This is deliberate in the reference implementation too, and asserted by a regres
 (`page.test.ts:427`). Four tappable empty slots make an empty day actionable; a sentence saying
 nothing is logged makes it blank.
 
+**A meal row showing no food names is not an empty slot, and neither of the two rules above reaches
+it.** `DAY-MEAL-13` gives an all-unresolvable meal a row that is visibly occupied with an empty food
+run. Routing it through this section — treating *renders nothing* as *holds nothing* — would offer a
+compose into a slot that already holds a meal, which is why `DAY-MEAL-13` exists. `DAY-EMPTY-1`'s
+one-empty-state-per-section rule is about a section with no records in it; a blank occupied row is a
+record.
+
 **`DAY-EMPTY-4` (MUST NOT)** — There is no permanent instructional hint on the day view.
 
 > **⚠ Divergence 6.** *PWA:* a hint reading *"Record everything via + : photo · meal · status"* is
@@ -909,9 +1001,10 @@ earliest record she has, so it extends backwards on its own as older records arr
 | 10 | §4 `DAY-SKIN-9` | An observation entry shows a glyph when it has photos; the PWA shows nothing. | New behaviour, #739 |
 | 11 | §4 `DAY-SKIN-11` | Tapping a thumbnail opens a paging, zoomable viewer; the PWA's lightbox shows one photo. | Resolved by #740 |
 | 12 | §4 `DAY-SKIN-6` | The day's photos are chronological; the PWA does not sort them at all. | Defect fixed |
+| 13 | §3.4 `DAY-MEAL-15` | A meal holding an unresolvable `foodId` opens read-only-degraded; the PWA throws on rehydration and cannot open it at all. | Settled by #703 |
 
-Twelve divergences, of which three (5, 7 and 12) are live defects in the shipped PWA and one (2) is a
-data-loss fix inherited from #712.
+Thirteen divergences, of which three (5, 7 and 12) are live defects in the shipped PWA and two (2 and
+13) are data-loss fixes inherited from #712 and #703.
 
 **`DAY-NAV-9`..`-9c` add no divergence, and that is worth saying.** Every other resolved rule in this
 section changed something: the time-zone resolution is the one that ratifies the reference's existing
@@ -950,6 +1043,8 @@ real rather than incidental.
 | `DAY-MEAL-5` | none — the actor labels are never rendered, so nothing asserts them | **re-derive** |
 | `DAY-MEAL-6` | `MealCard.test.ts:163,262` (no portion or preparation text on any logged row) | **translate** |
 | `DAY-MEAL-7`, `-8`, `-9` | `page.test.ts:432-574` (hrefs carry type, date, actor, `returnTo`) | **translate** the parameter contract; the URL form itself is web-specific |
+| `DAY-MEAL-12`, `-13`, `-14` | none — and nothing could exist: `atopic-db.ts` v12 wipes every meal holding a stale id (`:186-196`), so the reference has no persisted row that fails a catalog lookup | **re-derive** entirely. Four assertions, all cheap because the state is constructed by writing a record with an invented `foodId` rather than by version skew: a meal of two items, one unresolvable, renders **one** name and no trace of the other (`-12`); a meal of one unresolvable item renders as a row that reads as holding a meal per `DAY-MEAL-11`, with no food names (`-13`); that same row is **not** routed into the meal section's empty state and offers no compose (`-13`, the data-loss guard, and the assertion worth writing first); and neither row carries a badge, dimming or sentence (`-14`, the regression guard that keeps a helpful marker out) |
+| `DAY-MEAL-15` | `working-meal.test.ts:330` (*"throws on an item whose foodId is absent from the catalog"*) pins the behavior Divergence 13 replaces | **do not translate.** Re-derive: the row opens the editor rather than failing, and it opens in edit for that meal. The save refusal is the meal editor's to verify, not this section's; what belongs here is that reachability is unconditional |
 | `DAY-MEAL-10` | `MealCard.test.ts:130` (no swipe or long-press handlers) | **translate** as an absence check |
 | `DAY-SKIN-1`..`-4` | `SkinObservationCard.test.ts`; ordering, chips, all-calm chip, absence of a count at `:244` | **translate** — but see `skin-observation.md` §11, which owns these |
 | `DAY-SKIN-6`, `-7`, `-10` | `SkinPhotoCard.test.ts` — grid presence `:48`, one image per photo `:34`, the `region · time` caption `:101`, distinct times for two photos of one region `:114`, and **both** orphan paths `:132,146` | **translate** the grid, the caption format and the orphan degradation — `-10`'s rule is directly pinned. **Do not translate** the object-URL lifecycle or the count test `:80`, which asserts the count `DAY-DERIVE-1` drops. **`-6`'s ordering clause is verified by nothing and the reference violates it** (Divergence 12) — a fresh test, and a prerequisite for the pager |
@@ -991,6 +1086,12 @@ This is the honest list, and it is long for this screen.
 - **Shape-valid impossible dates.** The reference's date validation is a regex, so `2025-02-31`
   passes and renders a day. iOS date types make this unrepresentable — which is the preferred
   resolution, not a test.
+- **The unresolvable-item path in every form** (`DAY-MEAL-12`..`-15`) — nothing, and nothing could:
+  the v12 upgrade hook deletes the rows that would reach it. Three of the four rules are testable and
+  listed above. The fourth thing is not: **that the degradation is silent and reasonless** is a
+  *negative* about the whole screen, and the two costs #703 accepted knowingly — a skewed item
+  freezing the slot's note and its other foods, and a refusal that names no cause — are judged by a
+  person, not asserted. They belong to the acceptance pass, steps 34 and 35.
 
 ### Acceptance pass
 
@@ -1100,6 +1201,22 @@ something.
     which step 30 covers by clock instead (`DAY-NAV-13`). One further effect is **out of scope here**
     and tracked separately: a second breakfast silently overwriting the first on a twice-lived date
     ([#744](https://github.com/jirigrill/eczema-helper/issues/744)).
+34. **The skewed meal.** You need two app versions on one iCloud account, or a build with a food
+    added to the catalog. On the newer, log a meal with **two** foods, one of them the added food.
+    Open that day on the older phone: the row shows **one** food name, with nothing marking the
+    other's absence — no placeholder, no badge, no dimming, no sentence (`DAY-MEAL-12`,
+    `DAY-MEAL-14`). Tap it: the editor **opens**, shows the meal, and refuses to save — and read it
+    closely, because it tells you **no reason at all** (`DAY-MEAL-15`). **✗ PWA** — the reference
+    cannot open it; it throws (Divergence 13).
+35. **The blank row, and the cost.** On the newer phone log a meal of that **one** added food only.
+    On the older phone that row reads as *holding a meal* and shows no food names at all
+    (`DAY-MEAL-13`, `DAY-MEAL-11`). Confirm the slot is **not** offered as empty — there is no
+    compose affordance on it — because logging a second meal there is the loss this rule prevents.
+    Then, back on step 34's two-food meal, try to change its **note** and its **other** food: you
+    cannot, and one unresolvable item has frozen the whole slot until the app updates. Finally,
+    update the older phone and confirm every hidden food **reappears in full** with nothing lost
+    (`CAT-VER-9`) — that self-healing end state is what makes hiding acceptable, and it is the step
+    that proves it.
 
 ---
 
