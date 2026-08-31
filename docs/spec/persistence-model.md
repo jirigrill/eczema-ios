@@ -81,7 +81,7 @@ store-enforced, and the rest were already application code.
 | [INV-6](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-6) | _Per-region severity set, atomically saved with photos_ | **Holds, with one named loss** — the only invariant that genuinely weakens. The local write stays atomic; cross-device atomic *arrival* does not survive. `docs/spec/skin-observation.md` §5.2 records it; §5.2 and §6 here say what the app does about it. |
 | [INV-7](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-7) | _Calm regions persist; every save witnesses all nine_ | **Holds unchanged, and is now structurally guaranteed.** `DATA-SKIN-4` folds the nine regions into one value precisely so a partial arrival cannot represent a sparse observation (Divergence 3). |
 | [INV-8](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-8) | _`id` and `createdAt` immutable across edit, delete, undo_ | **Holds unchanged**, and this section is where it is enforced: `DATA-SKIN-2` makes `createdAt` write-once, and `DATA-CONV-3` must not let a convergence pass restamp it. |
-| [INV-9](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-9) | _Photos stored unencrypted at rest_ | **Void for iOS.** Field encryption ships from release one and §10.3 declares **every** encryptable attribute encrypted (`DATA-ENC-1`). `DATA-LOCK-4` is why that is not the whole story for photographs — a declared-encrypted field is silently **not** encrypted past §5.2's asset threshold — so `DATA-ENC-5` has the app encrypt photo bytes itself. Both halves of the invariant are therefore void, by two different mechanisms. The on-device store file is settled separately in §11 ([#752](https://github.com/jirigrill/eczema-helper/issues/752)): it inherits `NSFileProtectionCompleteUntilFirstUserAuthentication`, measured, so the store is encrypted at rest without the app acting. |
+| [INV-9](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-9) | _Photos stored unencrypted at rest_ | **Void for iOS.** Field encryption ships from release one and §10.3 declares **every** encryptable attribute encrypted (`DATA-ENC-1`). `DATA-LOCK-4` is why that is not the whole story for photographs — a declared-encrypted field is silently **not** encrypted past §5.2's asset threshold — so `DATA-ENC-5` has the app encrypt photo bytes itself. Both halves of the invariant are therefore void, by two different mechanisms. The on-device store file is settled separately in §11.1 ([#752](https://github.com/jirigrill/eczema-helper/issues/752)): it inherits `NSFileProtectionCompleteUntilFirstUserAuthentication`, measured, so the store is encrypted at rest without the app acting. The key `DATA-ENC-5` requires is §11.2 ([#763](https://github.com/jirigrill/eczema-helper/issues/763)). |
 | [INV-10](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-10) | _Dexie/IndexedDB, normalized tables; photos in a dedicated table_ | **Void for iOS** as to mechanism — replaced wholesale. One clause outlives it by coincidence rather than inheritance: photos do keep their own record type (§5.1), for transport reasons that have nothing to do with normalization. |
 | [INV-11](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-11) | _The app is a Logging Tool_ | **Holds**, and constrains this section twice: no derived value is persisted (`DATA-ABSENT-2`), and no field exists whose only use would be to support a claim the app must not make. |
 | [INV-12](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-12) | _Records carry types, not display strings_ | **Holds, and is tightened into a schema deadline.** `DATA-ITEM-2` drops `MealItem.name` — the violation [#677](https://github.com/jirigrill/eczema-helper/issues/677) flagged — and [#703](https://github.com/jirigrill/eczema-helper/issues/703) already settled that no fallback label replaces it. |
@@ -986,7 +986,12 @@ for one is the keychain — which makes keychain loss a **total loss of photogra
 silent-loss path to the three already accepted (#683, #687, and the keychain-reset path #693 identified).
 The alternative was confidentiality that varies with image size, in the direction where the more detailed
 photograph of an affected area is the one that loses protection. The key's own lifecycle — where it lives,
-whether it syncs, what happens on restore to a new device — is implementation, and is not specified here.
+its accessibility class, whether it syncs, and what she sees when it is gone — is settled in **§11.2**
+([#763](https://github.com/jirigrill/eczema-helper/issues/763)), which is not under this section's deadline
+but has a deadline of its own: the first photo write, because a re-key must decrypt what the lost key
+protected. Note that §11.2 **narrows** the loss recorded here rather than removing it: the key syncs, so a
+new phone recovers it, and what remains is the case where the mother has iCloud Keychain switched off — a
+setting the app can neither require nor detect.
 
 **What this does not cover.** Two things sit outside these rules by construction, not by choice. The
 feeding stage and the consent record live in the ubiquitous key-value store (§8.1, §8.2), which is
@@ -1028,20 +1033,32 @@ Nothing in release one displays them; they exist because the alternative to reco
 the moment it is written is decoding every photo the mother owns, and because there will be no second
 chance to record it cheaply.
 
----
-## 11. The store file on disk
+**One deadline sits outside this table, and a reviewer should check it in the same pass.** The photo key
+(§11.2, `DATA-KEY-1`..`-5`) is not frozen by schema promotion — no keychain attribute is — but it is frozen
+by the **first photo write**, because changing the key means decrypting what the old one protected. It is
+excluded from the table above because the table's subject is promotion; it is named here so that a reviewer
+working from the table does not conclude the key can be revisited after release one. Same deadline as
+[#762](https://github.com/jirigrill/eczema-helper/issues/762)'s encode targets.
 
-Everything in §10 is frozen at production schema promotion. **Nothing in this section is.** A file's
-protection class is an attribute of a file, changeable in any release, which is why
+---
+## 11. What sits on the phone
+
+Everything in §10 is frozen at production schema promotion. **Nothing in this section is frozen by
+*that*.** A file's protection class is an attribute of a file, changeable in any release, which is why
 [#752](https://github.com/jirigrill/eczema-helper/issues/752) was split out of
 [#714](https://github.com/jirigrill/eczema-helper/issues/714) rather than settled under its deadline.
-§10.3 governs what the *server* stores; this section governs what sits on the phone.
+§10.3 governs what the *server* stores; this section governs what sits on the phone — the store file
+(§11.1) and the photo key (§11.2). **§11.2 carries a deadline of its own**, though not the schema's: a
+keychain item is rewritable in any release, but the key's *value* cannot be changed once photographs have
+been encrypted with it, so the first photo write closes it. §11.1 has no deadline at all.
 
 The two are independent, and the SDK says so in as many words — `NSAttributeDescription.h` line 67,
 iOS 27.0 SDK, a passage the rendered documentation page drops entirely:
 
 > Note: This property does not affect the data in the persistent store. Local file encryption should
 > continue to be managed by using `NSFileProtection` and other standard platform security mechanisms.
+
+### 11.1 The store file
 
 **`DATA-FILE-1` (MUST)** — The app sets **no** protection class on the store file. It relies on the
 inherited default, which is `NSFileProtectionCompleteUntilFirstUserAuthentication`.
@@ -1096,8 +1113,8 @@ a device powered on and unlocked at least once, then locked — is not closed by
 background mirroring, so the choice is not *default vs. safer* but *default vs. broken sync*.
 
 Full-device encryption covers the powered-off case, and the photo bytes carry a second, app-level layer
-(`DATA-ENC-5`). The protection class of the **keychain item** holding that photo key is a separate question
-and is not settled here.
+(`DATA-ENC-5`). The keychain item holding that photo key is **§11.2**, and it is deliberately given the
+matching class for the reason set out there.
 
 ### Provenance
 
@@ -1119,6 +1136,145 @@ stand.
 establishes the class the framework *assigns*, not that the kernel *enforces* it; and it ran without
 mirroring enabled. Neither was the doubtful part — the doubt was whether SwiftData inherits the Core Data
 default at all, and it does — but a device run with `cloudKitDatabase:` set would close both.
+
+### 11.2 The photo key
+
+Settled by [#763](https://github.com/jirigrill/eczema-helper/issues/763), owner-confirmed. `DATA-ENC-5`
+makes the app encrypt photo bytes itself, so the app holds a key. Nothing here is frozen by schema
+promotion — a keychain item's attributes are rewritable in any release — but the **first photo write** is a
+real deadline all the same, and the same one [#762](https://github.com/jirigrill/eczema-helper/issues/762)
+carries: a re-key requires decrypting what the old key protected, which is precisely the operation that
+fails once the key is gone. The rules are therefore written as though deadlined, and §11's opening
+sentence about revisability does not extend to them in practice.
+
+**`DATA-KEY-1` (MUST)** — The key that `DATA-ENC-5` encrypts photo bytes with lives in the **keychain**,
+as a single item, and nowhere else. It is never written into the store, into a file, into the ubiquitous
+key-value store of §8, or into any mirrored attribute.
+
+**`DATA-KEY-2` (MUST)** — The item carries `kSecAttrAccessibleAfterFirstUnlock`.
+
+**`DATA-KEY-3` (MUST NOT)** — The item does **not** carry `kSecAttrAccessibleWhenUnlocked`, nor any class
+whose name ends `ThisDeviceOnly`, nor `kSecAttrAccessibleAlways`.
+
+**`DATA-KEY-4` (MUST)** — The item carries `kSecAttrSynchronizable = true`, so it travels to a new device
+through iCloud Keychain.
+
+**`DATA-KEY-5` (MUST)** — The key is generated on first need — the first photo written on this device with
+no key already present — and never regenerated while an item exists. No code path overwrites, rotates or
+deletes it.
+
+**`DATA-KEY-6` (MUST)** — A photograph whose bytes cannot be decrypted is a **permanent** state, and the
+app must distinguish it from `SKIN-PHOTO-9`'s transient not-yet-arrived state. It is never rendered as an
+observation with no photos yet.
+
+**`DATA-KEY-7` (MUST NOT)** — No copy anywhere attributes the loss to encryption in terms that would
+represent the app's storage as encrypted without qualification (`DATA-ENC-4`), and none claims the
+photograph may still arrive.
+
+**`DATA-KEY-8` (fact, sourced)** — `AfterFirstUnlock` is the class Apple names for exactly this need:
+"Item data can only be accessed once the device has been unlocked after a restart. This is recommended for
+items that need to be accesible by background applications" (`SecItem.h:570–574`, iOS 27.0 SDK; the typo is
+Apple's). `WhenUnlocked` is documented for items that "only need be accesible while the application is in
+the foreground" (`SecItem.h:565–569`).
+
+**`DATA-KEY-9` (fact, sourced)** — `kSecAttrSynchronizable` "may not also specify a `kSecAttrAccessible`
+value which is incompatible with syncing (namely, those whose names end with \"ThisDeviceOnly\".)"
+(`SecItem.h:244–246`). No error code is documented for the combination, so `DATA-KEY-3` and `DATA-KEY-4`
+are one constraint stated twice rather than two independent choices.
+
+#### Why the class matches the store file's
+
+This is the direct analogue of `DATA-FILE-1`, under the same constraint, and it is argued from it rather
+than chosen freehand. A key the app cannot read while the phone is locked cannot decrypt a photo that
+arrives while the phone is locked — and background arrival is not hypothetical here, it is how mirroring
+works: `DATA-FILE-3` rejects `NSFileProtectionComplete` precisely because "CloudKit mirroring is driven by
+silent remote notifications". `kSecAttrAccessibleWhenUnlocked` is the keychain analogue of the class
+`DATA-FILE-3` refuses, and `AfterFirstUnlock` the analogue of the default `DATA-FILE-1` accepts.
+
+The classes even coincide by name: the store file carries
+`NSFileProtectionCompleteUntilFirstUserAuthentication` (`DATA-FILE-2`, measured), so raising the key above
+`AfterFirstUnlock` would buy nothing. The ciphertext the key opens sits in a file that is itself readable
+after first unlock; a stricter class on the key would leave the weaker term untouched and break background
+decryption in exchange. The residual gap is identical to the one §11.1 accepts, and identical for the same
+reason: no class compatible with background mirroring closes it.
+
+#### Why the key syncs, and what that costs
+
+**The non-syncing option is worse than it looks, and the reason is not the one this question was framed
+around.** It was framed as a dilemma with two bad horns — a key that does not sync loses the photographs on
+restore, a key that syncs weakens confidentiality. The first horn is sharper than framed and the second is
+softer, so the balance is not close.
+
+An iCloud Backup restore to a **new** device does not carry a non-synchronizable keychain item at all.
+Apple Platform Security, *iCloud Backup*:
+
+> iCloud Backup is also used to back up the local device keychain, encrypted with a key derived from the
+> Secure Enclave UID root cryptographic key of the device. This key is unique to the device and not known
+> to Apple. This allows the database to be restored only to the same device from which it originated, and
+> it means no one else, including Apple, can read it.
+
+— <https://support.apple.com/guide/security/icloud-backup-security-sec2c21e7f49/web>, Apple Platform
+Security (August 2026 revision), fetched 2026-08-31.
+
+This corrects a reading the SDK header invites. `SecItem.h` says items in the non-`ThisDeviceOnly` classes
+"will migrate to a new device when using **encrypted backups**" (`SecItem.h:568–569`, `573–574`) — which is
+true of a local encrypted backup and **not** of iCloud Backup, whose keychain copy is sealed to the
+originating device's Secure Enclave. Without `DATA-KEY-4`, the store therefore arrives on the new phone
+complete while the key does not arrive at all, silently: no error, no signal, nothing the app could branch
+on. Every photograph would be present, listed, and permanently unopenable — and with no export
+([#683](https://github.com/jirigrill/eczema-helper/issues/683)) and no import (`SET-ABSENT-2`) there is no
+route by which a readable copy could have been kept. That is the *default* outcome of a new phone, not a
+tail risk.
+
+**And the confidentiality cost is smaller than the framing assumed, because the dependency already
+exists.** `DATA-ENC-1` puts every other field in this store behind CloudKit's field encryption, and for
+third-party containers that encryption already draws on iCloud Keychain key material: "This encryption
+functionality uses key material that is stored in the iCloud Keychain belonging to the iCloud account
+signed in on the device" (WWDC21 session 10086, *What's new in CloudKit*,
+<https://developer.apple.com/videos/play/wwdc2021/10086/>, transcript fetched 2026-08-14, recorded in
+`eczema-helper/docs/research/cloudkit-encrypted-values.md`). So `DATA-KEY-4` does not introduce an iCloud
+Keychain dependency — it puts the photo key in the same place the rest of the store's confidentiality
+already rests, and the photographs keep the one advantage `DATA-ENC-5` bought them: reading them needs the
+key material *and* the ciphertext, where `DATA-LOCK-4` would otherwise have handed the server plaintext
+outright once an image crossed ~750 KB.
+
+**A caution against over-reading that.** Platform Security does say CloudKit service keys "are synchronized
+between a user's devices even if the user chooses not to use iCloud Keychain to sync their passwords,
+passkeys, and other user data" — but that sentence is scoped to "Many Apple services, listed in the Apple
+Support article iCloud data security overview" and "these CloudKit containers"
+(<https://support.apple.com/guide/security/icloud-encryption-sec3cac31735/web>). It is **not** sourced for
+third-party containers, so nothing here claims this app's field encryption works with the toggle off. That
+is an open question — §14's 13.7 — and it cuts both ways: whatever the answer, `DATA-KEY-4` shares it with
+`DATA-ENC-1` rather than adding to it.
+
+**Its cost, accepted knowingly.** With iCloud Keychain switched off, `DATA-KEY-4` silently degrades to the
+non-syncing case: the item stays local, the new phone gets no key, and the photographs are lost exactly as
+described above. The app cannot require the setting, and nothing in these rules detects it. So the
+fifth silent-loss path is real, narrower than the default it replaces, and outside the app's control —
+recorded as `DECISIONS.md` §9 rather than left to be re-derived.
+
+**The alternative that was considered and rejected.** The photo key could have been stored as an
+**encrypted CloudKit field** instead of in the keychain — a 32-byte value never approaches §5.2's ~750 KB
+promotion threshold, so `DATA-LOCK-4` never fires on it, and the key would then inherit precisely the
+durability and recovery paths of the CloudKit key hierarchy, keychain excluded. It is the better option on
+recovery, and it is rejected on purpose: it collapses the photographs to the *same* protection as every
+other field, which is what `DATA-ENC-5` exists to exceed. A key held in the same encrypted-field mechanism
+as the data it protects adds a step for an attacker with server access, not a barrier.
+
+#### What a lost key looks like to her
+
+`DATA-KEY-6` is the rule that keeps an already-accepted loss from being reported as a lie.
+`SKIN-PHOTO-9` requires an observation whose photos have not arrived to render "as an observation with no
+photos yet, never as a failure" — correct for mirroring, where the photos genuinely may still arrive. A
+photograph with no key is the opposite case: it will never arrive, and rendering it in the transient state
+would tell her to wait for something that is gone. The two states are indistinguishable in the data — a
+photo record present, its bytes unreadable — which is exactly why the rule is needed rather than left to
+the implementer.
+
+The **copy** is not written here. `DATA-KEY-7` fences it on two sides — it may not overclaim encryption
+(`DATA-ENC-4`), and it may not imply the photograph is still coming — and the wording itself belongs with
+the rest of the skin-observation copy, which is the owner's to draft. That is carved out rather than
+guessed.
 
 ---
 
@@ -1176,8 +1332,10 @@ storage diagnostic, a file-protection class, or a byte count.
 | 9 | §8.2 `DATA-OUT-3` | A consent record exists at all, and lives outside the store. | Settled by #709 |
 | 10 | §9 `DATA-HIST-2` | The change log is not purged in release one. | Settled by #730 |
 | 11 | §10.1 `DATA-ABSENT-5` | No version attribute, against the platform vendor's own from-the-outset advice. | Owner's call — hiding records is the wrong failure |
+| 12 | §11.2 `DATA-KEY-6` | A photograph can be permanently unopenable while its record is intact — a state the PWA cannot reach, and one the app must render as distinct from a photo that has not arrived yet. | Forced by platform |
 
-Eleven divergences, of which **four are forced by the platform and two are the vendor's own advice
+Eleven of these twelve divergences predate [#763](https://github.com/jirigrill/eczema-helper/issues/763),
+and of them **four are forced by the platform and two are the vendor's own advice
 declined or reversed** — a distribution unlike any other section in this spec, and the honest measure of
 what this area is. Elsewhere a divergence usually means the reference implementation was incoherent and
 the port picked one behavior. Here it often means the reference implementation rested on a guarantee
@@ -1216,6 +1374,8 @@ For a port translating the existing tests rather than writing fresh ones. Paths 
 | §8 outside the store | `settings.svelte.ts` tests | **Do not translate.** They test a store row that no longer exists; the singleton moves out entirely. |
 | §9 history, §10 promotion | **none, and none possible** | Nothing to translate, and mostly nothing testable — see below. |
 | §11 `DATA-FILE-1`, `-2` | **none in either repo, but already measured** — `eczema-ios-spikes/probe-fileprotection-752/` | **Re-derive as a Swift test**, and it is nearly free: open the container, read `fileProtectionKey` off the store and both sidecars, assert `completeUntilFirstUserAuthentication`. Two constraints or the test lies. It must use the **`URL`** route (`DATA-FILE-8`) — `attributesOfItem` returns `nil` and an assertion against it would pass vacuously; and it must assert a **control** file whose class the test sets itself, because data protection is unenforced on the simulator, so without a control a green run proves nothing. |
+| §11.2 `DATA-KEY-1`..`-5` | **none — the reference implementation holds no key** | **Re-derive as a Swift test**, and read the attributes back rather than trusting the write: query the item with `kSecReturnAttributes` and assert `kSecAttrAccessible == kSecAttrAccessibleAfterFirstUnlock` **and** `kSecAttrSynchronizable == true`. Asserting only that a key can be fetched would pass under every class this section refuses. `DATA-KEY-5`'s stability is the second test: generate, read, call the generation path again, assert the same bytes come back. |
+| §11.2 `DATA-KEY-6`, `-7` | **none** | **Re-derive**, and this is the one rule here with a *user-visible* failure, so it is worth more than an attribute check: write a photo, remove the key, and assert the record renders in the permanent state and **not** in `SKIN-PHOTO-9`'s transient one. The two states are indistinguishable in the data, so a test that only asserts "no crash" would pass while the app told her to wait for a photograph that is gone. |
 | §11 `DATA-FILE-3`..`-7` | **none, and none wanted** | Prohibitions on code that does not exist. A test asserting the app never calls `setResourceValue(_:forKey:)` is a lint rule, not a behavior test. |
 | §11a accessibility | **none** | **Re-derive**, and only `DATA-A11Y-1` is really this section's to verify: assert that no accessibility label, value or hint anywhere in the app contains a record identifier, a tiebreak value or a raw food id. It is one sweep over the rendered surface rather than a per-rule test, and it is the guard against a raw id escaping as a stand-in label. The other three are enforced by the sections that own the surfaces. |
 
@@ -1385,6 +1545,29 @@ app-level equivalent would be the fallback — and would be a **new field**, dea
 dependency is visible: if 13.4's spike finds no author filter, this question becomes urgent rather than
 theoretical.
 
+**13.7 — What happens to an encrypted write when the mother has iCloud Keychain switched off.**
+Unanswered in both directions, and it is `DATA-ENC-1`'s question before it is `DATA-KEY-4`'s. For
+third-party containers the only sourced statement is that field encryption "uses key material that is
+stored in the iCloud Keychain belonging to the iCloud account signed in on the device" (WWDC21 10086).
+Apple Platform Security *does* say CloudKit service keys synchronise "even if the user chooses not to use
+iCloud Keychain", but that passage is scoped to "Many Apple services … these CloudKit containers"
+(<https://support.apple.com/guide/security/icloud-encryption-sec3cac31735/web>) and **cannot** be read as
+covering this app. So it is unknown whether an encrypted-field write fails, silently falls back, or works
+normally with the toggle off. Nothing in the spec depends on the answer — `DATA-KEY-4` shares the exposure
+with `DATA-ENC-1` rather than adding to it, and the loss it would cause is already recorded as
+`DECISIONS.md` §9 — but it is the difference between one silent-loss path and a broader one, and it is
+measurable on a device now that a probe builds and signs. This question was already open in
+`eczema-helper/docs/research/cloudkit-encrypted-values.md` (Gap 12) and is restated here because a rule now
+rests beside it.
+
+**13.8 — Whether deleting and reinstalling the app clears its keychain items.**
+Undocumented by Apple in **both** directions — no statement was found either way, and community reports
+disagree across OS versions. It matters because `DATA-KEY-5` generates the key on first need: if a
+reinstall clears the item, a reinstall on the *same* phone is a total loss of photographs, which would make
+`DATA-KEY-4`'s sync the only thing standing between a routine action and the loss. If it does not clear,
+the reinstall case is safe on any device that ever held the key. Worth a device probe before the first
+photo write, not a decision — no rule changes either way, but the size of the accepted loss does.
+
 ---
 ## 15. What the owner settled
 
@@ -1421,9 +1604,17 @@ encryptable attribute rather than a chosen list (`DATA-ENC-1`), include the time
 explicitly to the owner (`DATA-ENC-2`), encrypt photo bytes in the app rather than keeping them small
 (`DATA-ENC-5`), and treat the on-device store file as a separate, undeadlined question rather than settling
 it under the same deadline ([#752](https://github.com/jirigrill/eczema-helper/issues/752), now settled in
-§11 — the default class is inherited and nothing is set). Each was settled
+§11.1 — the default class is inherited and nothing is set). Each was settled
 in agreement with the recommendation put to the owner, so as with the nine above, no rule carries a
 "decided against advice" mark.
+
+**Three more were settled in [#763](https://github.com/jirigrill/eczema-helper/issues/763)**, on the photo
+key `DATA-ENC-5` implies: its accessibility class (`kSecAttrAccessibleAfterFirstUnlock`, `DATA-KEY-2`),
+that it syncs through iCloud Keychain (`DATA-KEY-4`), and that an undecryptable photograph gets a permanent
+state distinct from the transient not-yet-arrived one (`DATA-KEY-6`). All three were settled in agreement
+with the recommendation. None is deadlined by schema promotion; all three are closed by the **first photo
+write**, since a re-key must decrypt what the lost key protected. The second accepts a cost knowingly and
+carries a `DECISIONS.md` entry for it.
 
 ---
 ## Appendix: what this section does not contain
@@ -1434,14 +1625,12 @@ in agreement with the recommendation put to the owner, so as with the nine above
   [#684](https://github.com/jirigrill/eczema-helper/issues/684) deferred them to implementation, to be
   measured on a device. §5.2 is deliberately written so that no constant it picks can change the record
   shape.
-- **The photo-encryption key's lifecycle** — where the key `DATA-ENC-5` implies lives, whether it syncs,
-  and what happens to it on restore to a new device. §10.3 settles that the app encrypts the bytes and
-  states the total-loss risk that follows; the mechanism is implementation. **§11 narrows this by one
-  question without closing it:** the keychain item's own accessibility class is the direct analogue of
-  `DATA-FILE-1`, and the same background constraint applies — a key the mirroring layer cannot read while
-  the phone is locked is a key that cannot decrypt a photo arriving in the background. `DATA-FILE-*` is the
-  precedent to argue from when it is settled, and §11 is where the answer belongs, since it is likewise
-  undeadlined.
+- **The photo key's cipher, key size and derivation function.** §11.2 settles the key's *lifecycle* — where
+  it lives, its accessibility class, that it syncs, and what she sees when it is gone (`DATA-KEY-1`..`-9`) —
+  but not the cryptography it is used with. That was ruled out of scope by
+  [#763](https://github.com/jirigrill/eczema-helper/issues/763) as Swift implementation detail, on the
+  condition that no choice among them changes an answer in §11.2. A 256-bit symmetric key in the platform's
+  own crypto library satisfies every rule there; nothing in the spec requires that specific choice.
 - **Migration mechanics** — how a later release adds a field, and what the local migration does. Out of
   scope by the ticket, and §10.2's `DATA-LOCK-3` states the only part that carries behavior.
 - **Console configuration**, environment management, and how promotion is performed.

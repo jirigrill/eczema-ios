@@ -104,7 +104,9 @@ would mean photographs that do not survive a reinstall, which §1 forbids.
 keychain — so **losing the keychain is a total loss of every photograph.** That is a real silent-loss
 path, accepted knowingly, and it sits beside the platform's own hazard: an iCloud Keychain reset
 permanently destroys encrypted synced data, and the documented remedy is re-uploading from the local
-cache, which is the *only* remedy for an app with no export. Encryption also protects values and
+cache, which is the *only* remedy for an app with no export. §9 below narrows this without removing it —
+the key syncs, so a new phone recovers it, and what is left is the case where iCloud Keychain is switched
+off. Encryption also protects values and
 never structure: relationships are stored as plaintext foreign keys and cannot be encrypted, so
 *which observation belongs to which meal* stays visible to the server, and the server's own record
 timestamps mean **logging timing is permanently observable** whatever this app declares.
@@ -339,6 +341,60 @@ as the build takes. Once the profile is gone, this entry is not reversible at an
   the downstream durability decision is §3 above ([#683](https://github.com/jirigrill/eczema-helper/issues/683));
   examined and recorded here by
   [#757](https://github.com/jirigrill/eczema-helper/issues/757).
+
+---
+
+## 9. The photograph key rides in iCloud Keychain, so a switched-off setting can still lose every photo
+
+The app encrypts photograph bytes with its own key (§2), and that key is a keychain item marked
+**synchronizable** — it travels to a new phone through iCloud Keychain — accessible **after first
+unlock**, so a photograph arriving in the background can be decrypted. If the mother has iCloud Keychain
+switched off, the key stays on the old phone and every photograph on the new one is permanently
+unopenable.
+
+**Why it syncs, given that syncing puts a key in iCloud.** The alternative is worse, and not marginally.
+A keychain item that does not sync **cannot** reach a new device through iCloud Backup at all: Apple backs
+up the keychain "encrypted with a key derived from the Secure Enclave UID root cryptographic key of the
+device… This allows the database to be restored only to the same device from which it originated." So
+without syncing, a new phone is not a risk of loss — it is a guaranteed loss, silent, with the store
+arriving complete and every photograph in it unopenable. Note this contradicts a plausible reading of the
+SDK header, which says these items "will migrate to a new device when using encrypted backups": true of a
+local encrypted backup, false of iCloud. And the confidentiality objection is weaker than it appears,
+because the dependency **already exists** — every other field in the store is encrypted by CloudKit using
+"key material that is stored in the iCloud Keychain belonging to the iCloud account signed in on the
+device". Putting the photo key there adds no new party; it puts it where the rest of the store's
+confidentiality already rests, while photographs keep the advantage §2 bought them, since reading them
+needs the key material *and* the stored ciphertext.
+
+**Why not keep the key out of the keychain entirely.** It could have been stored as an encrypted CloudKit
+field — 32 bytes never approach the size threshold that silently voids encryption, so it would inherit the
+store's own durability and recovery, keychain excluded. Rejected on purpose: it drops photographs to the
+*same* protection as every other field, which is precisely what §2's app-side encryption exists to exceed.
+A key kept in the same mechanism as the data it protects is a step for an attacker with server access, not
+a barrier.
+
+**What it cost.** A fifth silent-loss path, narrower than the default it replaces but outside the app's
+control: the app can neither require iCloud Keychain nor detect that it is off, so nothing warns her, and
+the loss surfaces only on the new phone. Two related unknowns are recorded rather than guessed — whether
+an encrypted write behaves differently with the setting off (unsourced for third-party containers), and
+whether deleting and reinstalling the app clears its keychain items (**undocumented by Apple in both
+directions**, and if it does clear them, a routine reinstall becomes a total loss on the same phone). Both
+are device-measurable and neither changes a rule. Separately, a photograph that cannot be decrypted must
+never be shown as one that has merely not arrived yet — the two are indistinguishable in the data, and
+telling her to wait for a photograph that is gone is the failure the rules forbid.
+
+**To undo.** The attributes are rewritable in any release; the **key's value is not**. Changing keys means
+decrypting what the old key protected, which is the exact operation that fails once a key is lost — so this
+is settled by the **first photo write**, not by schema promotion, and no later release can revisit it for
+photographs already stored. Turning syncing off later would strand every photograph written before the
+change on the phone that wrote them.
+
+- **Rules:** `DATA-KEY-1`…`-9` in [`persistence-model.md`](persistence-model.md) §11.2, with the open
+  questions at §14 (13.7, 13.8); the parent decision is §2 above (`DATA-ENC-5`). The copy shown for an
+  unopenable photograph is fenced by `DATA-KEY-7` and not yet drafted.
+- **Argued in:** [#763](https://github.com/jirigrill/eczema-helper/issues/763), against the file-protection
+  precedent settled in [#752](https://github.com/jirigrill/eczema-helper/issues/752); the app-encryption
+  decision it follows from is [#714](https://github.com/jirigrill/eczema-helper/issues/714).
 
 ---
 
