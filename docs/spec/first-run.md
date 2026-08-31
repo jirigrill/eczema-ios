@@ -434,6 +434,57 @@ consent that nothing requires.
 
 ---
 
+## 7a. Accessibility
+
+First run is a three-choice picker and a confirm control. It is the smallest interactive surface in the
+spec, which is why the two rules that matter here are easy to get wrong: the whole screen turns on
+**nothing being preselected** (`RUN-PICK-2`) and on the confirm control being **inert until she picks**
+(`RUN-PICK-4`), and neither of those states is perceptible without being announced.
+
+**`RUN-A11Y-1` (MUST)** — Each of the three stages is one element, announced by its display label
+(`RUN-PICK-6`), traited as a control that can be selected, in the fixed order `breastfed`, `mixed`,
+`solids` (`RUN-PICK-1`). Focus order is that order, and it is never reordered by likelihood or
+recency.
+
+**`RUN-A11Y-2` (MUST)** — On arrival **no stage announces as selected** (`RUN-PICK-2`). This is the
+non-visual half of Divergence 3, and it is the rule most likely to be broken while the screen still
+looks correct: a picker implemented with a platform control that requires a selected value will
+announce one even when nothing is visually highlighted, which re-creates the preselection that
+divergence removes — and re-creates it only for the person who cannot see that nothing is highlighted.
+
+**`RUN-A11Y-3` (MUST)** — Picking a stage announces the new selection, and picking a second announces
+that the first is no longer selected (`RUN-PICK-5`). Reversibility she cannot perceive is not
+reversibility.
+
+**`RUN-A11Y-4` (MUST)** — The confirm control stays **in** the accessibility tree while it is inert
+(`RUN-PICK-4`), announced as unavailable with the reason — that a stage has not been chosen. Removing
+it until a choice is made would leave the screen with no announced way forward; this is the same rule
+`skin-observation.md` `SKIN-A11Y-7` states for save, and the same defect its Divergence 5 fixed.
+
+**`RUN-A11Y-5` (MUST)** — A failed stage write (`RUN-PICK-7`) is **announced**, not shown only as
+visible error text. She stays on the screen and nothing moves, so there is no other signal that her
+answer did not persist — and the failure this rule exists to prevent is her believing she answered.
+
+**`RUN-A11Y-6` (MUST)** — The degraded-account sentence (`RUN-ICLOUD-2`) is announced **before** she
+reaches the picker in focus order, matching the requirement that it be stated before she picks. A
+consequence read out after the choice is not a warning.
+
+**`RUN-A11Y-7` (MUST NOT)** — No label, hint or announcement states or implies what the app will find,
+conclude or recommend (`RUN-COPY-3`), marks any stage as usual, recommended or default
+(`RUN-PICK-2`), or names the technical account status rather than its consequence (`RUN-ICLOUD-5`).
+
+### 7a.1 The five questions
+
+| # | Answer |
+| --- | --- |
+| 1 | **VoiceOver label and trait** — four interactive elements: three stage choices (`RUN-A11Y-1`, `-2`, `-3`) and confirm (`-4`). The copy above them is text, and its two variants (`RUN-COPY-2`) read as written. |
+| 2 | **Dynamic Type** — the three stage labels **must never truncate**: they are the entire question, and a clipped label is an unanswerable choice. The picker therefore stacks rather than clipping at large sizes. The explanatory copy may wrap to any length — `RUN-ABSENT-3` forbids paging, so the screen scrolls. |
+| 3 | **Colour alone** — one case: which stage is selected. It is carried by the accessibility selected state (`RUN-A11Y-2`, `-3`) as well as visually, and `RUN-PICK-2` means the initial answer to "which is selected" is *none*. |
+| 4 | **Focus order and grouping** — copy, then the degraded-account sentence if present (`RUN-A11Y-6`), then the three stages in fixed order, then confirm. One element per stage; the three are a single group, so it is discoverable that there are exactly three. |
+| 5 | **Reduce Motion** — one transition: leaving for the day view on confirmation (`RUN-PICK-8`). Under Reduce Motion it completes without animation. There is no other motion — `RUN-ABSENT-3` forbids progress indicators. |
+
+---
+
 ## 8. Divergence index
 
 | # | Where | Divergence | Class |
@@ -478,6 +529,7 @@ all three links.
 | `RUN-SYNC-1`..`-5` | none — the PWA has no sync and no second writer | **re-derive**; `-4` is the one to write first, and both limbs need separate tests |
 | `RUN-CONSENT-1`..`-3` | none — there is no consent gate in the reference | **re-derive** |
 | `RUN-CONSENT-4` | `OPEN` | — |
+| `RUN-A11Y-1`..`-7` | none, and the reference has no accessibility assertions at all | **re-derive**. `RUN-A11Y-2` is the one to write first and the only one with a subtlety: the assertion is that **no** element reports a selected state on arrival, which is a different claim from the existing visual check and is the claim a platform picker control silently breaks. `RUN-A11Y-4` is assertable as "confirm is present and reports unavailable", the inverse of the PWA's habit of removing inert controls |
 
 ### Rules nothing verifies today
 
@@ -499,6 +551,11 @@ port that assumed test coverage equals specification would inherit each silently
   rule most likely to be implemented as "while the process lives" by someone who has not read the
   reasoning. Both limbs are testable without CloudKit, by feeding the handler a synthetic arriving value
   before and after a backgrounding and a Settings write.
+- **`RUN-A11Y-2` — that nothing announces as selected on arrival.** Named on its own because it is the
+  accessibility half of the section's sharpest defect. Divergence 3 removes a visual preselection whose
+  consequence was #712's apparent-total-data-loss path; a picker that announces a selected stage while
+  highlighting none reinstates that path for exactly the user least able to notice it. Nothing in either
+  repo asserts a selected state, so this fails silently and passes review.
 
 ### Acceptance pass
 
@@ -544,6 +601,18 @@ those are the divergences, and they are the steps that prove the port did someth
 19. Turn on airplane mode with the account signed in. First run says **nothing** about iCloud
     (`RUN-ICLOUD-3`).
 20. Check that first run never asks for notification, camera or photo permission (`RUN-ABSENT-4`).
+21. **Turn VoiceOver on** and reach first run from a fresh install. Swipe through it: you hear the copy,
+    then three stage choices in the order `breastfed`, `mixed`, `solids`, then confirm. **None of the three
+    announces as selected** (`RUN-A11Y-1`, `-2`). **✗ PWA** — the reference preselects.
+22. Still under VoiceOver, land on confirm before picking anything. It is **there**, and it tells you it
+    is unavailable and that you need to choose (`RUN-A11Y-4`).
+23. Pick `mixed`, then `solids`. You hear `solids` become selected and `mixed` stop being selected
+    (`RUN-A11Y-3`).
+24. Sign out of iCloud and reach first run again under VoiceOver. The consequence sentence is announced
+    **before** you reach the three choices (`RUN-A11Y-6`), and it names what you cannot do rather than an
+    account status (`RUN-ICLOUD-5`).
+25. Set Dynamic Type to the **largest accessibility size**. All three stage labels are fully readable —
+    the picker stacks if it must — and nothing is clipped (§7a question 2).
 
 Steps 12–15 are the section's real acceptance test and each needs a fresh install; they are the only way
 to exercise `RUN-SYNC-2`..`-4`, and they are slow. Steps 13–15 depend on an arriving import, which Apple

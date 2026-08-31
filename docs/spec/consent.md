@@ -500,6 +500,59 @@ stage is harmless. **`settings.md` `SET-DELETE-6` should name the consent record
 an amendment this section needs rather than made silently to another section's rule.
 
 ---
+
+## 6a. Accessibility
+
+On this screen accessibility is not a usability property — it is a **validity** property. Consent is
+valid only if it is informed (§3), and a disclosure she cannot read is a disclosure she was not given.
+WP260 para 11's test is that she *"should not have to seek out the information"*, and information
+present on screen but unreachable through the interface she is using has been sought out and not found.
+So every rule below is §3 or §4 restated against the accessibility surface, and a breach of one is a
+breach of the rule it restates.
+
+**`CONSENT-A11Y-1` (MUST)** — All eleven disclosures (§3.1) are reachable and readable through
+assistive technology, in the order they appear, without entering any sub-layer. This is
+`CONSENT-FORM-1` bound to the accessibility surface: a disclosure hidden behind an accessibility
+container that must be opened is behind a tap, which that rule forbids.
+
+**`CONSENT-A11Y-2` (MUST)** — The two act controls (`CONSENT-ACT-1`) are announced by their
+performative wording — *"I consent"*, *"I do not consent"* — and traited as buttons. Neither is
+announced as *Continue*, and neither is announced in a way that implies it is the expected answer.
+
+**`CONSENT-A11Y-3` (MUST)** — The two controls are **equally weighted** to assistive technology, as
+`CONSENT-ACT-2` requires visually. Same trait, adjacent in focus order, neither marked as a default,
+a preferred action, or a hint. A decline that is reachable only after passing over the accept, or
+announced with a lower prominence the platform assigns to secondary actions, is the disadvantaged
+refusal that rule forbids by another route.
+
+**`CONSENT-A11Y-4` (MUST)** — Neither control is reachable in focus order before the disclosures above
+it (`CONSENT-FORM-3`). There is no accessibility shortcut, rotor entry, or custom action that jumps to
+accept.
+
+**`CONSENT-A11Y-5` (MUST)** — The link to the privacy notice (`CONSENT-FORM-5`) is announced as a link
+and says where it goes, not *"tap here"*. It is the Tier-2 route, so an announcement that does not
+identify it makes the layering §3.2 relies on unnavigable.
+
+**`CONSENT-A11Y-6` (MUST)** — The refusal screen (§5) is fully reachable, and both of the two things it
+offers (`CONSENT-NO-3`) are announced. `CONSENT-NO-5` forbids a dead end, and a route back that is not
+announced is a dead end for anyone who cannot see it.
+
+**`CONSENT-A11Y-7` (MUST NOT)** — No label, hint or announcement on this screen states or implies what
+the app will find, discover or conclude (`CONSENT-SAY-5`), or that withdrawal is a toggle
+(`CONSENT-SAY-10`). The prohibitions in §3 are prohibitions on what the screen *says*, and an
+announcement is the screen saying something.
+
+### 6a.1 The five questions
+
+| # | Answer |
+| --- | --- |
+| 1 | **VoiceOver label and trait** — three interactive elements only: accept, decline (`CONSENT-A11Y-2`, `-3`) and the privacy-notice link (`-5`), plus the refusal screen's two (`-6`). Everything else on the screen is text, and `CONSENT-A11Y-1` governs it. |
+| 2 | **Dynamic Type** — no disclosure may truncate, be clipped, or become unreachable at any size. This is the strongest Dynamic Type requirement in the spec, and it follows from validity rather than comfort: at the largest accessibility sizes the eleven disclosures may run to many screens of scrolling, and that is **acceptable** — para 82 sanctions interruption, and `CONSENT-FORM-2` is already only a `SHOULD`. What is not acceptable is a fixed-height text area that scrolls internally, a "read more" that appears only at large sizes, or act controls pinned over the text. |
+| 3 | **Colour alone** — the one case is `CONSENT-ACT-2`'s equal weighting, which is about visual prominence and is answered by `CONSENT-A11Y-3` for the non-visual channel. Nothing on this screen conveys meaning by colour. |
+| 4 | **Focus order and grouping** — disclosures in their stated order, then the two act controls, per `CONSENT-A11Y-4`. Each disclosure is its own element; the eleven are not merged into one long announcement, because a single utterance of the whole screen cannot be re-read selectively. |
+| 5 | **Reduce Motion** — not applicable. This section specifies no animation and no transition; `CONSENT-FORM-4` even forbids a progress indicator. |
+
+---
 ## 7. What this screen does not contain
 
 These are prohibitions with ids, not features nobody built. Each is a decision taken elsewhere that a
@@ -605,6 +658,7 @@ leaving implicit.
 | `CONSENT-REC-1`..`-4` | none — no consent record exists | **re-derive**; `-3` is the one to write first |
 | `CONSENT-REC-5` | `reset-database.ts` clears the settings table with all the others, which is the analogous claim | **translate** the intent, not the mechanism: the consent record is in `NSUbiquitousKeyValueStore`, not a table, so `db.tables` enumeration has no counterpart |
 | `CONSENT-ABSENT-1`..`-7` | none | **re-derive** as absence checks |
+| `CONSENT-A11Y-1`..`-7` | none, and the reference has neither a consent screen nor any accessibility assertion | **re-derive**. Two are assertable cheaply and both are validity guards rather than usability ones: that all eleven disclosures are present in the accessibility tree without opening anything (`-1`), and that the two act controls carry the same trait with neither marked as a default action (`-3`). `-2`'s performative wording is the same content assertion `CONSENT-ACT-1` needs, run against the label instead of the rendered text |
 
 ### Rules nothing verifies today
 
@@ -632,6 +686,12 @@ confidence but **untested-by-default**, because there is no failing test to noti
 - **`CONSENT-GATE-4` — that an arriving record does not dismiss the gate.** Untestable in the reference by
   construction, and the rule most likely to be "fixed" into its opposite for consistency with
   `RUN-SYNC-2`. The test is cheap and its name should carry the reason.
+- **`CONSENT-A11Y-1` and `-3` — that the disclosures are reachable and the refusal is not disadvantaged.**
+  Named separately from the rest of §6a because on this screen they are not usability rules: an
+  unreachable disclosure means consent was not informed, and a decline the interface disadvantages is the
+  pre-ticked accept para 79 rules out. Both would fail invisibly — the visual screen satisfies
+  `CONSENT-FORM-1` and `CONSENT-ACT-2` while the accessibility surface does not, and no screenshot review
+  distinguishes the two cases.
 
 ### Acceptance pass
 
@@ -681,6 +741,21 @@ marked, because none of this exists in the reference.
     though you have already consented on the first phone, and it does **not** disappear while you are
     reading it (`CONSENT-GATE-1`, `-4`). Consent, and check that this device's record names the revision
     this device rendered. **✗ PWA**
+15. **Turn VoiceOver on** and restart from a fresh install. Swipe through the consent screen from the top.
+    You reach all eleven disclosures, in order, and you never have to open a container to hear one
+    (`CONSENT-A11Y-1`). This is the step that decides whether consent given on this device was informed.
+    **✗ PWA**
+16. Keep swiping to the end. The next two stops are *I consent* and *I do not consent*, in that order,
+    both announced as buttons, and **neither** is announced as the default or preferred action
+    (`CONSENT-A11Y-2`, `-3`). You could not have reached either before the disclosures (`-4`). **✗ PWA**
+17. Find the privacy-notice link under VoiceOver. It is announced as a link and says what it opens
+    (`CONSENT-A11Y-5`). **✗ PWA**
+18. Decline, under VoiceOver. On the refusal screen you can reach and hear both things it offers,
+    including the way back (`CONSENT-A11Y-6`). **✗ PWA**
+19. Set Dynamic Type to the **largest accessibility size** and read the consent screen again. Every
+    disclosure is still fully readable — the screen simply gets longer. Nothing scrolls inside a fixed box,
+    no "read more" has appeared, and the act controls are not sitting on top of the text (§6a question 2).
+    **✗ PWA**
 
 ---
 ## 10. Amendments this section needs elsewhere

@@ -985,6 +985,99 @@ earliest record she has, so it extends backwards on its own as older records arr
 
 ---
 
+## 7a. Accessibility
+
+The day view is a screen of **composite rows**: a meal row is an actor, a state and a run of food
+names; an observation entry is a time, a set of region chips, a note and a photo glyph. Every one of
+those is a place where the choice between one accessibility element and five decides whether the
+screen is navigable or a maze, and none of it is visible in a screenshot.
+
+Two of this section's rules are already accessibility rules in substance — `DAY-MEAL-11` (a row
+indicates whether it holds a meal, and not by colour alone) and `DAY-SKIN-9` (the photo glyph reads as
+"photo" without prior learning). They stay where they are; this block says what they mean for
+assistive technology and closes what they leave open.
+
+### 7a.1 Grouping — what is one element
+
+**`DAY-A11Y-1` (MUST)** — A **meal row** is one element. Its label names the meal type and, when the
+slot shows more than one actor row (`DAY-MEAL-5`), the actor; its value is the run of food names in
+recorded order; its trait is a button. It is never a stop per food name.
+
+**`DAY-A11Y-2` (MUST)** — An **observation entry** is one element. Its label is the observation's
+time; its value is the bumped region chips in canonical order (`SKIN-REG-3`), then the note, then
+photo-presence. Region chips are not separate stops.
+
+**`DAY-A11Y-3` (MUST)** — A **thumbnail** in the day-level photo card (`DAY-SKIN-6`) is its own
+element, labelled with its caption — region and the parent observation's time (`DAY-SKIN-7`) — and
+traited as a button, since tapping it opens the viewer.
+
+**`DAY-A11Y-4` (MUST)** — Focus order follows the screen's reading order and the section order
+`DAY-SKIN-3` fixes: date selector, skin section, photo card, meal section. Within the meal section it
+is the fixed slot order (`DAY-MEAL-1`) and then canonical actor order (`DAY-MEAL-4`) — never the order
+records were written or returned.
+
+### 7a.2 Announcing state without the visual channel
+
+**`DAY-A11Y-5` (MUST)** — Whether a row holds a meal (`DAY-MEAL-11`) is part of its announcement.
+An empty slot announces that it is empty and that tapping it records a meal; an occupied one announces
+its foods. `DAY-MEAL-11` already forbids colour being the only channel; this rule names the channel.
+
+**`DAY-A11Y-6` (MUST)** — A meal row whose items are all unresolvable (`DAY-MEAL-13`) announces as
+**occupied with no food names** — the same reading its blank visual gives. It never announces a
+diagnostic, a raw id, a count of hidden items, or anything else `DAY-MEAL-14` forbids the visual
+surface from carrying. This is the rule that stops the read-only skew condition being invisible on
+screen and explained aloud.
+
+**`DAY-A11Y-7` (MUST)** — A meal whose actor is no longer eligible (`DAY-MEAL-3`) announces as a
+normal row. Its ineligibility is not announced, because `DAY-MEAL-3` says it is not marked.
+
+**`DAY-A11Y-8` (MUST)** — In the date selector, today's mark (`DAY-NAV-6`) is announced as *today* and
+the selected day as selected. A cell announces **nothing** about whether that day holds records —
+`DAY-NAV-7`'s prohibition binds the announcement exactly as it binds the dot, and an announcement is
+the easier place to leak it, because "Tuesday, 2 records" is a natural label to write.
+
+**`DAY-A11Y-9` (MUST)** — The reveal control on the collapsed photo grid (`DAY-SKIN-8`) announces that
+there are more photos, and **not how many** (`DAY-SKIN-8a`). "Show all photos" is the label; "show 34
+more" is forbidden.
+
+**`DAY-A11Y-10` (MUST)** — An arriving record (`DAY-LIVE-1`) does not move the assistive-technology
+focus, matching `DAY-LIVE-2`'s promise about her position. It is announced only if it changes the day
+shown, which it never does — so in practice it is not announced at all.
+
+**`DAY-A11Y-11` (MUST)** — The undo affordance (`DAY-ROOT-7`) is reachable and announced for as long
+as it is available, on the same reasoning as `SKIN-A11Y-10`: it is short-lived, in-memory, and the only
+recovery path in the product. A visual-only toast makes the deletion unconditional for anyone not
+watching the screen.
+
+### 7a.3 The prohibitions, bound to the accessibility surface
+
+**`DAY-A11Y-12` (MUST NOT)** — No label, hint, value or announcement on this screen states anything
+`DAY-DERIVE-1` forbids: no count of meals or photos, no total, no streak, no days-since, no
+completeness, no grading, no day-level severity (`SKIN-VIEW-5`). The three-category framing §6 settles
+— derived statements, screen marks, record content — applies unchanged to what is spoken.
+
+The accessibility surface is where this prohibition is **most** likely to be breached, and by good
+intentions rather than bad. A summary label is the standard way to make a long list navigable — "3
+meals logged", "40 photos" — and it is exactly the statement about her day §6 exists to prevent.
+Someone using VoiceOver gets the count and someone reading the screen does not, which is the same
+inequality reversed and no better.
+
+**`DAY-A11Y-13` (MUST NOT)** — No announcement conveys a food's allergens (`catalog.md`
+`CAT-DERIVE-6`) or frames a record as evidence about a food, a trigger or a cause
+(`SKIN-INT-14`).
+
+### 7a.4 The five questions
+
+| # | Answer |
+| --- | --- |
+| 1 | **VoiceOver label and trait** — specified for every interactive element: date-selector cells and the return-to-today control (`DAY-A11Y-8`, `DAY-NAV-8`), meal rows (`DAY-A11Y-1`, `-5`), observation entries (`DAY-A11Y-2`), thumbnails (`DAY-A11Y-3`), the reveal control (`DAY-A11Y-9`), the add control (`DAY-ROOT-2` — its two options and the already-logged marking are part of the announcement), Settings (`DAY-ROOT-4`), and undo (`DAY-A11Y-11`). |
+| 2 | **Dynamic Type** — food names **must never truncate**, for `catalog.md`'s reason: a clipped name is a wrong food. A meal row therefore wraps to as many lines as it needs, and `DAY-MEAL-6`'s single-line-row rationale is a layout preference that yields at accessibility sizes. Region chips wrap rather than clip. The **note** (`DAY-SKIN-2`) is the one thing that may truncate — it is free text, its truncation is already layout's call, and the entry opens to the full text. The date selector may show fewer cells; it must not stop reaching the back edge (`DAY-NAV-4`). The photo grid may reduce below six thumbnails per its two-row cap. |
+| 3 | **Colour alone** — three cases, all already answered: a row holding a meal (`DAY-MEAL-11`, and `DAY-A11Y-5`), today in the selector (`DAY-NAV-6`, announced by `DAY-A11Y-8`), and photo-presence (`DAY-SKIN-9`, a glyph rather than a tint, announced as part of `DAY-A11Y-2`'s value). Nothing here conveys severity by colour, because no day-level severity exists (`SKIN-VIEW-5`). |
+| 4 | **Focus order and grouping** — §7a.1, and it is the substance of this block for this section. One element per meal row, one per observation entry, one per thumbnail; order per `DAY-A11Y-4`. |
+| 5 | **Reduce Motion** — this section specifies two: the selector's recentring (`DAY-NAV-5`, `DAY-NAV-8`) and the photo grid's expansion (`DAY-SKIN-8`). Under Reduce Motion both happen without animation — the selector still centres the day shown, and the grid still expands. What must not happen is the *behavior* being dropped with the animation. |
+
+---
+
 ## 8. Divergence index
 
 | # | Section | Summary | Class |
@@ -1056,6 +1149,7 @@ real rather than incidental.
 | `DAY-DERIVE-2` | none here; `skin-observation.md` owns it | **translate** from there |
 | `DAY-ROOT-1`..`-7` | none at page level — the add control and the undo toast are layout-owned and are not rendered in the day view's tests at all | **re-derive** |
 | `DAY-LIVE-1`, `-2` | `page.test.ts:398-428` drives a `liveQuery` meal into the page | **do not translate** as written — it asserts a Dexie reactivity guarantee; re-derive against sync arrival |
+| `DAY-A11Y-1`..`-13` | none. The page tests query by accessible role and text, which exercises labels incidentally but asserts nothing about them; no test anywhere asserts a grouping, a trait, a value, or an announcement | **re-derive**, all of it. Two are regression guards worth writing first, because both are prohibitions that a helpful label reintroduces: no selector cell announces anything about that day's contents (`DAY-A11Y-8`, the spoken twin of the `data-recorded` guard that already exists at `page.test.ts:298-321`), and no announcement anywhere carries a count (`DAY-A11Y-12`, the spoken twin of `DAY-DERIVE-1`'s `task-counter` guard). The grouping rules (`-1`, `-2`) are the ones that decide whether the screen is usable, and they need a test that counts accessibility elements per row rather than reading their text |
 
 ### Rules nothing verifies today
 
@@ -1092,6 +1186,12 @@ This is the honest list, and it is long for this screen.
   *negative* about the whole screen, and the two costs #703 accepted knowingly — a skewed item
   freezing the slot's note and its other foods, and a refusal that names no cause — are judged by a
   person, not asserted. They belong to the acceptance pass, steps 34 and 35.
+- **The whole of §7a.** The reference has no accessibility assertions at all, and this screen is where
+  that costs the most: `DAY-A11Y-1` and `-2` decide whether a day with three meals and two observations
+  is a dozen stops or fifty, and nothing in the PWA's tests would notice either answer. The two
+  prohibitions (`DAY-A11Y-8`, `-12`) are the more insidious gap — the visual guards for both already
+  exist and pass, so the screen can satisfy `DAY-NAV-7` and `DAY-DERIVE-1` on inspection while
+  announcing exactly what they forbid.
 
 ### Acceptance pass
 
@@ -1217,6 +1317,23 @@ something.
     update the older phone and confirm every hidden food **reappears in full** with nothing lost
     (`CAT-VER-9`) — that self-healing end state is what makes hiding acceptable, and it is the step
     that proves it.
+36. **Turn VoiceOver on** and swipe through a day holding two meals and two observations. Each meal row
+    is **one** stop that names its slot and reads its foods; each observation entry is **one** stop that
+    reads its time, its regions, its note and that it has a photo. You do not land on individual foods
+    or individual region chips (`DAY-A11Y-1`, `-2`).
+37. Still under VoiceOver, swipe the date selector. No cell says anything about what that day holds —
+    only the date, whether it is today, and whether it is selected (`DAY-A11Y-8`).
+38. Listen to the whole screen, top to bottom, for a number that is not a date, a time, or a food. There
+    is none: no meal count, no photo count, no "3 of" anything, and the reveal control on the photo grid
+    says only that there is more (`DAY-A11Y-12`, `DAY-A11Y-9`). This is the step that catches the
+    helpful summary label.
+39. Under VoiceOver, land on an **empty** meal slot. It tells you it is empty and that tapping records a
+    meal — you do not have to see the row to know it is free (`DAY-A11Y-5`).
+40. Set Dynamic Type to the **largest accessibility size**. Every food name on every row is fully
+    readable, wrapping onto as many lines as it needs; the note may truncate, no food name does
+    (§7a question 2). The date selector still reaches the back edge.
+41. Turn **Reduce Motion** on. Move to another day: the selector still centres it, without animating.
+    Expand the photo grid: it still expands (§7a question 5).
 
 ---
 
