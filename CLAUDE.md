@@ -18,7 +18,7 @@ The PWA lives at [`jirigrill/eczema-helper`](https://github.com/jirigrill/eczema
 
 **Reference it by pointer; never copy from it.** A regulatory finding or invariant duplicated across two repos is a finding that goes stale in one of them.
 
-**One exception, and it is deliberate: [`docs/spec/DECISIONS.md`](docs/spec/DECISIONS.md).** The six decisions that shape the whole product are stated there in full — self-contained, readable without opening a single issue link — because this repo must stand on its own. Its links are provenance, never the content. Read it before proposing any change that a rule appears to invite; it will usually tell you why the obvious improvement was already rejected. It is not authoritative on behavior (the spec rules are), and it is **not** an ADR series or a decisions log — both were considered and declined ([#721](https://github.com/jirigrill/eczema-helper/issues/721)), so **do not create `docs/adr/` here.**
+**One exception, and it is deliberate: [`docs/spec/DECISIONS.md`](docs/spec/DECISIONS.md).** The nine decisions that shape the whole product are stated there in full — self-contained, readable without opening a single issue link — because this repo must stand on its own. Its links are provenance, never the content. Read it before proposing any change that a rule appears to invite; it will usually tell you why the obvious improvement was already rejected. It is not authoritative on behavior (the spec rules are), and it is **not** an ADR series or a decisions log — both were considered and declined ([#721](https://github.com/jirigrill/eczema-helper/issues/721)), so **do not create `docs/adr/` here.**
 
 | What you need | Where it is |
 |---|---|
