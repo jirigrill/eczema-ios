@@ -731,9 +731,14 @@ Inherited deliberately with the grid. The PWA builds an `observationId → H:MM`
 (`day/[date]/+page.svelte:28-30`) and `SkinPhotoCard.svelte:11-19` documents the degradation:
 orphans "shouldn't happen given the FK relationship, but we degrade silently rather than showing a
 broken pill." Specified rather than left to be rediscovered, because on iOS the parent is resolved
-through a SwiftData relationship and CloudKit **cannot enforce cascade delete**
-([#679](https://github.com/jirigrill/eczema-helper/issues/679)) — so an orphan is reachable here in a
-way it was not in the single-device PWA.
+through a SwiftData relationship and the cascade **does not span devices**
+([`persistence-model.md` §6](persistence-model.md#6-orphans)) — a cascade is applied where it is issued and
+its individual deletions then travel separately, so an orphan is reachable here in a way it was not in the
+single-device PWA. (The stronger claim [#679](https://github.com/jirigrill/eczema-helper/issues/679) made —
+that cascade cannot be declared at all — was retired by Divergence 7; it is declared. What cannot be
+declared is the *refusing* rule, measured local-only as well in
+[#764](https://github.com/jirigrill/eczema-helper/issues/764), and that would not have prevented an orphan
+either.)
 
 **`DAY-SKIN-11` (MUST)** — Tapping a thumbnail opens the **photo viewer** — a full-screen surface that
 **pages through the day's photos**, flat and chronological, in the same order the grid shows them. The

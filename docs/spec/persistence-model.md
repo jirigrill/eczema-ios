@@ -403,7 +403,7 @@ documentation gives the reason — *"The framework synchronizes changes concurre
 times, which means CloudKit is unable to enforce the `unique` property option"* — and the consequence is
 structural rather than incidental: peers write independently, so no participant is ever in a position
 to reject a colliding insert. Declaring a uniqueness constraint anyway does not degrade gracefully; the
-store refuses to open at all (§7.4).
+store refuses to open at all (§7.2).
 
 One further trap deserves naming, because the newest platform guidance walks straight into it. Recent
 framework documentation promotes a uniqueness declaration as *the* way to avoid writing deduplication
@@ -531,11 +531,33 @@ refers to the record being deleted.
 > call sites the way a manual scan can. This corrects a claim this map carried for some time: the
 > platform prohibits only the *refusing* delete rule, and cascade is used on three relationships in the
 > platform vendor's own mirrored sample. What is unavailable is not the cascade but the **transaction
-> around it** — see `DATA-ARRIVE-3`. Class: **defect fixed**.
+> around it** — see `DATA-ARRIVE-3`. [#764](https://github.com/jirigrill/eczema-helper/issues/764) has since
+> measured the prohibition directly and narrowed it: the refusing rule is rejected local-only too, so it is
+> not a mirroring restriction and the cascade's availability does not depend on mirroring either.
+> Class: **defect fixed**.
 
 `DATA-PHOTO-8` is the prohibition to keep. The refusing delete rule is the one the platform names as
 unsupported, and the failure it produces is not a refused delete — it is a store that will not open
-(§7.4).
+(§7.2).
+
+This is now measured rather than inferred, and the measurement moves the *reason* without moving the rule
+(`(fact, measured)` — [#764](https://github.com/jirigrill/eczema-helper/issues/764), physical device, real
+container, live iCloud account). A refusing delete rule on a to-many is rejected at store-open **whether or
+not mirroring is enabled**: the same model, attempted local-only with no CloudKit database configured, fails
+identically, with `NSLocalizedFailureReason` naming only *"The following relationships are configured with
+unsupported delete rules"*. So it is a persistence-framework prohibition, not a mirroring one, and
+`DATA-PHOTO-8` cannot be relaxed by unmirroring a relationship — a remedy that would otherwise look
+available. #764 went looking for the pattern §10.3 records for field encryption, where mirroring silently
+voids a declaration past a threshold; here there is nothing to void, because the model never loads. The
+failure is loud, total, and at launch, so **no orphan can be created through a refused delete** — the
+`DATA-ORPHAN-*` sweep owes nothing to this case.
+
+Two consequences worth stating for whoever implements §5.3. First, referential integrity of the form
+"refuse to delete a parent while children exist" is **not expressible in the schema at all** and must be
+application code if it is ever wanted — `DATA-PHOTO-8` says it is not. Second, the thrown Swift error is as
+opaque as `DATA-ARRIVE-10`'s note warns, but the `NSCocoaErrorDomain` 134060 error beneath it carries a
+precise reason naming the offending entity and relationship: diagnosable in the Core Data log, not from the
+caught error.
 
 ---
 ## 6. Orphans
@@ -638,9 +660,18 @@ is durable independently of the upload, and the upload is retried from a log the
 
 ### 7.2 The schema must load
 
-**`DATA-ARRIVE-9` (MUST)** — The schema contains no feature the mirroring layer rejects: no uniqueness
+**`DATA-ARRIVE-9` (MUST)** — The schema contains no feature the store rejects at load: no uniqueness
 constraint, no refusing delete rule, no required relationship, and no attribute that is neither optional
 nor defaulted.
+
+One of those four is **not** a mirroring restriction, which matters only because it forecloses a remedy.
+[#764](https://github.com/jirigrill/eczema-helper/issues/764) measured the refusing delete rule as rejected
+**local-only as well**, with no CloudKit database configured, so it cannot be escaped by unmirroring the
+type that carries it. Required *relationships*, by contrast, are genuinely mirroring-specific — the same
+probe recorded a non-optional to-many failing with *"CloudKit integration requires that all relationships
+be optional"*, a reason that names mirroring explicitly and that `DATA-ARRIVE-4` already covers. The
+optional-or-defaulted **attribute** rule was not probed either way and remains as 13.3 describes it: every
+model in #764's probe carried defaulted attributes throughout, so nothing there tests it.
 
 **`DATA-ARRIVE-10` (MUST)** — A test loads the **real schema with mirroring enabled** and fails if it
 does not open. It runs on every change to the schema.
@@ -1376,7 +1407,7 @@ For a port translating the existing tests rather than writing fresh ones. Paths 
 | §5.1 observation, regions | `src/routes/skin/page.test.ts:190`, `:215` | **Translate** — the two tests that assert all nine regions are witnessed are the closest existing guard on `DATA-SKIN-4`. |
 | §5.1 `DATA-SKIN-2` write-once | `page.test.ts` edit tests | **Translate.** `createdAt` immutability across edit is asserted today. |
 | §5.2 photo record shape | `page.test.ts:528`–`:938` | **Do not translate.** Every test asserts the single-row shape Divergence 6 replaces, and one acknowledges in a comment that it cannot verify the image survives its round trip at all. |
-| §5.3 cascade | `dexie-skin-observation-repository` tests | **Do not translate.** They assert a hand-written scan inside a transaction — both the mechanism and the transaction are gone. Replace with a test that deleting an observation removes its photos, and one that no delete is ever refused. |
+| §5.3 cascade | `dexie-skin-observation-repository` tests | **Do not translate.** They assert a hand-written scan inside a transaction — both the mechanism and the transaction are gone. Replace with a test that deleting an observation removes its photos. A test that "no delete is ever refused" is **not writable at runtime** — per [#764](https://github.com/jirigrill/eczema-helper/issues/764) a refusing rule prevents the store from opening at all, so `DATA-PHOTO-8` is verified by `DATA-ARRIVE-10` loading the schema, not by attempting a delete. |
 | §6 orphans | **none** | Nothing to translate. An orphan is unrepresentable in a store with transactions. |
 | §7 arrival | **none — the reference implementation is single-device by construction** | Nothing to translate. Every rule in §7 describes a state the reference store cannot enter. |
 | §7.2 `DATA-ARRIVE-10` | **none** | New, and the cheapest test in the suite: load the real schema with mirroring enabled and assert it opens. |
