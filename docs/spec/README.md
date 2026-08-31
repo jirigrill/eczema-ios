@@ -12,8 +12,9 @@ written as the template.
 In short: one file per behavior area, rules with permanent `<AREA>-<GROUP>-<n>` ids, an explicit
 strength mark on every rule (**MUST** / **MUST NOT** / **SHOULD** / **PWA** / **OPEN**), invariants
 cited by anchor and never restated but always given a **disposition**, divergences from the PWA
-marked inline *and* indexed, and every section ending in a verification table, an on-device
-acceptance pass, and its open questions.
+marked inline *and* indexed, a numbered **Accessibility** block whose requirements carry `A11Y` rule
+ids so they reach the verification table, and every section ending in a verification table, an
+on-device acceptance pass, and its open questions.
 
 [`GLOSSARY.md`](GLOSSARY.md) holds the terms used by **more than one** section, so no single section
 owns them. Area-local terms stay in each section's own §1 Vocabulary table.
