@@ -847,6 +847,103 @@ observation the mother made says "today was Moderate".
 
 ---
 
+## 9a. Accessibility
+
+This is the screen the accessibility block was invented for. It is a nine-tile grid whose entire
+meaning is carried by a severity ramp, driven by a two-stage tap gesture, with a photo viewer behind
+it dismissed by a swipe — every one of those is a place where a correct-looking screen is an unusable
+one. §6.2 already carried three rules of this kind (`SKIN-INT-7`, `-8`, `-9`); they are the seed of
+this block, not a substitute for it, and they stay where they are because they are also rules about
+what the grid *shows*.
+
+### 9a.1 The region grid
+
+**`SKIN-A11Y-1` (MUST)** — Each region tile is **one** element to assistive technology, not a tile
+plus a separate level. Its label is the region's English label (§2.2) and its value is the level's
+label (§2.3) — "Elbow folds, Moderate". Focus order is the canonical order (`SKIN-REG-3`), the same
+order the grid displays, never a layout-derived or storage-derived order.
+
+**`SKIN-A11Y-2` (MUST)** — The tile's **trait** says it is a control that adjusts a value, and the
+active region's selection state is exposed as required by `SKIN-INT-9`.
+
+**`SKIN-A11Y-3` (MUST)** — The two-stage gesture (`SKIN-INT-2`, `SKIN-INT-3`) is reachable without
+sight. Activating an inactive tile announces that it became active **and** that its level is
+unchanged; advancing an active tile announces the new level. A user who cannot see the ramp must be
+able to tell those two outcomes apart from the announcement alone, because they differ in whether
+anything was recorded.
+
+**`SKIN-A11Y-4` (MUST)** — The wrap from `Severe` to `Calm` (`SKIN-INT-5`) is announced as the level
+it landed on. It is never announced as a reset, a clear, or a removal — it is the supported way to
+retire a region, and copy that framed it as clearing would misdescribe what was written.
+
+**`SKIN-A11Y-5` (SHOULD)** — Where the platform offers an adjustable-value gesture (increment and
+decrement), the grid supports it in addition to the tap cycle. A cycle-only control forces someone
+using it to step through three levels to go back one.
+
+### 9a.2 The note, saving, and deleting
+
+**`SKIN-A11Y-6` (MUST)** — The note field is labelled, and its optionality is part of the label or
+hint rather than conveyed only by placeholder text. Placeholder text disappears on focus, which is
+exactly when it would be read.
+
+**`SKIN-A11Y-7` (MUST)** — When the save action is unavailable in edit mode (`SKIN-VIS-6`), it stays
+**in** the accessibility tree with its unavailable state and the reason. This is Divergence 5's rule
+stated positively: one disabled mechanism, discoverable, with the reason readable.
+
+**`SKIN-A11Y-8` (MUST)** — A failed save or a failed delete (`SKIN-SAVE-7`, `SKIN-DEL-6`) is
+**announced**, not shown only as a visual banner. She is still on the screen with her work intact and
+nothing on the visual surface has changed position, so a user not watching the screen has no other
+signal that the write did not land.
+
+**`SKIN-A11Y-9` (MUST)** — The delete confirmation is announced as destructive, and the announcement
+includes that the photos go too (`SKIN-DEL-2`). The photo clause is the substance of the warning, so
+it cannot be the part that only the sighted read.
+
+**`SKIN-A11Y-10` (MUST)** — The undo affordance is **reachable and announced** for as long as it is
+available. `SKIN-DEL-11` makes the undoable action in-memory and short-lived, and it is the only
+recovery path in the product (§8.5) — an undo that appears as a transient visual toast and is never
+announced does not exist for a VoiceOver user, which would make the hard delete unconditional for
+them.
+
+### 9a.3 The photo viewer and the gallery
+
+**`SKIN-A11Y-11` (MUST)** — A gallery thumbnail is announced with its region and its position in the
+sequence, and a photo marked for removal (`SKIN-PHOTO-12`) announces that state — it is shown as
+marked visually, and `SKIN-A11Y-14` forbids colour or opacity being the only channel for it.
+
+**`SKIN-A11Y-12` (MUST)** — The viewer's dismissal has a control in the chrome, not only the downward
+swipe. `SKIN-PHOTO-27` already requires this and gives the reason; it is repeated here because it is
+the one place in the section where an accessibility requirement is already load-bearing for a
+non-accessibility rule (it is what makes hiding the chrome safe).
+
+**`SKIN-A11Y-13` (MUST)** — Paging position is announced on each page change, including the stop at
+the first and last photo (`SKIN-PHOTO-29`). `DAY-SKIN-11b` removes the visual position indicator, so
+the resistance at the end is the only sighted signal — and resistance is not perceptible at all
+through assistive technology. Without the announcement the sequence has no discoverable end.
+
+### 9a.4 The five questions
+
+| # | Answer |
+| --- | --- |
+| 1 | **VoiceOver label and trait** — specified for every interactive element this section has: region tiles (`SKIN-A11Y-1`, `-2`), the note (`-6`), save (`-7`), delete and its confirmation (`-9`), undo (`-10`), thumbnails (`-11`), and the viewer's pager and dismissal (`-12`, `-13`). |
+| 2 | **Dynamic Type** — region labels and level labels **must never truncate**: they are the record's entire content, and `Mild` clipped against `Moderate` is a misread severity, not a cosmetic loss. The nine-tile grid must therefore reflow — fewer tiles per row, or one per row — rather than hold its shape and clip. `SKIN-INT-1` requires all nine be visible at once, and at the largest sizes that is satisfied by scrolling the grid, not by abbreviating it. The note field grows; the photo grid may reduce to fewer, larger thumbnails. |
+| 3 | **Colour alone** — this section's central case, already answered by `SKIN-INT-7` (level carried as text or an accessible label as well as the ramp) and `SKIN-INT-8` (active state distinguished independently of level). `SKIN-A11Y-14` closes the two the ramp rule missed. |
+| 4 | **Focus order and grouping** — a region tile is one element, in canonical order (`SKIN-A11Y-1`). An observation entry in the day view is one element per `DAY-SKIN`'s rules; its region chips are its value, not nine separate stops. |
+| 5 | **Reduce Motion** — this section specifies two transitions: the viewer's open and dismiss, and the pager. Under Reduce Motion both complete without a positional or scaling animation. Nothing about *what* is reachable changes — `SKIN-PHOTO-27`'s swipe and `SKIN-A11Y-12`'s control both remain. |
+
+**`SKIN-A11Y-14` (MUST)** — Nothing in this section conveys meaning by colour, opacity, or position
+alone. The three cases are the severity ramp (`SKIN-INT-7`), the active region (`SKIN-INT-8`), and a
+photo marked for removal (`SKIN-PHOTO-12`); each carries a second channel that is text or an
+accessibility value.
+
+**`SKIN-A11Y-15` (MUST NOT)** — No label, hint, value or announcement on this screen frames the
+record as evidence about a food, a trigger, or a cause, offers a comparison to a previous day, or
+states a day-level severity. This is `SKIN-INT-13`, `SKIN-INT-14` and `SKIN-VIEW-5` bound to the
+accessibility surface — the regulatory boundary §6.4 draws is drawn against what the interface
+*claims*, and an announcement is a claim.
+
+---
+
 ## 10. Divergence index
 
 Every intentional departure from the reference implementation, in one place. This is the table a
@@ -910,6 +1007,7 @@ repo at `582f662`.
 | §5.2 atomicity | `dexie-skin-observation-repository` tests | **Do not translate** — asserts a transaction iOS does not have. Replace with `SKIN-PHOTO-9`/`-10` tests. |
 | §9 day view | `src/routes/day/[date]/page.test.ts`, `SkinObservationCard` | Partly; §9 gets its own section. |
 | §5.5 the photo viewer | `SkinPhotoCard.test.ts:159-208` and the gallery's own lightbox tests — open, `×` close, backdrop close | **Do not translate.** All three pin the single-photo lightbox Divergence 16 replaces; the backdrop-close test in particular asserts a mechanism (`SKIN-PHOTO-27` swaps it for a swipe) that no longer exists. Re-derive entirely. |
+| §9a accessibility | `SKIN-INT-7`/`-8`/`-9` have no test; `page.test.ts` queries by accessible role and label throughout, which exercises labels **incidentally** without asserting any of them | **Re-derive, all of it.** The label-driven queries are the closest thing to coverage and they are not coverage: a test that finds a button by its name fails if the name changes, but never fails if the name is wrong, missing a value, or leaking something `SKIN-A11Y-15` forbids. |
 
 **Rules nothing verifies today.** Worth stating, because these are where a port inherits
 ambiguity if it assumes test coverage equals specification:
@@ -929,6 +1027,11 @@ ambiguity if it assumes test coverage equals specification:
   (`SKIN-PHOTO-30`), no editor route from the gallery's viewer (`SKIN-PHOTO-31`), and — the guard that
   keeps a reasonable feature from creeping back — no position or extent indicator anywhere in it
   (`DAY-SKIN-11b`).
+- **Every rule in §9a.** The reference asserts nothing about the accessibility surface, and two of the
+  gaps are consequential rather than cosmetic. `SKIN-A11Y-3`: the reference's activate-then-cycle
+  gesture announces nothing distinguishing "became active" from "level advanced", so a
+  non-sighted user cannot tell whether a tap recorded a severity. `SKIN-A11Y-10`: nothing verifies the
+  undo affordance is announced at all, and it is the product's only recovery path from a hard delete.
 
 ### 11.1 Acceptance pass
 
@@ -987,6 +1090,31 @@ of this screen. Each maps to rules above; each is a thing to *do* on a device, i
     `SKIN-PHOTO-25`
 24. From **this** screen's viewer, look for a control that opens the observation. There is none — you
     are already in it. → `SKIN-PHOTO-31`
+25. **Turn VoiceOver on.** Swipe through the grid. You hear nine stops, in canonical order, each one
+    "region, level" — not eighteen stops, and not a tile whose level you have to look for. →
+    `SKIN-A11Y-1`, `SKIN-A11Y-2`
+26. Still under VoiceOver, double-tap an inactive region. You hear that it is now active **and** that
+    its level did not change. Double-tap again: you hear the new level. Keep going past `Severe`: you
+    hear `Calm`, described as a level and not as "cleared". → `SKIN-A11Y-3`, `SKIN-A11Y-4`
+27. Open a saved observation under VoiceOver and change nothing. You can still **reach** the save
+    control, and it tells you it is unavailable and why. → `SKIN-A11Y-7` *(this fails on the PWA —
+    Divergence 5; the control is absent from the accessibility tree entirely)*
+28. Delete it. The confirmation is announced as destructive **and** says the photos go too. Undo: the
+    undo affordance is announced, and you can reach it without seeing it. → `SKIN-A11Y-9`,
+    `SKIN-A11Y-10`
+29. Under VoiceOver, open the viewer on the middle of three photos. You hear which photo of how many.
+    Page to the third and try to page again: you hear that you are at the end. Then dismiss it using
+    the control, not the swipe. → `SKIN-A11Y-11`, `SKIN-A11Y-13`, `SKIN-A11Y-12`
+30. Set Dynamic Type to the **largest accessibility size**. Every region label and every level label
+    is fully readable — the grid reflows or scrolls, and nothing reads `Mod…`. → §9a question 2
+31. Turn **Reduce Motion** on and open, page, and dismiss the viewer. All three work; none animates
+    position or scale. → §9a question 5
+32. Turn colour filters to greyscale, or just squint. Each region's level is still readable, the
+    active region is still identifiable, and a photo marked for removal is still identifiably marked.
+    → `SKIN-A11Y-14`, `SKIN-INT-7`, `SKIN-INT-8`
+33. Under VoiceOver, listen to everything on the screen and everywhere the observation appears. Nothing
+    announced compares today to yesterday, names a food, or gives the day one severity. →
+    `SKIN-A11Y-15`
 
 ---
 ## 12. Open questions

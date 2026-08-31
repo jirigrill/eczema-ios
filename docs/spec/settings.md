@@ -821,6 +821,80 @@ previous notice to have changed from.
 
 ---
 
+## 6a. Accessibility
+
+Settings holds the product's only **irreversible** control and its only **legal** document, and the
+accessibility requirements follow from those two facts rather than from the screen being complicated.
+The delete-all path has no undo, no trash and no recovery (`SET-DELETE-9`), so a warning she does not
+receive is a warning that did not happen; the notice is the Art. 13 disclosure, so unreachable text is
+undisclosed text.
+
+### 6a.1 The stage control
+
+**`SET-A11Y-1` (MUST)** — The three stages are announced by their labels in the fixed order
+(`SET-STAGE-2`), each with a selected state, and the current stage announces as selected. When no stage
+is known (`SET-STAGE-7`) **none** announces as selected — the same requirement `first-run.md`
+`RUN-A11Y-2` makes, for the same reason.
+
+**`SET-A11Y-2` (MUST)** — Selecting a stage announces the change. `SET-STAGE-3` makes the change take
+effect immediately with no save step, so the announcement is the only confirmation that anything
+happened.
+
+**`SET-A11Y-3` (MUST)** — The hint saying what the stage governs (`SET-STAGE-6`) is announced as part of
+the control's label or hint, not as a separate stop she may swipe past before reaching the choices.
+
+### 6a.2 Deleting everything
+
+**`SET-A11Y-4` (MUST)** — The delete control announces the verb *delete* (`SET-DELETE-5`) and is
+traited as destructive. Never *reset*, never *restart*, never a generic affirmative — Divergence 1's
+euphemism is forbidden in the label exactly as on the button.
+
+**`SET-A11Y-5` (MUST)** — The confirmation's full content is announced: what is destroyed — meals,
+observations, photos — and that it cannot be undone (`SET-DELETE-3`). The irreversibility clause is the
+substance of the warning, so it cannot be the part carried only by visual emphasis.
+
+**`SET-A11Y-6` (MUST)** — The confirmation's destructive action announces as destructive and is
+distinguishable from cancel by more than position. Cancel is reachable, and reachable without passing
+through the destructive action.
+
+**`SET-A11Y-7` (MUST)** — The post-deletion disclosures are **announced**, not merely displayed:
+that the iCloud copy is still there now (`SET-DELETE-16`), the two things she can do about it
+(`SET-DELETE-17`), and the `noAccount` ordering (`SET-DELETE-18`). This is the case where a
+visual-only message is most costly — she lands on first run immediately (`SET-DELETE-8`), so the
+message has one chance to be received, and the window it warns about closes for good if she deletes
+the app.
+
+### 6a.3 The notice and sync
+
+**`SET-A11Y-8` (MUST)** — The route to the privacy notice announces where it goes, and the notice
+itself is fully reachable and readable through assistive technology — every section, in order, with no
+part behind a container that must be opened. `SET-PRIVACY-2` renders it in-app precisely so it is
+always available; unreachable in-app text would defeat that.
+
+**`SET-A11Y-9` (MUST)** — The notice's revision identifier (`SET-PRIVACY-6`) is announced as text, not
+conveyed only as fine print. It is what a consent record refers to (`consent.md` `CONSENT-REC-3`), so
+it must be readable by anyone checking what they agreed to.
+
+**`SET-A11Y-10` (MUST)** — A sync-failure line (`SET-SYNC-3`, `-5`, `-6`) is announced when it appears
+and names the consequence (`SET-SYNC-9` — not yet copied, never lost). The banner is announced without
+taking focus, since it can appear while she is reading something else.
+
+**`SET-A11Y-11` (MUST NOT)** — Nothing announces an affirmative sync state (`SET-SYNC-1`) — no
+"synced", no "up to date", no last-upload time. `SET-SYNC-12` records that timestamp and
+`SET-SYNC-11` keeps the diagnostic log off every surface; both bind announcements as well as pixels.
+
+### 6a.4 The five questions
+
+| # | Answer |
+| --- | --- |
+| 1 | **VoiceOver label and trait** — the three stage choices (`SET-A11Y-1`), the delete control and its confirmation's two actions (`-4`, `-6`), the notice route (`-8`), and the link out to iOS Settings where offered (`SET-ICLOUD-5`, `SET-PRIVACY-3`). Sync and account lines are text, announced per `SET-A11Y-10`. |
+| 2 | **Dynamic Type** — the confirmation's text and the post-deletion disclosures **must never truncate or scroll out of reach**: a warning about an irreversible act, clipped, is the failure mode this whole block exists to prevent. The confirmation therefore scrolls at large sizes rather than eliding its text, and `SET-DELETE-21` — which forbids waiting indefinitely — is about the network call, not about shortening the copy. The notice is long and scrolls freely. Stage labels must not truncate; row hints may wrap. |
+| 3 | **Colour alone** — one case: the delete control's destructive styling. The destructive trait (`SET-A11Y-4`) and the verb itself are the second and third channels, which is why `SET-DELETE-5` names the verb rather than leaving it to red text. |
+| 4 | **Focus order and grouping** — a Settings row is one element: its label, its value and its hint announced together (`SET-A11Y-3`), not three stops. The stage choices are one group of three. Order follows the screen: stage, delete, account and sync lines, privacy. |
+| 5 | **Reduce Motion** — the confirmation's presentation and the transition to first run after deletion (`SET-DELETE-8`). Under Reduce Motion both complete without animation; neither is skipped, and in particular the confirmation is still presented. |
+
+---
+
 ## 7. What Settings does not contain
 
 These are prohibitions with ids, not features nobody built. Each is a decision taken elsewhere that
@@ -924,6 +998,7 @@ map*, not from the reference implementation.
 | `SET-PRIVACY-1`..`-4` | none | **re-derive** |
 | `SET-PRIVACY-5`..`-14` | none — the PWA has no privacy notice at all | **re-derive**; `-6`, `-8` and `-11` are checked against the built bundle and the served page rather than in-app, and `-14` is `OPEN` |
 | `SET-ABSENT-1`..`-7` | none | **re-derive** as absence checks; see below |
+| `SET-A11Y-1`..`-11` | none — the reference has no accessibility assertions at all | **re-derive**. Three are assertable and worth writing in this order: the delete control's label carries the verb *delete* and the destructive trait (`-4`, which is Divergence 1's guard on the spoken surface and would otherwise inherit *"Restartovat"* by translation), the confirmation announces the irreversibility clause (`-5`), and no announcement anywhere carries an affirmative sync state (`-11`, the spoken twin of `SET-SYNC-1`) |
 
 ### Rules nothing verifies today
 
@@ -976,6 +1051,13 @@ Most of this section, and the reasons differ in a way worth separating.
 - **`SET-STAGE-9`/`-10` in a real degraded state.** Requires a signed-out device; see the standing
   ceiling on account-state testing recorded on
   [#704](https://github.com/jirigrill/eczema-helper/issues/704).
+- **The whole of §6a.** Nothing in the reference asserts anything about the accessibility surface, and
+  on this screen two of the gaps are consequential. `SET-A11Y-4`: the delete control's *label* is where
+  Divergence 1's euphemism is most likely to survive the port, because a translator working from
+  `common.ts` gets *"Restartovat"* and the visual button can be corrected without anyone re-reading the
+  label. `SET-A11Y-7`: the post-deletion disclosures have exactly one chance to be received — she lands
+  on first run immediately — so a visual-only message is a warning never given, and the window it warns
+  about then closes permanently.
 
 ### Acceptance pass
 
@@ -1080,6 +1162,26 @@ something.
     online. The deletion still completes locally and you see **the same** copy as step 32, not an
     error code (`SET-DELETE-19`). Then confirm from the log that the failure was captured with full
     detail (`SET-DELETE-20`).
+37. **Turn VoiceOver on** and open Settings. Each row is one stop that reads its label, its value and its
+    hint together — the stage row tells you the current stage and what it governs without you having to
+    hunt for a second element (`SET-A11Y-1`, `-3`).
+38. Change the stage under VoiceOver. You hear the change (`SET-A11Y-2`). There is no save control to
+    look for, which is why the announcement is the confirmation.
+39. Land on the delete control under VoiceOver. It says **delete** and announces as destructive
+    (`SET-A11Y-4`). **✗ PWA** — the reference calls it *restart*.
+40. Activate it and listen to the whole confirmation without looking. You hear what is destroyed **and**
+    that it cannot be undone (`SET-A11Y-5`), and you can reach cancel without going through the
+    destructive action first (`SET-A11Y-6`).
+41. Go through with it, offline, under VoiceOver. The disclosure that the iCloud copy is still there —
+    and the two things you can do about it — is **spoken**, not merely on screen (`SET-A11Y-7`). This is
+    the one message in the product with a single chance to land.
+42. Open the privacy notice under VoiceOver. Every part of it is reachable, in order, with nothing behind
+    a container you have to open, and the revision identifier is readable (`SET-A11Y-8`, `-9`).
+43. Listen to the whole of Settings for a claim that sync is working — "synced", "up to date", a last
+    upload time. There is none (`SET-A11Y-11`).
+44. Set Dynamic Type to the **largest accessibility size** and open the delete confirmation. Its full
+    text is still reachable — it scrolls if it must — and the irreversibility sentence has not been
+    clipped away (§6a question 2).
 
 ---
 

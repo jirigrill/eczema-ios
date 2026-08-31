@@ -109,6 +109,50 @@ The roughly fifteen **unnumbered** invariant-shaped rules in `CONTEXT.md` glossa
 **by heading**. Where one is ambiguous, the section resolves it and records the resolution as an
 open question against the source — as `skin-observation.md` §12.1 does.
 
+## Accessibility block
+
+Every section carries a numbered **Accessibility** block, placed after the area's behavior rules and
+**before** its *What this does not contain* list, its divergence index, and its verification section.
+Settled by [#755](https://github.com/jirigrill/eczema-helper/issues/755).
+
+**It takes a lettered section number**, e.g. `§9a` in a section whose behavior rules end at `§9`.
+This is the same reasoning [#689](https://github.com/jirigrill/eczema-helper/issues/689) applied to
+rule ids and `DAY-NAV-9a` applies within a group: a heading number is *position*, and sections cite
+each other by `§n` heavily enough that renumbering the tail of seven files would silently retarget
+those citations. A letter inserts the block where it belongs without moving anything after it.
+
+It exists because accessibility is the one class of requirement that is **invisible in a screenshot
+and absent from a test unless it is specified**. A section without this block yields a screen that
+looks right and is unusable under VoiceOver, and neither the rules nor the verification table
+fail — which is exactly what happened to the three most interactive sections before this block
+existed.
+
+**Requirements carry ids, in an `A11Y` group** — `<AREA>-A11Y-n`, with the same strength marks as
+any other rule. That is the whole point of a block rather than a paragraph: an id can appear in the
+verification table and take a *translate / re-derive / do not translate* verdict, and prose cannot.
+A requirement written as prose is not verifiable and does not count as an answer here.
+
+The block **must force an answer on all five** of the following. Where one does not apply, it says
+so explicitly and says why — "this section has no animation, so there is nothing for Reduce Motion
+to suppress" is an answer; silence is not.
+
+| # | What the block must answer |
+| --- | --- |
+| 1 | **VoiceOver label and trait** for every interactive element the section specifies, and what each label reads. |
+| 2 | **Dynamic Type** up to the largest accessibility sizes: what reflows, what may truncate, and what must **never** truncate. |
+| 3 | **Colour alone**: whether any rule in the section conveys meaning by colour, and the second channel that carries it. |
+| 4 | **Focus order and grouping** for composite rows — whether a row is one element to assistive technology or several, and in what order. |
+| 5 | **Reduce Motion**, wherever a rule specifies an animation or a transition. |
+
+**An accessibility label is a conveyance channel.** Anything a rule elsewhere forbids *displaying*
+is equally forbidden in a label, a hint, a trait or an announcement — a prohibition written against
+the visual surface alone has a hole in it, and this block is where it is closed. See
+[`catalog.md`](catalog.md) `CAT-DERIVE-6`, which closes it for the allergen mapping.
+
+**Not a design document, still.** The block specifies what must be *announced*, *readable* and
+*reachable* — never type sizes, contrast ratios, or layout. Those belong to the iOS UI work, which
+is not this spec's.
+
 ## Divergences
 
 This is not a 1:1 port, and per [#690](https://github.com/jirigrill/eczema-helper/issues/690)

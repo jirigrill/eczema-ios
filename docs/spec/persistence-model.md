@@ -1121,6 +1121,46 @@ mirroring enabled. Neither was the doubtful part — the doubt was whether Swift
 default at all, and it does — but a device run with `cloudKitDatabase:` set would close both.
 
 ---
+
+## 11a. Accessibility
+
+The store has no interface, so this block is short — and it is here rather than omitted for the same
+reason `catalog.md` §9a is: the template requires every section to answer, and "nothing renders" is an
+answer only once it has been checked against what this section actually decides. Two of its decisions
+do reach the accessibility surface.
+
+**`DATA-A11Y-1` (MUST)** — No stored value is exposed to assistive technology that is not also
+displayed. Tiebreak values, record identifiers, food ids (`DATA-SCOPE-5`), byte sizes, formats and
+dimensions (`DATA-PHOTO-5`), and change-log entries (`DATA-HIST-*`) are internal. An accessibility label
+is the likeliest place for a raw id to escape, because it is a natural stand-in when there is no display
+string to hand — which is exactly the unresolvable-item case `day-view.md` `DAY-A11Y-6` governs.
+
+**`DATA-A11Y-2` (MUST)** — The distinction between **absent** and **empty** that §10 makes carries into
+what is announced. An absent note is not announced as an empty note, and an absent value is not
+announced as a zero, a blank, or an unknown — the display rules for each absence live in the section
+that owns the surface, and this rule says the announcement follows them rather than exposing the
+storage state.
+
+**`DATA-A11Y-3` (MUST)** — An orphan photo is invisible to assistive technology exactly as it is
+invisible on screen (`DATA-ORPHAN-1`), and the sweep is silent in announcements as well as in the
+interface (`DATA-ORPHAN-6`). A record whose parent has not arrived is not announced as anything,
+including as missing.
+
+**`DATA-A11Y-4` (MUST)** — Where photo bytes cannot be read, the failure is surfaced through
+`skin-observation.md` `SKIN-VIS-4`'s rule and announced as that section requires. Nothing announces a
+storage diagnostic, a file-protection class, or a byte count.
+
+### 11a.1 The five questions
+
+| # | Answer |
+| --- | --- |
+| 1 | **VoiceOver label and trait** — not applicable. This section specifies no interactive element and no screen. Every surface that renders a stored value is specified elsewhere, and each of those sections carries its own block. |
+| 2 | **Dynamic Type** — not applicable to the store itself. One consequence is worth naming: nothing in the schema imposes a length limit on the note (§10), so no stored value is short enough to assume a fixed line count, and the surfaces that render notes must reflow rather than rely on brevity. |
+| 3 | **Colour alone** — not applicable. The store holds no presentational value: no colour, no severity ramp, no emphasis. `DATA-SKIN-5` keeps even the canonical region order a property of the app rather than of the data. |
+| 4 | **Focus order and grouping** — not applicable, with one consequence. Storage order is not display order (`DATA-SKIN-5`, and `catalog.md` `CAT-SRC-3`), so a surface must not derive focus order from what the store returns — the rule that binds this is `day-view.md` `DAY-A11Y-4`. |
+| 5 | **Reduce Motion** — not applicable. The store specifies no animation and no transition. |
+
+---
 ## 12. Divergence index
 
 | # | Section | Summary | Class |
@@ -1177,6 +1217,7 @@ For a port translating the existing tests rather than writing fresh ones. Paths 
 | §9 history, §10 promotion | **none, and none possible** | Nothing to translate, and mostly nothing testable — see below. |
 | §11 `DATA-FILE-1`, `-2` | **none in either repo, but already measured** — `eczema-ios-spikes/probe-fileprotection-752/` | **Re-derive as a Swift test**, and it is nearly free: open the container, read `fileProtectionKey` off the store and both sidecars, assert `completeUntilFirstUserAuthentication`. Two constraints or the test lies. It must use the **`URL`** route (`DATA-FILE-8`) — `attributesOfItem` returns `nil` and an assertion against it would pass vacuously; and it must assert a **control** file whose class the test sets itself, because data protection is unenforced on the simulator, so without a control a green run proves nothing. |
 | §11 `DATA-FILE-3`..`-7` | **none, and none wanted** | Prohibitions on code that does not exist. A test asserting the app never calls `setResourceValue(_:forKey:)` is a lint rule, not a behavior test. |
+| §11a accessibility | **none** | **Re-derive**, and only `DATA-A11Y-1` is really this section's to verify: assert that no accessibility label, value or hint anywhere in the app contains a record identifier, a tiebreak value or a raw food id. It is one sweep over the rendered surface rather than a per-rule test, and it is the guard against a raw id escaping as a stand-in label. The other three are enforced by the sections that own the surfaces. |
 
 **Rules nothing verifies today.** The list is unusually long for this spec, and its length is the finding:
 **most of this document specifies behavior the reference implementation could not exhibit**, so absence of
@@ -1209,6 +1250,9 @@ content-derived identity.
   key (`DATA-ENC-5`), and that no query in the codebase is server-side (`DATA-ENC-3`) — the second is a
   review or a lint, not a test. Whether a field actually arrived encrypted is only observable by reading the
   raw server record, which is what the #747/#748 probe harness does and no unit test can.
+- **§11a, and it is genuinely thin.** Only `DATA-A11Y-1` is verifiable here and it is worth the one
+  sweep. `DATA-A11Y-2`'s absent-versus-empty distinction is verified by the sections that render it, and
+  `DATA-A11Y-3`'s silence is verified by the same absence checks the orphan rules already need.
 
 ### Acceptance pass
 
@@ -1264,6 +1308,10 @@ minutes.
 18. Delete the app and reinstall **while signed out** of iCloud. Nothing arrives, and the app does not
     treat the empty store as a fresh installation by asking you to consent again or re-pick a feeding
     stage that is still recorded (`DATA-ARRIVE-5`, `DATA-OUT-3`). **✗ PWA**
+19. **Turn VoiceOver on** and sweep the whole app — day view, both editors, Settings. Nothing announced
+    anywhere is a record identifier, a tiebreak value, a raw food id, a byte size or an image dimension
+    (`DATA-A11Y-1`). Pay particular attention to a meal row whose items do not resolve: it must announce
+    as occupied with no names, not as an id (`day-view.md` `DAY-A11Y-6`).
 
 Steps 9–16 are this section's real acceptance test, and they are slow: each needs a fresh install or a
 second device, and steps 9–11 need an import that the platform is entitled to defer out of a launch

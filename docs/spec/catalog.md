@@ -511,6 +511,12 @@ this rule forbids it at the source.
 **`CAT-DERIVE-5` (MUST NOT)** — No user-facing string caveats, hedges, or explains a mapping in v1 —
 no "based on typical ingredients", no disclaimer sheet.
 
+**`CAT-DERIVE-6` (MUST NOT)** — No accessibility label, hint, trait, value, or announcement conveys a
+food's allergen ids, an allergen's name, or anything derived from either. `CAT-DERIVE-1` reads
+"displays"; this rule says that the assistive-technology surface is a display. A VoiceOver label of
+"oat milk, contains wheat" breaches §7 exactly as a visible chip would, and is harder to notice
+because no screenshot shows it.
+
 That may read as the wrong instinct, so the reasoning is worth stating: a caveat is only honest if
 there is a claim to caveat, and v1 makes no claim, because nothing renders. Shipping a disclaimer for
 an invisible mapping would *create* the impression that the app asserts something about her baby's
@@ -592,6 +598,42 @@ forbids by a different route.
 invite a preparation to be recorded against an unknown food — ADR-0028's own complaint about the bucket
 scheme, one step further on. Thirty-seven of the 160 reference foods carry an empty list, so an empty
 list must render as "no choice offered" and never as "not yet authored".
+
+---
+
+## 9a. Accessibility
+
+The catalog renders nothing itself, so this block is short — but it is not empty, and the reason it is
+not empty is the whole point of having it. The catalog is the **source of the data §7 forbids
+displaying**, and an accessibility label is a display.
+
+**`CAT-A11Y-1` (MUST)** — Every requirement in §7 binds the accessibility surface as written in
+`CAT-DERIVE-6`. Allergen ids, allergen names, trigger counts and anything derived from them are absent
+from labels, hints, traits, values and announcements, in every locale.
+
+**`CAT-A11Y-2` (MUST)** — A food is announced by its **display label** (`CAT-LOC-1`) and nothing more.
+Its family, its source group, and its position in a list are structure, not content, and are conveyed
+by grouping rather than by being read out as part of the food's label.
+
+**`CAT-A11Y-3` (MUST)** — A **preparation method** (§9) is announced by its own label, and its
+applicability is conveyed by the choice being **absent** rather than present-and-disabled. An empty
+preparation list (`CAT-PREP-3`) means assistive technology encounters no preparation control at all,
+which is the correct reading of "no choice offered" — a disabled control would announce a choice that
+does not exist.
+
+**`CAT-A11Y-4` (MUST)** — Where a food's label is missing or its id does not resolve (`CAT-VER-8`),
+the degraded rendering is announced as the same neutral text it displays. The announcement never
+exposes a raw id, a diagnostic, or the fact that resolution failed.
+
+The five questions the template requires an answer on, answered for this section:
+
+| # | Answer |
+| --- | --- |
+| 1 | **VoiceOver label and trait** — the catalog specifies no interactive element. Food labels and preparation labels are the strings it owns (`CAT-A11Y-2`, `-3`); the controls that carry them belong to `meal-editor.md`, which specifies their traits. |
+| 2 | **Dynamic Type** — food and preparation labels are authored copy and **must never be truncated to the point of ambiguity**: `CAT-MEMBER-4` granularity means `oat milk` and `oat` are different records, so a label clipped to "oat…" is a wrong identification, not a cosmetic loss. Labels must therefore be free to wrap. The catalog authors no length limit and no abbreviated variant for either. |
+| 3 | **Colour alone** — nothing in this section conveys meaning by colour. `CAT-DERIVE-1` explicitly forbids the one case that would have (a colour derived from allergens), so there is no second channel to specify. |
+| 4 | **Focus order and grouping** — the catalog specifies **order** (`CAT-SRC-3`, `CAT-PREP-2`) and requires that focus order follow authored order, because that order is curated and carries meaning. Grouping of the surfaces that render it is `meal-editor.md`'s. |
+| 5 | **Reduce Motion** — not applicable. This section specifies no animation or transition, so there is nothing to suppress. |
 
 ---
 
@@ -718,6 +760,9 @@ by file rather than by class will port 135 assertions about food that is not in 
 | `CAT-PREP-5` | `preparation-rules.ts:25` returns `[]` for an unknown id; no test | **re-derive** |
 | `CAT-VER-4`, `-8`, `-9` | `working-meal.ts:350` **throws** — the behavior being diverged from | **do not translate** |
 | `CAT-DERIVE-1..5` | nothing — there is no screen to assert against | **re-derive** as a prohibition test over the rendered surface |
+| `CAT-DERIVE-6`, `CAT-A11Y-1` | nothing, and the PWA has no accessibility assertions at all | **re-derive** — extend the `CAT-DERIVE-1` prohibition test over labels, hints, traits and values, not only over rendered text |
+| `CAT-A11Y-2`, `-4` | nothing | **re-derive** |
+| `CAT-A11Y-3` | `preparation-rules.ts:25` returns `[]`; nothing asserts an empty list yields **no control** | **re-derive** — the assertion is about absence, which the PWA never made |
 | `CAT-SIGN-1..6` | nothing, and nothing could | **do not translate** — process, not behavior |
 
 ### Rules nothing verifies today
@@ -744,6 +789,10 @@ This is the honest list, and for this section it is where the real work is.
 - **`CAT-SHAPE-7`'s counts.** No test asserts the catalog's extent, so a translation pass that drops a
   row fails nothing.
 - **Everything in §8.** Sign-off is a procedure; it is verified by a human doing it or not.
+- **Every rule in §9a.** The reference has no accessibility assertions of any kind, so the whole
+  accessibility block inherits zero coverage. `CAT-A11Y-1` matters most: it is the rule that stops §7's
+  prohibition being satisfied on the visible surface and breached in a label, and it is the one gap
+  that a screenshot review cannot find.
 
 ---
 ### Acceptance pass
@@ -793,14 +842,24 @@ there*. That is the honest shape of a section whose largest rule group is a proh
 18. Anywhere in the app, look for a reintroduction ladder, a dose step, or a food graded by how
     allergenic it is. There is nothing (`CAT-ABSENT-1`, `CAT-ABSENT-2`). **✗ PWA** — the reference
     ships 22 ladders in its data.
+19. **Turn VoiceOver on** and swipe through a whole family's food list. Every food is announced by its
+    name alone — no announcement mentions an allergen, a count, or what a food contains
+    (`CAT-A11Y-1`, `CAT-DERIVE-6`). **✗ PWA** — untestable there; the reference specifies no labels.
+20. Still under VoiceOver, land on `Salt`. There is **no preparation control to reach** — not a disabled
+    one (`CAT-A11Y-3`). Then land on `Banana` and confirm its preparations are announced in the
+    authored order, not alphabetically (§9a question 4, `CAT-PREP-2`).
+21. Set Dynamic Type to the **largest accessibility size** and open `Dairy`. Every food name is fully
+    readable — wrapped if it must be, never clipped to a prefix that reads as a different food
+    (`CAT-A11Y-2`). `Oat milk` in particular must not render as `Oat…`.
 
 The last two steps below need a second device or a build, so they are the owner's to run with help.
 
-19. **Skew.** On a device with an older build, open a day holding a meal logged on a newer build that
+
+22. **Skew.** On a device with an older build, open a day holding a meal logged on a newer build that
     contains a food the older one does not. The app does not crash, the meal is still there, and
     nothing is deleted (`CAT-VER-8`, `CAT-VER-9`). **✗ PWA** — the reference throws. The item's own
     display behavior is [#749](https://github.com/jirigrill/eczema-helper/issues/749)'s.
-20. **Then update that device.** The food reappears in full, in the meal where she logged it, with
+23. **Then update that device.** The food reappears in full, in the meal where she logged it, with
     nothing re-entered (`CAT-VER-9`).
 
 ---
