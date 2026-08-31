@@ -90,7 +90,8 @@ record *type names* are permanently plaintext and they say what this store is, s
 type on a record type named for an eczema diary is a correlation rather than a neutral value.
 
 **Why the app encrypts photographs separately.** Platform field encryption and automatic promotion of
-large values to attachments **do not compose**: past roughly 750 KB the field is silently renamed and
+large values to attachments **do not compose**: past a boundary measured between 699 500 and 699 600
+bytes the field is silently renamed and
 the encryption request is dropped, with no error and no warning. This was measured on a physical
 device against a real container, not inferred. For photographs the failure runs in the worst possible
 direction — a detailed photograph of an affected area is *more* likely to cross the threshold than a
