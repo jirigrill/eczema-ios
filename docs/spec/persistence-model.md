@@ -330,6 +330,15 @@ its natural key, or its tiebreak.
 modified** wins — last-edit instant if present, creation instant otherwise — and the tiebreak breaks an
 exact tie. The losing record's content is discarded.
 
+**A same-device clock repeat does not reach the tiebreak (fact, measured).**
+[#766](https://github.com/jirigrill/eczema-helper/issues/766) measured the one case that could have
+defeated a tiebreak designed for two-device conflict: an autumn DST transition, where one device
+reads the same wall clock twice with no travel and no zone change. Two records written in the two
+passes through `02:30` are **one hour apart as instants**, so `DATA-CONV-4` is decided on the creation
+instant and the tiebreak is never consulted. They also share the ordinary calendar date of that day —
+a repeated *hour* is not a repeated *date* — so the repeat introduces no new natural-key collision
+either. The tiebreak's deadline stands on the reinstall case above, unchanged by this.
+
 **`DATA-CONV-5` (MUST NOT)** — The app never merges the contents of two colliding meals. A meal she
 never ate must not be assembled from two she did.
 

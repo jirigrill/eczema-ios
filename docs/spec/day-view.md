@@ -217,9 +217,38 @@ end up somewhere these rules do not reach, and each has its own id or ticket:
   these rules prevents it. → [#744](https://github.com/jirigrill/eczema-helper/issues/744), §3.5 and
   the persistence section.
 
-**Not tested by the prototype: daylight saving.** No leg of the fixture crosses a DST transition (all
-three zones hold a constant offset across the journey), so what these rules are measured against is
-the date-line effect alone. Nothing here should be read as evidence about a one-hour shift.
+**Daylight saving: measured, and these rules hold (fact, measured).** The zone-crossing fixture
+crossed no DST transition, so this was measured separately by
+[#766](https://github.com/jirigrill/eczema-helper/issues/766) — a clock that moves while
+`TimeZone.current` stays put, which no zone change produces. Both directions, arithmetic on the host
+and cross-checked against iOS `Foundation` on a simulator, agreeing on every value.
+
+`DAY-NAV-9`, `-9a` and `-9b` are **unaffected**. A record written in the missing hour, and a record
+written in each pass of the repeated hour, all file under the ordinary calendar date of that day
+(`2026-03-29`, `2026-10-25`) and never move. `DAY-NAV-9c`'s caption cost is the only visible effect,
+and it is the cost that rule already records: a nonexistent local time is resolved **silently** —
+`Calendar.date(from:)` for `2026-03-29 02:30` in `Europe/Prague` returns `03:30` rather than nil — so
+an entry written in the missing hour is captioned one hour later than the clock she read. Nothing
+throws and no date shifts.
+
+`DAY-NAV-13` is unaffected: the reachability tick-over is 24 hours of real time even though the day it
+opens is 23 hours long.
+
+**The repeated hour does not repeat the date, and that is the load-bearing part.** Both passes through
+`02:30` share a calendar date, so they are the *ordinary* same-day case — autumn DST introduces no new
+`INV-4` slot collision, and [#744](https://github.com/jirigrill/eczema-helper/issues/744)'s
+twice-lived-date problem is **not** reproduced by it. The two passes are an hour apart as instants, so
+ordering by the creation instant stays total and stable and `persistence-model.md` `DATA-CONV-4`
+decides before the tiebreak is ever consulted. The concern that a single device seeing one wall clock
+twice might defeat a tiebreak designed for two-device conflict does **not** materialise.
+
+**Day-boundary construction survives both transitions, including where midnight itself does not
+exist.** Prague's midnights are all real only because it moves at 02:00; `Asia/Beirut` springs forward
+*at* `00:00`, so `2026-03-29 00:00` does not exist there. Even in that zone the two ways an
+implementation writes "start of day" — `00:00` components, and `Calendar.startOfDay` — return the
+**same** instant (`01:00`), and a half-open day range built from them excludes no real instant of that
+date. This is the one measurement that could have invalidated every date query in the day view, and it
+did not.
 
 
 **`DAY-NAV-10` (MUST)** — Crossing local midnight while the view is open does **not** change the
@@ -1171,6 +1200,15 @@ This is the honest list, and it is long for this screen.
   the **same** calendar date after the zone changes (`DAY-NAV-9`, `-9b`), and the same record's
   **time of day** re-renders in the new zone (`-9c`). The prototype drives the real zone via
   `SIMCTL_CHILD_TZ`, so this is testable on a simulator without a plane.
+
+  **Two DST guards belong here too, and neither needs a zone change** —
+  [#766](https://github.com/jirigrill/eczema-helper/issues/766) measured both, so these pin a
+  confirmed result rather than explore an open one. A record whose creation instant falls in a
+  **nonexistent** local time files under that day's ordinary date and stays there (`DAY-NAV-9`,
+  `-9a`), which is the guard that matters because the platform resolves such a time **silently**
+  rather than throwing. And a **half-open day range** built from a `00:00` wall clock selects every
+  record of that date in a zone whose midnight does not exist — `Asia/Beirut`, `2026-03-29` is the
+  fixture, and it needs no travel and no DST-aware code, only the right zone identifier.
 - **Records dated after today** (`DAY-NAV-13`) — nothing, and nothing could: the reference's forward
   edge renders seven future cells, so the state the rule governs does not exist there. Worth
   separating from `DAY-NAV-9` above, because unlike the time-zone question this one is testable
@@ -1185,7 +1223,7 @@ This is the honest list, and it is long for this screen.
   listed above. The fourth thing is not: **that the degradation is silent and reasonless** is a
   *negative* about the whole screen, and the two costs #703 accepted knowingly — a skewed item
   freezing the slot's note and its other foods, and a refusal that names no cause — are judged by a
-  person, not asserted. They belong to the acceptance pass, steps 34 and 35.
+  person, not asserted. They belong to the acceptance pass, steps 35 and 36.
 - **The whole of §7a.** The reference has no accessibility assertions at all, and this screen is where
   that costs the most: `DAY-A11Y-1` and `-2` decide whether a day with three meals and two observations
   is a dozen stops or fifty, and nothing in the PWA's tests would notice either answer. The two
@@ -1301,38 +1339,49 @@ something.
     which step 30 covers by clock instead (`DAY-NAV-13`). One further effect is **out of scope here**
     and tracked separately: a second breakfast silently overwriting the first on a twice-lived date
     ([#744](https://github.com/jirigrill/eczema-helper/issues/744)).
-34. **The skewed meal.** You need two app versions on one iCloud account, or a build with a food
+34. **The clock that moves without the zone changing.** Set the device's date to the day before a
+    DST transition in your own zone — Prague's are `2026-03-29` and `2026-10-25` — with *Set
+    Automatically* off, then step it across the transition and reopen the app. Every record stays on
+    the date you logged it (`DAY-NAV-9`, `-9b`), and a record logged in the hour that spring-forward
+    skips is filed under that day normally, captioned an hour later than the clock you set
+    (`DAY-NAV-9c`). In autumn, log two things an hour apart across the repeated hour: both read the
+    **same** clock time and both sit on the same day, in the order you wrote them. Nothing is lost
+    and neither overwrites the other — the repeated hour is not a repeated *date*, so
+    [#744](https://github.com/jirigrill/eczema-helper/issues/744)'s collision does not apply.
+    Measured by [#766](https://github.com/jirigrill/eczema-helper/issues/766); this step confirms the
+    screen agrees with the arithmetic.
+35. **The skewed meal.** You need two app versions on one iCloud account, or a build with a food
     added to the catalog. On the newer, log a meal with **two** foods, one of them the added food.
     Open that day on the older phone: the row shows **one** food name, with nothing marking the
     other's absence — no placeholder, no badge, no dimming, no sentence (`DAY-MEAL-12`,
     `DAY-MEAL-14`). Tap it: the editor **opens**, shows the meal, and refuses to save — and read it
     closely, because it tells you **no reason at all** (`DAY-MEAL-15`). **✗ PWA** — the reference
     cannot open it; it throws (Divergence 13).
-35. **The blank row, and the cost.** On the newer phone log a meal of that **one** added food only.
+36. **The blank row, and the cost.** On the newer phone log a meal of that **one** added food only.
     On the older phone that row reads as *holding a meal* and shows no food names at all
     (`DAY-MEAL-13`, `DAY-MEAL-11`). Confirm the slot is **not** offered as empty — there is no
     compose affordance on it — because logging a second meal there is the loss this rule prevents.
-    Then, back on step 34's two-food meal, try to change its **note** and its **other** food: you
+    Then, back on step 35's two-food meal, try to change its **note** and its **other** food: you
     cannot, and one unresolvable item has frozen the whole slot until the app updates. Finally,
     update the older phone and confirm every hidden food **reappears in full** with nothing lost
     (`CAT-VER-9`) — that self-healing end state is what makes hiding acceptable, and it is the step
     that proves it.
-36. **Turn VoiceOver on** and swipe through a day holding two meals and two observations. Each meal row
+37. **Turn VoiceOver on** and swipe through a day holding two meals and two observations. Each meal row
     is **one** stop that names its slot and reads its foods; each observation entry is **one** stop that
     reads its time, its regions, its note and that it has a photo. You do not land on individual foods
     or individual region chips (`DAY-A11Y-1`, `-2`).
-37. Still under VoiceOver, swipe the date selector. No cell says anything about what that day holds —
+38. Still under VoiceOver, swipe the date selector. No cell says anything about what that day holds —
     only the date, whether it is today, and whether it is selected (`DAY-A11Y-8`).
-38. Listen to the whole screen, top to bottom, for a number that is not a date, a time, or a food. There
+39. Listen to the whole screen, top to bottom, for a number that is not a date, a time, or a food. There
     is none: no meal count, no photo count, no "3 of" anything, and the reveal control on the photo grid
     says only that there is more (`DAY-A11Y-12`, `DAY-A11Y-9`). This is the step that catches the
     helpful summary label.
-39. Under VoiceOver, land on an **empty** meal slot. It tells you it is empty and that tapping records a
+40. Under VoiceOver, land on an **empty** meal slot. It tells you it is empty and that tapping records a
     meal — you do not have to see the row to know it is free (`DAY-A11Y-5`).
-40. Set Dynamic Type to the **largest accessibility size**. Every food name on every row is fully
+41. Set Dynamic Type to the **largest accessibility size**. Every food name on every row is fully
     readable, wrapping onto as many lines as it needs; the note may truncate, no food name does
     (§7a question 2). The date selector still reaches the back edge.
-41. Turn **Reduce Motion** on. Move to another day: the selector still centres it, without animating.
+42. Turn **Reduce Motion** on. Move to another day: the selector still centres it, without animating.
     Expand the photo grid: it still expands (§7a question 5).
 
 ---
