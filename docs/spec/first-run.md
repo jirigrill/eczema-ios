@@ -1,7 +1,9 @@
 # First run and the feeding stage — behavior specification
 
-**Status:** written, **awaiting owner confirmation** on two points marked in place (§3.1 `RUN-COPY-2`,
-§5 `RUN-ICLOUD-2`). Written against the format settled by
+**Status:** **owner-confirmed.** The two points previously marked in place (§3.1 `RUN-COPY-2`, §5
+`RUN-ICLOUD-2`) were confirmed as written in
+[#767](https://github.com/jirigrill/eczema-helper/issues/767) — both had been decided against a
+recommendation, and both stand unchanged. Written against the format settled by
 [#682](https://github.com/jirigrill/eczema-helper/issues/682) — see [`TEMPLATE.md`](TEMPLATE.md) for
 the rules, and [`skin-observation.md`](skin-observation.md) for the worked example.
 **Behavior reference:** `jirigrill/eczema-helper` @ `582f662` (frozen PWA), `src/routes/+page.svelte`,
@@ -148,8 +150,9 @@ holding records gets copy that does not, and reads correctly for a mother who ha
 > is false for the returning one — it lands beside an empty day view and reinforces exactly the
 > apparent-data-loss reading #712 spent its resolution defusing. Class: **defect fixed**.
 
-**Awaiting owner confirmation.** This was decided against a recommendation of one newness-neutral text
-true for both audiences, and it carries a cost that must be recorded rather than discovered later:
+**Owner-confirmed** ([#767](https://github.com/jirigrill/eczema-helper/issues/767)), against a
+recommendation of one newness-neutral text true for both audiences. The branch stands, and so does the
+cost it carries — recorded here rather than discovered later:
 **on the reinstall path the branch is wrong.** She reinstalls, launches, and neither her records nor
 her stage have arrived — so the store is empty, the branch reads *new*, and she gets welcome copy as a
 mother of four months. That is the very path #712 designed for. The branch is right on a second device
@@ -300,7 +303,8 @@ in the reference — in a codebase where #712's data-loss path ran through exact
 the consequence** before she picks: records cannot be created yet, and what she is about to answer will
 not be lost.
 
-**Awaiting owner confirmation.** `RUN-ICLOUD-1` is settled and follows `settings.md`
+**Owner-confirmed** ([#767](https://github.com/jirigrill/eczema-helper/issues/767)). `RUN-ICLOUD-1` is
+settled and follows `settings.md`
 `SET-STAGE-9`/`-10` — the stage is not a record, does not live in the synced store, and Apple documents
 the write as succeeding locally with *"the changes remain only on the current device"*, so gating it
 would invent a platform restriction. `RUN-ICLOUD-2` is the part decided against a recommendation to
@@ -310,8 +314,9 @@ It is written as **warns, does not block** because blocking has no exit. `restri
 Apple as **nonrecoverable**, so a first run that refuses to complete in that state is an app that can
 never be used at all, by anyone on a managed device — a terminal state reached before she has seen a
 single screen, and one no in-app action can clear. Warning costs one sentence and keeps every path
-open. If the intent was in fact to block, that is a different rule and a decision that needs recording
-against the `restricted` consequence.
+open. ~~If the intent was in fact to block, that is a different rule and a decision that needs recording
+against the `restricted` consequence.~~ **Closed by #767: warns-does-not-block is the confirmed intent,
+so no blocking variant is open.**
 
 **`RUN-ICLOUD-3` (MUST NOT)** — First run shows nothing about the account in `temporarilyUnavailable`
 or `couldNotDetermine`. Those are self-resolving and Apple instructs apps to wait.
@@ -647,22 +652,28 @@ already fixed in substance by `settings.md` `SET-ICLOUD-3` for the Settings line
 drafted together or they will describe the same account state in two different vocabularies. The
 regulatory constraint on all of them is `RUN-COPY-3`, and it is guarded by nothing but review (§9).
 
-**Whether the returning-mother copy variant is worth its known failure.** `RUN-COPY-2` is
-**awaiting owner confirmation** and §3.1 records the cost in place: on the reinstall path the branch
+**~~Whether the returning-mother copy variant is worth its known failure.~~ Closed by
+[#767](https://github.com/jirigrill/eczema-helper/issues/767): the branch stands as written.**
+`RUN-COPY-2` is **owner-confirmed** and §3.1 records the cost in place: on the
+reinstall path the branch
 reads *new* and shows welcome copy to a mother of four months, because neither her records nor her
 stage have arrived. That is not a gap to be closed later — #712's correction 4 found KVS↔CloudKit
 ordering undocumented in both directions, so no signal can sequence "her settings value has arrived"
-against mirroring progress. The question left open is therefore not *how to fix it* but whether the
-branch earns its keep given that it is wrong precisely on the path it was added for. The alternative is
-on the record as a recommendation: one newness-neutral text true for both audiences.
+against mirroring progress. The question was therefore never *how to fix it* but whether the branch
+earned its keep given that it is wrong precisely on the path it was added for; the owner's answer is
+that it does. The alternative is on the record as a recommendation: one newness-neutral text true for
+both audiences.
 
-**Whether a degraded first run warns at all.** `RUN-ICLOUD-2` is the section's second
-**awaiting confirmation** point, and unlike `RUN-COPY-2` the recommendation went the other way — that
+**~~Whether a degraded first run warns at all.~~ Closed by
+[#767](https://github.com/jirigrill/eczema-helper/issues/767): it warns, as written.** `RUN-ICLOUD-2`
+was the section's second **awaiting confirmation** point, and unlike `RUN-COPY-2` the recommendation
+went the other way — that
 first run proceed identically in every state and let #687's persistent banner carry the message once
-she reaches the day view. What is *settled* either way is `RUN-ICLOUD-1`: first run always completes,
+she reaches the day view. What is settled either way is `RUN-ICLOUD-1`: first run always completes,
 because `restricted` is documented by Apple as nonrecoverable, so a blocking first run would be an app
-that can never be used at all on a managed device. If the answer is "no warning", `RUN-ICLOUD-2` is
-deleted and `-5` goes with it; `-1`, `-3` and `-4` are untouched.
+that can never be used at all on a managed device. ~~If the answer is "no warning", `RUN-ICLOUD-2` is
+deleted and `-5` goes with it; `-1`, `-3` and `-4` are untouched.~~ The answer was "warn", so
+`RUN-ICLOUD-2` and `-5` both stand and no rule in this group is deleted.
 
 **Where first run sits relative to the OS permission prompts, in practice.** `RUN-ABSENT-4` settles the
 rule — first run asks for nothing — and `skin-observation.md` `SKIN-PHOTO-20` settles the Photos case at

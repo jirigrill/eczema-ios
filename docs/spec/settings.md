@@ -1,10 +1,10 @@
 # Settings — behavior specification
 
-**Status:** owner-confirmed **except §4.1**, which is written against
-[#723](https://github.com/jirigrill/eczema-helper/issues/723) and **awaits the owner's confirmation on
-five of its nine decisions** — the diagnostic log's shape, the banner/Settings split, the 24-hour
-threshold, the quota copy, and the two timestamps. The four the owner has settled are marked in §4.1's
-own note. §3's `SET-DELETE-13`..`-21` are **owner-confirmed** (#733, eight answers). Written against the format settled by
+**Status:** **owner-confirmed throughout.** §4.1's last five open decisions — the diagnostic log's
+shape, the banner/Settings split, the 24-hour threshold, the quota copy, and the two timestamps — were
+confirmed as written in [#767](https://github.com/jirigrill/eczema-helper/issues/767), closing the
+section written against [#723](https://github.com/jirigrill/eczema-helper/issues/723). §4.1's own note
+records the split as it stood. §3's `SET-DELETE-13`..`-21` are **owner-confirmed** (#733, eight answers). Written against the format settled by
 [#682](https://github.com/jirigrill/eczema-helper/issues/682) — see
 [`TEMPLATE.md`](TEMPLATE.md) for the rules, and
 [`skin-observation.md`](skin-observation.md) for the worked example.
@@ -436,16 +436,20 @@ Settled by [#723](https://github.com/jirigrill/eczema-helper/issues/723). The ru
 
 **Confirmation status, stated per decision** so nothing unreviewed passes as settled. Twelve rules, of
 which three (`SET-SYNC-2`, `-8`, `-9`) are forced by the platform and are not product choices at all —
-leaving **nine decisions, four settled and five awaiting confirmation**.
+leaving **nine decisions, all nine owner-confirmed** — four settled while the section was written and
+five confirmed afterwards in [#767](https://github.com/jirigrill/eczema-helper/issues/767).
 
 **Settled by the owner:** silence while sync is healthy (`SET-SYNC-1`), writing that silence as a
 numbered prohibition rather than leaving it an absence (`-1`), two failure messages keyed to the
 consequence for her (`-3`), and surfacing only persistent failures rather than every one (`-4`).
 
-**Awaiting confirmation:** the diagnostic log's capture-only shape (`-10`, `-11`), the banner/Settings
-split and its empty-store exception (`-5`, `-6`), the **24-hour** figure specifically (`-4` — that the
-gate is persistence is settled; the number is not), naming quota as a *likely* cause in the copy
-(`-7`), and recording the two timestamps (`-12`).
+**Confirmed as written in [#767](https://github.com/jirigrill/eczema-helper/issues/767)** — the
+remaining five, presented there with the reasoning and, where one existed, the recommendation each was
+decided against: the diagnostic log's capture-only shape (`-10`, `-11`), the banner/Settings split and
+its empty-store exception (`-5`, `-6`), the **24-hour** figure specifically (`-4` — that the gate is
+persistence was already settled; the number is now too), naming quota as a *likely* cause in the copy
+(`-7`), and recording the two timestamps (`-12`). Nothing changed on confirmation: the rules stand as
+written. So **all nine decisions are owner-confirmed**, and no rule in this section awaits review.
 
 **`SET-SYNC-1` (MUST NOT)** — The app displays no affirmative sync state anywhere: no "synced", no
 "up to date", no "last synced at", no cloud glyph in a healthy condition, no progress indicator. It
@@ -1038,8 +1042,8 @@ Most of this section, and the reasons differ in a way worth separating.
 - **The 24-hour persistence threshold (`SET-SYNC-4`).** Unit-testable with an injected clock, and it
   must be — the two failure modes are opposite and both bad: too eager and the mother sees a warning
   every time she logs a meal in a lift, too patient and a genuinely broken sync stays quiet for a day.
-  What no test settles is whether 24 hours is the right number; that is a judgment, listed as awaiting
-  confirmation in §4.1.
+  What no test settles is whether 24 hours is the right number; that is a judgment, and the owner
+  confirmed it in [#767](https://github.com/jirigrill/eczema-helper/issues/767) (§4.1).
 - **The diagnostic log (`SET-SYNC-10`, `-11`).** Testable and cheap — assert a synthetic failure event
   lands in the log and that no screen reads it — but note what the test cannot cover: `-11` is a
   prohibition on a surface nobody has asked for yet, so the test's whole value is holding that line

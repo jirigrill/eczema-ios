@@ -398,6 +398,85 @@ change on the phone that wrote them.
 
 ---
 
+## 10. The app says nothing while sync is working, so silence is the healthy state
+
+There is no affirmative sync indicator anywhere in this product — no "synced", no "up to date", no
+"last synced at", no cloud glyph in a healthy condition, no progress spinner. The app is **silent
+while sync is healthy and speaks only when something is wrong**, and when it does speak it says what
+the failure costs her rather than naming a technical state.
+
+**Why it is not a missing feature.** The reflex reading of a sync-less status bar is that someone
+forgot the status bar. The truth is that the honest version cannot be built: **no API can report that
+the store is synchronised.** A "synced" badge would be a claim the platform gives no way to verify, so
+it would be decoration that reads as a guarantee — and the moment it is wrong is the moment she is
+looking at an incomplete diary and being told it is complete. The framework only ever reports *events*,
+and a verdict is taken only from an ended one; watermark inference was examined and rejected.
+
+**What it cost.** She gets no reassurance. A mother who wants to know her infant's record is safely in
+iCloud has no screen that tells her so, and reassurance is a reasonable thing to want in this product
+of all products. Accepted knowingly: an unverifiable reassurance is worth less than none, because it
+would be believed.
+
+**What speaks instead, and only then.** Failures are surfaced only when **persistent** — no successful
+upload for 24 hours while unexported changes are pending, a wall-clock gate rather than a count of
+failures, chosen against a daily-use app. Two messages keyed to the consequence: her records are on
+this phone only, or this phone may not be showing everything. A failed upload never means a lost
+record, so the copy says *not yet copied to iCloud* and never *not saved*. The quota message names full
+iCloud storage as a **likely** cause without asserting it, because quota exhaustion is genuinely not
+detectable through the mirroring API — its error is the same code the platform documents for fatal
+setup failure — and Apple's only published recovery instruction is to send her to iCloud settings.
+
+**To undo.** Adding a positive indicator is easy in code and wrong for the reason above; the constraint
+is the absent API, not the design. Anyone reversing this needs a way to know the store is synchronised
+first. Removing the 24-hour gate is the cheaper knob, and it re-introduces alarms on transient
+failures that train her to ignore the one that matters.
+
+- **Rules:** `SET-SYNC-1`…`-12` in [`settings.md`](settings.md) §4.1 (`-2`, `-8`, `-9` are
+  platform-forced, not choices); `RUN-ICLOUD-3` in [`first-run.md`](first-run.md) forbids the parallel
+  connectivity warning at first run; [`day-view.md`](day-view.md)'s question of where a health
+  indicator would live is closed **nowhere**.
+- **Argued in:** [#723](https://github.com/jirigrill/eczema-helper/issues/723), the observability it
+  rests on in [#704](https://github.com/jirigrill/eczema-helper/issues/704) and the banner form in
+  [#687](https://github.com/jirigrill/eczema-helper/issues/687); owner-confirmed in
+  [#767](https://github.com/jirigrill/eczema-helper/issues/767).
+
+## 11. Sync failures are captured to a log with no way to read it
+
+Every sync-event failure is written to a local diagnostic log at the moment it is observed — the
+error's full detail, the event type, the time — pruned to a bounded number of recent entries. In v1
+that log has **no user-facing surface at all**: it is not displayed, not exported, not shared, and
+nothing in the app acknowledges it exists.
+
+**Why a log nobody can read ships anyway.** Error detail exists **only live on the notification**. An
+event re-read afterwards retains only the domain and code of the original error, so an app that does
+not capture at notification time has lost the detail **permanently** — this is stated by an Apple
+Frameworks Engineer on the developer forums and in a technote, and it is the reason this is the one
+irreversible decision in the sync area. It is also the only route by which the open question of *which
+error codes actually arrive in practice* can ever close from real use, rather than from another spike
+that cannot provoke a genuine failure.
+
+**Why no surface, when the capture is the expensive half.** A share-to-support flow would mail an
+infant's medical record to the developer's inbox and require a new Art. 13 disclosure. Reading and
+sharing are additive and cheap to add later; the capture is not. So the asymmetric bet is to capture
+now and decide about surfaces once there is something to look at.
+
+**What it cost.** Storage and code for a feature with no user value in v1, and a diagnostic channel the
+owner cannot actually consult without attaching a debugger. Accepted as the price of not throwing away
+the only evidence the failure ever produces.
+
+**To undo.** The surface is addable in any release. The capture is not retroactive: any failure that
+happened before capture shipped is gone, so removing or deferring it silently forecloses the diagnosis
+it exists to enable.
+
+- **Rules:** `SET-SYNC-10` (capture at notification time) and `SET-SYNC-11` (no user-facing surface) in
+  [`settings.md`](settings.md) §4.1; `SET-SYNC-12`'s upload timestamp is a **correctness** requirement
+  rather than a display one, because the platform gates persistent-history purging on it.
+- **Argued in:** [#723](https://github.com/jirigrill/eczema-helper/issues/723), with the
+  disclosure constraint from [#709](https://github.com/jirigrill/eczema-helper/issues/709);
+  owner-confirmed in [#767](https://github.com/jirigrill/eczema-helper/issues/767).
+
+---
+
 ## What is deliberately not in this file
 
 **No ADR series, and no decisions log.** Both were considered and declined. The spec sections already
