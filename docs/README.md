@@ -11,6 +11,7 @@ Docs here describe what exists or what the app must do. Anything forward-looking
 ## Layout
 
 - `spec/` — platform-neutral behavior specifications. One document per behavior area, each written so tests fall out of it. This is the primary deliverable of the current phase.
+- `setup/` — what exists on the Apple Developer account, recorded so build work copies rather than re-derives it. Identifiers and capabilities only; [#699](https://github.com/jirigrill/eczema-helper/issues/699) keeps secrets out of the repo entirely.
 
 ## What lives in the frozen PWA repo instead
 
