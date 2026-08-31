@@ -9,8 +9,14 @@ sections — not by being important.
 **This is not a port of the Czech `UBIQUITOUS_LANGUAGE.md`**, which freezes in the reference repo
 ([#677](https://github.com/jirigrill/eczema-helper/issues/677)). That file is 696 lines of a
 different product's vocabulary. This one starts small and grows only when a second section reaches
-for the same word — the six entries below each earned their place that way, and two of them
+for the same word — the entries below each earned their place that way, and two of them
 (*feeding stage*, *eligible actors*) were found by applying the rule to sections already written.
+
+Two entries are here for a second reason, stated so the rule is not misread as having been bent:
+*sync health* and *tolerant read* each name a decision whose whole content is what the app **does
+not** do. A term like that cannot be inferred from the places it is used, so it needs a definition
+even where the sections using it are few
+([#756](https://github.com/jirigrill/eczema-helper/issues/756)).
 
 **Domain invariants are not vocabulary.** `INV-1..14` live in
 [`CONTEXT.md`](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md) and are cited by
@@ -146,3 +152,59 @@ clock while showing the same day. Both halves are deliberate.
 Three sections reach for the pair: `day-view.md` §2 (which day a record shows under),
 `persistence-model.md` §5 (how each is stored and typed) and `skin-observation.md` (an observation's
 date and its time). None owns it.
+
+## Sync health
+
+A **failure-only** notion. It names the app's judgement that something about CloudKit mirroring has
+gone wrong for long enough to tell the mother about — and it has no positive counterpart.
+
+**Nothing on any screen ever reports that sync is working.** No "synced", no "up to date", no "last
+synced at", no cloud glyph in a healthy condition, no progress indicator: the app is silent while
+sync is healthy and speaks only when something is wrong (`settings.md` `SET-SYNC-1`). A reader
+meeting the term should not go looking for the indicator; there isn't one, and its absence is a
+numbered prohibition rather than an omission.
+
+That is not only a product preference. **No API can report that the store is synchronised** — a
+successful import means the device is current with what was in iCloud at that moment and implies
+nothing about other devices or about changes arriving since. An affirmative indicator would assert
+something unknowable, in an app with no export
+([#683](https://github.com/jirigrill/eczema-helper/issues/683)) where that assertion would be the
+mother's last line of defence.
+
+What "wrong for long enough" means is a **durability** gate, not a connectivity one: no successful
+upload for 24 hours while changes are still pending, so a tunnel or a basement produces nothing
+(`SET-SYNC-4`). A verdict is read only from an event that has **ended**, because an in-flight event
+reports *not succeeded* and would otherwise cry wolf on every launch (`SET-SYNC-2`). When the app
+does speak, it says one of two things, keyed to the consequence for her rather than to the error:
+her records are on this phone only, or this phone may not be showing everything (`SET-SYNC-3`).
+
+Settled by [#723](https://github.com/jirigrill/eczema-helper/issues/723). The rules live in
+`settings.md` §4.1; `first-run.md` reaches for the same notion where it warns about a degraded
+iCloud state at setup.
+
+## Tolerant read
+
+The policy that a `foodId` the bundled catalog does not contain is a **recoverable display
+condition** — never an error, never a crash, never a reason to drop what she recorded
+(`catalog.md` `CAT-VER-8`). The catalog layer never deletes, rewrites or "repairs" such a record:
+the id stays on disk untouched and the food reappears in full when the app updates (`CAT-VER-9`).
+
+**There is no fallback label.** `MealItem` carries `foodId` alone — no denormalised name is stored
+beside it — so an unresolvable item has nothing to render and is therefore hidden rather than shown
+as a placeholder or a raw id. Hiding is safe only paired with degrading the meal to read-only, so
+no save path can overwrite a meal while one of its items is invisible; the two halves must not be
+separated. Settled by [#703](https://github.com/jirigrill/eczema-helper/issues/703); the screen half
+is written into `day-view.md` ([#749](https://github.com/jirigrill/eczema-helper/issues/749)).
+
+**Why an unknown id can exist at all is worth stating, because there is only one route.** Ids are
+**retired in place** — reserved forever, never reused, never reassigned to a food that merely
+resembles the withdrawn one (`CAT-VER-5`, `-6`) — so a rename can never orphan a record. What
+remains is **bundle-vs-store skew**: the catalog ships inside the app rather than in the store
+(`CAT-VER-1`, `-2`), so two devices on one iCloud account may hold different catalog versions, and
+a meal logged on an updated phone may name a food an older phone does not contain (`CAT-VER-3`).
+
+That makes tolerance a consequence of mandatory sync rather than of curation. Under the PWA's
+single-device premise the catalog and the records were always the same vintage, so the reference
+implementation treats an unresolvable id as a crash — `working-meal.ts:337-343` throws. With
+per-device bundles the skew is ordinary, and throwing would mean a meal she logged on her new phone
+breaks the editor on her old one (`catalog.md` Divergence 4).
