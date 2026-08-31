@@ -1,7 +1,9 @@
 # Consent and the refusal path — behavior specification
 
-**Status:** written, **awaiting owner confirmation**. Twelve decisions were settled with the owner
-while writing it; each is marked in place where a reader would otherwise re-derive it. Written
+**Status:** **owner-confirmed.** Twelve decisions were settled with the owner while writing it and
+confirmed as written in [#767](https://github.com/jirigrill/eczema-helper/issues/767); each is marked
+in place where a reader would otherwise re-derive it, and § Confirmation status below names all twelve.
+Written
 against the format settled by [#682](https://github.com/jirigrill/eczema-helper/issues/682) — see
 [`TEMPLATE.md`](TEMPLATE.md) for the rules, and [`skin-observation.md`](skin-observation.md) for the
 worked example.
@@ -59,6 +61,40 @@ Four things are worth knowing before the rules make sense:
 **How to read this document:** see
 [`skin-observation.md` § How to read this document](skin-observation.md#how-to-read-this-document).
 Rule ids here are `CONSENT-<group>-<n>`, permanent identity, never renumbered or reused.
+
+### Confirmation status
+
+**Stated per decision** so nothing unreviewed passes as settled, in the form `settings.md` §4.1 uses.
+All twelve are **owner-confirmed as written**
+([#767](https://github.com/jirigrill/eczema-helper/issues/767)); nothing changed on confirmation.
+
+The status line long carried the count without the roster, which forced a reader to re-derive which
+twelve were meant. They are named here once, keyed to the rule that holds each:
+
+| # | Rule | The decision |
+| --- | --- | --- |
+| 1 | §2 `CONSENT-GATE-4` | An arriving consent record never dismisses the gate, though an arriving feeding stage does replace her answer (Divergence 1) |
+| 2 | §4 `CONSENT-ACT-6` | One accept control, but the two processing operations stated as separate purposes (Divergence 2) |
+| 3 | §5 `CONSENT-NO-1`..`-8` | A terminal refusal state exists at all (Divergence 3) |
+| 4 | §6 `CONSENT-REC-5` | Delete-all clears the consent record, so withdrawal is followed by re-consent (Divergence 4) |
+| 5 | §4 `CONSENT-ACT-4` | No photo-specific consent — **declined #694 §6.4's recommendation** |
+| 6 | §3 `CONSENT-FORM-1`, `-2` | One long scrolling screen; a three-screen sequence rejected |
+| 7 | §2 `CONSENT-GATE-6` | The sync disclosures stated in full even when sync is unreachable |
+| 8 | §2 `CONSENT-SAY-8` | Apple named; the transfer disclosure rests on contractual terms alone |
+| 9 | §2 `CONSENT-SAY-9`, `-10` | Withdrawal stated with its cost, in the same breath |
+| 10 | §6 `CONSENT-REC-4` | The consent record holds no child identifier and no contact details |
+| 11 | §7 `CONSENT-ABSENT-5` | Silence on whether app deletion removes her iCloud data, in **both** directions — **narrowed #694 §4.6 step 4's recommendation** |
+| 12 | §3 `CONSENT-FORM-6`, `-4` | One text, English only; no progress indicator |
+
+Two carry the highest re-litigation risk and are the reason this block exists: **1**, which
+deliberately reverses `first-run.md` `RUN-SYNC-2` for the adjacent screen (§8 explains why "fixing"
+the inconsistency would make the app record an act of consent nobody performed), and **5** and **11**,
+which decline or narrow a recommendation from the research rather than following it.
+
+**What confirmation did not cover.** Every rule above fixes **structure and branching**, not wording.
+The sentences are the owner's to draft (§10, against #694 §6.3) and are **not written**, so a
+confirmed rule here is not confirmed copy. The `UNSETTLED` legal questions in §11 are untouched by
+this — confirmation is the owner's assent to the app's behavior, not a resolution of the law.
 
 ### Invariant dispositions
 
