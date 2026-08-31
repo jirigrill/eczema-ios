@@ -277,6 +277,67 @@ ids to cite when reversing it; here there is no rule to reverse, so this entry i
   *"the hazard half, untouched by #734: v1 still has no hazard axis"*), recorded here so the absence
   reads as a choice.
 
+## 8. The PWA's existing records are abandoned, and that loss is total
+
+This app starts from an empty store. The records already in the Czech PWA — dated meals, dated skin
+observations and photographs of a breastfed newborn's affected skin, accumulated in real household use
+— do not come across in any form. There is no migration, no one-shot import, and no re-entry
+procedure. The first launch of this app on the mother's phone is a first launch in the full sense.
+
+**Why this entry exists at all.** The decision was made, early and deliberately: *start fresh, no
+migration from the PWA*. But it was made as a **scoping** call, weighed as "which features does v1
+carry", at a time when the iOS app was a plan rather than the successor to a phone holding a real
+diary. What was scoped away turns out, on inspection, to be the only copy of the data. Read from
+inside the code, the absence of an import path is indistinguishable from a feature nobody got to. This
+entry is the difference.
+
+**Why the loss is total rather than deferred.** The PWA is IndexedDB in Safari on one phone, with no
+backend, no export and no backup — that is `ADR-0001` and `ADR-0029` in the frozen repo, both decided
+the other way here. So those records are readable **only** in that browser profile, on that phone, for
+as long as it survives. Clearing Safari's storage destroys them; so does a new phone. Nothing else
+holds a copy. The photographs are the part with no substitute anywhere.
+
+**Why the alternatives are closed rather than merely unbuilt.** Each was checked, and each fails on a
+rule already written rather than on effort:
+
+- **Hand re-entry does not exist as an option.** `DAY-NAV-9a` files a newly written record under the
+  device's local calendar date **at the moment of writing**, and `DAY-NAV-9b` forbids any later
+  rewrite of a stored date, on read or on edit. The app has no back-date affordance anywhere. So
+  retyping last month's meals produces records dated *today* — which is not a partial recovery of the
+  history but a corruption of it, and worse than nothing in an app whose only value is that dates line
+  up. Re-entry would first require a back-dating capability, which is new behavior and a §5 hazard
+  (a diary that lets you write yesterday is a diary you can tidy).
+- **A one-shot import is the only route that preserves photographs, and it is out of reach here.**
+  `SET-ABSENT-2` forbids import outright, and *start fresh* sits in the handoff's do-not-reopen set.
+  Whether a developer-run migration run once is even the "import control" that rule prohibits is
+  arguable — but it is the owner's call to make, not a reading to be discovered in a spec session.
+
+**What it cost, stated plainly so it cannot later read as an oversight.** The lost record is not
+reconstructible from memory and not re-derivable from anything: the whole premise of the app is that
+the signal only appears across weeks of logging (`CONTEXT.md#inv-5`). This app therefore begins with
+an empty store on the child whose history is the reason it was built, and every week of prior logging
+is spent. Whether that matters depends on something outside this spec — whether the elimination phase
+is still running — and the decision was taken without that being settled either way.
+
+**This entry had an expiry, and it has passed.** Unlike everything else in this file, the choice could
+be foreclosed by an unrelated event: once the PWA phone was wiped, updated or replaced, *abandoned*
+became the outcome whether or not anyone chose it. That is why the question was raised urgently rather
+than eventually. Recording it here converts a decision-by-erosion into a decision on the record.
+
+**To undo.** Only while the PWA's browser profile is intact — and that window is not under this
+project's control. If the records still exist and the owner wants them, the extraction is a throwaway
+script run once, and it must happen **before** anything else: the file can then sit unread for as long
+as the build takes. Once the profile is gone, this entry is not reversible at any price.
+
+- **Rules:** none — this is an absence, like §7. The nearest rules are `SET-ABSENT-2` in
+  [`settings.md`](settings.md) (no import, which is the route this would need) and `DAY-NAV-9a`/`-9b`
+  in [`day-view.md`](day-view.md) (dates fixed at log time, which is what closes hand re-entry).
+- **Argued in:** settled in the handoff's do-not-reopen set (*"Existing data: start fresh, no migration
+  from the PWA"*), reachable via the map ([#672](https://github.com/jirigrill/eczema-helper/issues/672));
+  the downstream durability decision is §3 above ([#683](https://github.com/jirigrill/eczema-helper/issues/683));
+  examined and recorded here by
+  [#757](https://github.com/jirigrill/eczema-helper/issues/757).
+
 ---
 
 ## What is deliberately not in this file
