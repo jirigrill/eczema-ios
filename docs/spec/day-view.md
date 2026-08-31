@@ -455,10 +455,9 @@ for the day shown, that meal type, and that row's actor.
 **`DAY-MEAL-9` (MUST)** — Every entry into the editor supplies the day shown as the editor's return
 destination.
 
-The editor itself is specified by
-[`meal-editor-state-machine.md`](https://github.com/jirigrill/eczema-helper/blob/main/docs/spec/meal-editor-state-machine.md); its §1.1 fixes meal type and date
-at entry and defines the `returnTo` contract this rule satisfies. This section owns the *list*, not
-the editor.
+The editor itself is specified by [`meal-editor.md`](meal-editor.md); its §1.1 fixes meal type and date
+at entry (`MEAL-ENTRY-1`..`-6`) and defines the return contract this rule satisfies. This section owns
+the *list*, not the editor.
 
 **`DAY-MEAL-15` (MUST)** — A row holding a meal with one or more unresolvable items still opens the
 editor in **edit** under `DAY-MEAL-8`, and the editor it opens is **read-only-degraded**: the meal
@@ -475,9 +474,8 @@ displays and cannot be saved. Reachability is unconditional; the refusal is the 
 > that made it safe. Class: **settled by #703**.
 
 This screen owns only *entering*. The refusal on save, and what the editor shows while degraded,
-belong to the meal editor — [`meal-editor-state-machine.md`](https://github.com/jirigrill/eczema-helper/blob/main/docs/spec/meal-editor-state-machine.md)
-§1, cited by section because that document carries no rule ids yet
-([#746](https://github.com/jirigrill/eczema-helper/issues/746) corrects it without adding them). The
+belong to the meal editor — [`meal-editor.md`](meal-editor.md) §1.2, where they are `MEAL-DEG-1`..`-4`.
+The
 boundary is drawn here rather than there because `DAY-MEAL-8` would otherwise read as opening an
 editor the reference cannot open, and because a row that refuses to open is the one degradation #703
 ruled out.
@@ -989,8 +987,8 @@ closed, so a fourth mark needs a decision, not an inference.
 other screen is entered from it and returns to it.
 
 **`DAY-ROOT-2` (MUST)** — An add control on the day view offers exactly two things, both scoped to
-the day shown: record a meal (choosing a meal type), and record a skin observation. Meal types
-already logged on that day are marked as such.
+the day shown: record a meal (choosing a meal type), and record a skin observation. The meal-type
+choices carry no indication of what has already been logged — see `DAY-ABSENT-1`.
 
 **`DAY-ROOT-3` (MUST NOT)** — The add control is not offered on the editor screens themselves.
 
@@ -1001,7 +999,7 @@ to the day it happens to have written to.
 
 **`DAY-ROOT-6` (MUST)** — A meal copied to another day returns to the **destination** day, so that
 the copy and its undo are both visible on the day they affected. See `CONTEXT.md` § _Copy Meal_ and
-[`meal-editor-state-machine.md`](https://github.com/jirigrill/eczema-helper/blob/main/docs/spec/meal-editor-state-machine.md).
+[`meal-editor.md`](meal-editor.md) §9 (`MEAL-COPY-1`..`-10`).
 
 **`DAY-ROOT-7` (MUST)** — The undo affordance for a deletion performed inside an editor appears on
 the day view, since that is where the editor returns to. Its mechanism — single-slot, in-memory,
@@ -1104,7 +1102,7 @@ inequality reversed and no better.
 
 | # | Answer |
 | --- | --- |
-| 1 | **VoiceOver label and trait** — specified for every interactive element: date-selector cells and the return-to-today control (`DAY-A11Y-8`, `DAY-NAV-8`), meal rows (`DAY-A11Y-1`, `-5`), observation entries (`DAY-A11Y-2`), thumbnails (`DAY-A11Y-3`), the reveal control (`DAY-A11Y-9`), the add control (`DAY-ROOT-2` — its two options and the already-logged marking are part of the announcement), Settings (`DAY-ROOT-4`), and undo (`DAY-A11Y-11`). |
+| 1 | **VoiceOver label and trait** — specified for every interactive element: date-selector cells and the return-to-today control (`DAY-A11Y-8`, `DAY-NAV-8`), meal rows (`DAY-A11Y-1`, `-5`), observation entries (`DAY-A11Y-2`), thumbnails (`DAY-A11Y-3`), the reveal control (`DAY-A11Y-9`), the add control (`DAY-ROOT-2` — its two options are part of the announcement; there is no already-logged marking to announce, `DAY-ABSENT-1`), Settings (`DAY-ROOT-4`), and undo (`DAY-A11Y-11`). |
 | 2 | **Dynamic Type** — food names **must never truncate**, for `catalog.md`'s reason: a clipped name is a wrong food. A meal row therefore wraps to as many lines as it needs, and `DAY-MEAL-6`'s single-line-row rationale is a layout preference that yields at accessibility sizes. Region chips wrap rather than clip. The **note** (`DAY-SKIN-2`) is the one thing that may truncate — it is free text, its truncation is already layout's call, and the entry opens to the full text. The date selector may show fewer cells; it must not stop reaching the back edge (`DAY-NAV-4`). The photo grid may reduce below six thumbnails per its two-row cap. |
 | 3 | **Colour alone** — three cases, all already answered: a row holding a meal (`DAY-MEAL-11`, and `DAY-A11Y-5`), today in the selector (`DAY-NAV-6`, announced by `DAY-A11Y-8`), and photo-presence (`DAY-SKIN-9`, a glyph rather than a tint, announced as part of `DAY-A11Y-2`'s value). Nothing here conveys severity by colour, because no day-level severity exists (`SKIN-VIEW-5`). |
 | 4 | **Focus order and grouping** — §7a.1, and it is the substance of this block for this section. One element per meal row, one per observation entry, one per thumbnail; order per `DAY-A11Y-4`. |
@@ -1112,7 +1110,34 @@ inequality reversed and no better.
 
 ---
 
-## 8. Divergence index
+## 7b. What the day view does not contain
+
+These are prohibitions with ids, not features nobody built. Each names a behaviour the reference
+implementation has, or one an implementer would reasonably add, and each would be silently reversed
+by a plausible guess. The scope-routing list in §11 answers a different question — *which document
+owns this* — and is not a substitute.
+
+**`DAY-ABSENT-1` (MUST NOT)** — The add control does not mark, tick, grey out, or otherwise indicate
+which meal types have already been logged on the day shown.
+
+The PWA marks them (`src/routes/+layout.svelte:39-40`), deriving the marking from the day's meals by
+meal type alone. With more than one actor that is wrong in the direction that matters: a meal type
+recorded only for the mother reads as recorded for the baby, so the marking asserts something she
+never logged and would lead her to skip an entry. Making it per-`(type, actor)` would work, but it
+puts a derived summary of the day inside a control whose job is to start a recording, and the day
+view already shows what is logged directly above it. The marking is dropped rather than corrected.
+See `DECISIONS.md` §13.
+
+**`DAY-ABSENT-2` (MUST NOT)** — Nothing on the day view offers a day-level severity, score, average,
+or trend, and no colour, badge, or ordering encodes one.
+
+Already load-bearing elsewhere — `SKIN-VIEW-5` denies a day-level severity exists and §6 forbids
+deriving one — but it is stated here as a prohibition because a day view is exactly where an
+implementer would add a summary chip, and
+[INV-11](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-11) forbids it.
+
+---
+
 
 | # | Section | Summary | Class |
 | --- | --- | --- | --- |
@@ -1129,8 +1154,9 @@ inequality reversed and no better.
 | 11 | §4 `DAY-SKIN-11` | Tapping a thumbnail opens a paging, zoomable viewer; the PWA's lightbox shows one photo. | Resolved by #740 |
 | 12 | §4 `DAY-SKIN-6` | The day's photos are chronological; the PWA does not sort them at all. | Defect fixed |
 | 13 | §3.4 `DAY-MEAL-15` | A meal holding an unresolvable `foodId` opens read-only-degraded; the PWA throws on rehydration and cannot open it at all. | Settled by #703 |
+| 14 | §7b `DAY-ABSENT-1` | The add control's already-logged marking is dropped; the PWA marks meal types by type alone, so a mother-only meal reads as logged for the baby. | Deliberately given up, #772 |
 
-Thirteen divergences, of which three (5, 7 and 12) are live defects in the shipped PWA and two (2 and
+Fourteen divergences, of which three (5, 7 and 12) are live defects in the shipped PWA and two (2 and
 13) are data-loss fixes inherited from #712 and #703.
 
 **`DAY-NAV-9`..`-9c` add no divergence, and that is worth saying.** Every other resolved rule in this
@@ -1182,6 +1208,8 @@ real rather than incidental.
 | `DAY-DERIVE-1` | `page.test.ts:290-296` (`task-counter` absent, "parked: daily-completeness") | **translate** — the single most valuable guard on this screen |
 | `DAY-DERIVE-2` | none here; `skin-observation.md` owns it | **translate** from there |
 | `DAY-ROOT-1`..`-7` | none at page level — the add control and the undo toast are layout-owned and are not rendered in the day view's tests at all | **re-derive** |
+| `DAY-ABSENT-1` | none asserting its absence; `+layout.svelte:39-40` implements the marking being dropped | **do not translate.** Re-derive as an absence check, and it is worth writing rather than skipping: with a lunch logged for the mother only, the add control's lunch choice reads and announces identically to an unlogged one. That is the regression guard against an implementer re-adding the tick as an obvious courtesy |
+| `DAY-ABSENT-2` | `page.test.ts:290-296` (`task-counter` absent) is the nearest guard | **translate** that one and extend it: no day-level severity, score or trend appears in any form |
 | `DAY-LIVE-1`, `-2` | `page.test.ts:398-428` drives a `liveQuery` meal into the page | **do not translate** as written — it asserts a Dexie reactivity guarantee; re-derive against sync arrival |
 | `DAY-A11Y-1`..`-13` | none. The page tests query by accessible role and text, which exercises labels incidentally but asserts nothing about them; no test anywhere asserts a grouping, a trait, a value, or an announcement | **re-derive**, all of it. Two are regression guards worth writing first, because both are prohibitions that a helpful label reintroduces: no selector cell announces anything about that day's contents (`DAY-A11Y-8`, the spoken twin of the `data-recorded` guard that already exists at `page.test.ts:298-321`), and no announcement anywhere carries a count (`DAY-A11Y-12`, the spoken twin of `DAY-DERIVE-1`'s `task-counter` guard). The grouping rules (`-1`, `-2`) are the ones that decide whether the screen is usable, and they need a test that counts accessibility elements per row rather than reading their text |
 
@@ -1488,9 +1516,8 @@ coexist; what the spec refuses is making *this* grid's tap mean the second thing
 ## 11. Appendix: what this section does not contain
 
 - **The meal editor.** Fixed-at-entry parameters, the three state machines, dirtiness, save, delete,
-  undo and copy all belong to [`meal-editor-state-machine.md`](https://github.com/jirigrill/eczema-helper/blob/main/docs/spec/meal-editor-state-machine.md). That
-  document was extracted **before** this format existed, so it has no rule ids, no strength marks
-  and no invariant disposition table; cross-references to it are by section number.
+  undo and copy all belong to [`meal-editor.md`](meal-editor.md), which supersedes for the port the
+  earlier `meal-editor-state-machine.md` on the frozen repo. Cross-references to it are by rule id.
 - **The skin observation screen.** [`skin-observation.md`](skin-observation.md) owns it, including
   the `SKIN-VIEW-1..5` rules this section cites without restating.
 - **First run and the feeding stage picker.** Owned by the first-run section; the day view's only

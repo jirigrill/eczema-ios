@@ -80,6 +80,24 @@ knows a decision was made.
 
 **An implementer never silently resolves an `OPEN` rule.** That is a map ticket.
 
+### Every section carries an `ABSENT` group
+
+A section's rules say what the app does. Its `<AREA>-ABSENT-n` rules say what it **deliberately does
+not**, as `MUST NOT`s with ids — *"prohibitions with ids, not features nobody built"*.
+
+The group is not optional, and it is not the same as the section's scope list. A scope list answers
+*which document owns this* and routes the reader elsewhere; an `ABSENT` rule answers *this was
+considered and rejected, and adding it back is a change*. Two tests for membership, and a rule needs
+only one:
+
+- The reference implementation **has** it and the port drops it. It also gets a divergence row.
+- A competent implementer would **add** it as an obvious improvement, unaware a decision was taken.
+
+Absences earn ids for the same reason anything else does: without one, the prohibition never reaches
+the verification table, so nothing guards it and the next contributor restores it in good faith. Where
+one is worth a test, say so there — an absence check is usually one assertion and it is the cheapest
+regression guard in the section.
+
 ### Prose between rules is allowed, and load-bearing
 
 After a group of rules, a short paragraph may explain *why* — especially where a rule looks
@@ -164,7 +182,18 @@ Each divergence appears **twice**:
 1. **Inline**, as a block quote at the rule it affects, with three parts — *PWA:* what the
    reference does, *iOS:* what this app does, *Why:* the reason. Numbered within the section.
 2. **In a divergence index** near the end: number, section, one-line summary, and a class
-   (*defect fixed*, *forced by platform*, *settled by #nnn*).
+   (*defect fixed*, *forced by platform*, *settled by #nnn*, *deliberately given up*).
+
+*Deliberately given up* is for a behaviour the reference **has** and the port drops on purpose —
+distinct from *obsolete*, which is for one the port has no place for. A drop of that kind is the one
+class of divergence a reader is most likely to mistake for an oversight, so it also earns a
+`DECISIONS.md` entry when a competent implementer would otherwise re-add it.
+
+**The twice rule has one exception**, and it is the *absences*. A row covering a whole rule group —
+`SET-ABSENT-1`..`-7`, `MEAL-ABSENT-1`..`-6` — has no single rule to hang an inline block on, and
+repeating one at each member would say the same thing six times. Those rows live in the index alone,
+and their reasoning lives in the prose under each prohibition. Every row naming **one** rule carries
+its inline block.
 
 The index is what a reviewer reads to confirm the port did not drift by accident. It is also the
 honest measure of the port: if a section has no divergences, either the area was coherent or

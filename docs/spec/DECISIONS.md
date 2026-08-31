@@ -399,6 +399,7 @@ change on the phone that wrote them.
 
 ---
 
+
 ## 10. The app says nothing while sync is working, so silence is the healthy state
 
 There is no affirmative sync indicator anywhere in this product — no "synced", no "up to date", no
@@ -478,7 +479,69 @@ it exists to enable.
 
 ---
 
-## What is deliberately not in this file
+
+## 12. An undo offer can disappear while the undo is still available
+
+The reference implementation tied the undo buffer's life to its banner: five seconds, and dismissing the
+banner by hand discarded the buffered work immediately. Letting a toast fade therefore committed a
+deletion or threw away a draft she had just written. **This app separates the two.** The offer is a
+presentation concern with no fixed duration; the buffer behind it survives the offer and is discarded only
+when a newer action replaces it, a restore consumes it, a hand edit invalidates it, she leaves the screen,
+or the app terminates. No timer destroys data.
+
+**What it cost.** Undo stays briefly available with nothing on screen advertising it, which is mildly
+surprising to anyone who shakes to undo after the banner has gone — the app can accept an undo it is no
+longer offering. The alternative cost more: this buffer is the product's only recovery path, because there
+is no trash behind a delete and CloudKit is sync rather than backup (see §3), and a five-second window
+makes a VoiceOver user structurally less able to recover a meal than a sighted one, since the announcement
+must finish before the control can be reached at all. iOS offers no snackbar convention to inherit —
+`UndoManager` scopes undo to an editing context, never to a view's visibility, and Apple's own destructive
+flows buy time rather than a banner (Undo Send's fixed window, Recently Deleted's thirty days).
+
+**To undo.** Cheap in either direction: the buffer is in-memory state with no persisted representation, so
+reverting to banner-scoped lifetime is a change to when one object is released. Nothing stored depends on
+it. What would be expensive is discovering the reference's behavior in the port by accident, which is what
+happened here — the rule existed nowhere and the PWA's answer was destructive.
+
+- **Rules:** `MEAL-UNDO-13`, `-14`, `-15` in [`meal-editor.md`](meal-editor.md) §8, with
+  `SKIN-DEL-11a` in [`skin-observation.md`](skin-observation.md) §8.5 citing them for the skin screen.
+  Divergence 16 (meal editor) and 17 (skin observation).
+- **Argued in:** [#772](https://github.com/jirigrill/eczema-helper/issues/772), the coverage sweep that
+  found the behavior unspecified; the no-rollback exposure it mitigates is
+  [#683](https://github.com/jirigrill/eczema-helper/issues/683).
+
+---
+
+
+## 13. The add control stops saying what has already been logged
+
+The PWA's add control ticks the meal types already recorded on the day, and derives that from the day's
+meals **by meal type alone** (`src/routes/+layout.svelte:39-40`). With more than one actor eligible that
+is wrong in the direction that costs a record: a lunch logged for the mother marks lunch as done, so the
+baby's lunch reads as recorded and she skips it. **This app shows no marking at all.** The choices in the
+add control are four meal types and nothing else.
+
+**What it cost.** She loses a genuine convenience — a glance at the control no longer tells her what is
+outstanding, so she reads the day view instead. The obvious repair was to make the marking
+per-`(type, actor)`, and it was rejected on a different ground than correctness: it puts a derived
+summary of the day inside a control whose only job is to begin a recording, one tap away from the day
+view that already shows every logged meal directly. A marking that is right is still a claim about her
+diary assembled by the app
+([INV-11](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-11)), and this one would
+have to be recomputed correctly every time actor eligibility changed.
+
+**To undo.** Cheap, and the per-actor version is the one to build if it comes back — never the
+type-only one, which is the reference's defect. Nothing stored depends on this; the marking is derived
+at render time from records that remain exactly as they are.
+
+- **Rules:** `DAY-ABSENT-1` in [`day-view.md`](day-view.md) §7b, with `DAY-ROOT-2` amended to say the
+  choices carry no such indication. Divergence 14.
+- **Argued in:** [#772](https://github.com/jirigrill/eczema-helper/issues/772), the coverage sweep that
+  found the type-only derivation; the multi-actor model it breaks against is
+  [#712](https://github.com/jirigrill/eczema-helper/issues/712).
+
+---
+
 
 **No ADR series, and no decisions log.** Both were considered and declined. The spec sections already
 carry each decision's trade-off, rejected alternatives, accepted costs and irreversibility at the rule
