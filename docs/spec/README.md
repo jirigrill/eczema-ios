@@ -39,27 +39,14 @@ way it does, and before proposing a change that a rule appears to invite.
 | [`consent.md`](consent.md) | Written — [#737](https://github.com/jirigrill/eczema-helper/issues/737); no **OPEN** rules, but the consent copy is the owner's to draft and five questions are tabled for [#694](https://github.com/jirigrill/eczema-helper/issues/694)'s lawyer review |
 | Persistence model (SwiftData + CloudKit) | [`persistence-model.md`](persistence-model.md) — written; **no OPEN rules**; [#730](https://github.com/jirigrill/eczema-helper/issues/730). Carries the schema deadlines |
 | Food catalog | [`catalog.md`](catalog.md) — written; **70 rules, the largest section, no OPEN rules**; [#734](https://github.com/jirigrill/eczema-helper/issues/734). Two groups are what a reader most needs routing to: the **sign-off gate** (`CAT-SIGN-1`..`-6`) — the owner reviews the English catalog source itself, provenance lives in comments beside the data and on no field, and a change to a food's allergen ids needs her sign-off because resolution is live and therefore retroactive; and the `CAT-DERIVE-*` **display prohibition** — the allergen level ships fully populated and entirely unrendered, and no screen names a trigger, an allergen, or a food as safe or risky |
+| [`meal-editor.md`](meal-editor.md) | Written — [#753](https://github.com/jirigrill/eczema-helper/issues/753); **1 OPEN rule** (`MEAL-DEG-4`, what the screen tells her about a food the catalog no longer knows) and **13 divergences, eleven of them defects fixed** — the largest divergence index in the spec, because this is the app's most-iterated screen. Two of those are data loss in the PWA: an in-progress food dropped without undo when a saved meal is left ([#690](https://github.com/jirigrill/eczema-helper/issues/690) §2), and one discarded by the actor-swap autosave. The section splits the one predicate the PWA used for two questions — *can this be saved* counts only finished foods, *would leaving lose something* counts started ones too (§3.3, §3.4). Supersedes, for the port, the pre-template `meal-editor-state-machine.md` on the frozen repo, and adjudicates its nine surviving open questions in §13 |
 
-The meal editor is the one area extracted **before** the template existed, and it lives on the
-frozen PWA repo beside the code it was read out of:
-[`docs/spec/meal-editor-state-machine.md`](https://github.com/jirigrill/eczema-helper/blob/main/docs/spec/meal-editor-state-machine.md).
-It documents three cooperating state machines, maps every rule to its current TypeScript test, and
-lists its own open questions. Reference it; do not copy it here. It predates this format — it has no
-rule ids, no strength marks and no disposition table.
-
-> **Read it as a description of the PWA, not as instruction to the port.** Because it has no
-> strength marks, nothing in its prose distinguishes a live requirement from one that was
-> reversed — and **six of its behaviors were overturned** by
-> [#690](https://github.com/jirigrill/eczema-helper/issues/690) (undone-delete timestamps,
-> unconfirmed-food dirtiness, outside-click, buffer ownership, failed-delete undo invalidation,
-> and the post-remount "done" state). Each is now corrected in place and marked as a **Port
-> rule** block at §3.3, §3.4, §4.4, §6.1, §9.3 and §9.5, and seven of its sixteen open questions
-> are struck through. Treat any wart it records *without* a Port rule block as **undecided** —
-> #690's coherence default governs it, but nobody has adjudicated it.
-
-Reformatting it into this format — rule ids, strength marks, disposition table, divergence index,
-verification verdicts — is worthwhile but is nobody's task yet
-([#731](https://github.com/jirigrill/eczema-helper/issues/731)).
+The meal editor's pre-template extraction still lives on the frozen PWA repo as
+[`meal-editor-state-machine.md`](https://github.com/jirigrill/eczema-helper/blob/main/docs/spec/meal-editor-state-machine.md).
+[`meal-editor.md`](meal-editor.md) **supersedes it for the port** and carries everything it
+established. Read the old document only as a line-by-line description of what the TypeScript did —
+its value from here is archaeological, and it has no rule ids, no strength marks and no disposition
+table ([#731](https://github.com/jirigrill/eczema-helper/issues/731) is closed by that supersession).
 
 
 ## Open questions live on the map
