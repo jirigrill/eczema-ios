@@ -907,6 +907,32 @@ dimensions — every field whose value would, read alone, look banal.
 **`DATA-ENC-3` (MUST NOT)** — No rule anywhere depends on a mirrored attribute being server-readable. In
 particular, no read path, convergence step or sweep may be implemented as a server-side query.
 
+**This rule is a platform constraint, not a self-imposed discipline, and the distinction matters to
+anyone tempted to negotiate it.** `CKQuery` is **unusable** against the mirrored schema: the #747 probe
+measured `CKError 12/2015` from a real container, with `recordName` not queryable, and reading mirrored
+records requires `CKFetchRecordZoneChangesOperation` instead
+([#747](https://github.com/jirigrill/eczema-helper/issues/747)). So a rule written as a server-side query
+would not merely violate policy — it would not run. Two consequences follow. A server-side query cannot
+be introduced later as an optimisation, and the fact that this app "never issues" one is not a choice it
+could reverse.
+
+**Verified against the whole corpus** ([#761](https://github.com/jirigrill/eczema-helper/issues/761)), by
+review rather than by test, as §12 anticipates. All seven sections plus `DECISIONS.md` and `GLOSSARY.md`
+were swept — ~658 rules, counting `meal-editor.md` in the draft state it was in at the time — and **no
+rule depends on a mirrored attribute being server-readable**;
+`CKQuery` does not occur anywhere in the corpus. The four constructs most likely to have assumed
+otherwise, all written before #747, were each confirmed local: §6's orphan sweep tests whether a parent
+is *in the store* over a wall-clock grace period (`DATA-ORPHAN-1`, `-4`); convergence considers only the
+records that *arrived* rather than rescanning (`DATA-CONV-3`, `-4`); settings' `SET-SYNC-*` reason from
+*emitted mirroring events* and locally recorded timestamps, never from a server read
+(`SET-SYNC-2`, `-10`, `-12`); and `SKIN-ENTRY-2`'s "invisible to every date query" describes the PWA's
+local predicate in a divergence note. The one construct that does read the server —
+`SET-DELETE-7`/`-14`'s zone enumeration for deletion — reads **zone metadata, not attributes**, which
+`DATA-ENC-6` keeps permanently plaintext, so it is consistent with this rule rather than an exception to
+it. The negative result is the finding: `DATA-ENC-3`'s "no rule anywhere" is now checked rather than
+asserted, which matters because §10.3 argues *from* it and
+[#714](https://github.com/jirigrill/eczema-helper/issues/714) made that decision permanent.
+
 **`DATA-ENC-4` (MUST NOT)** — The app never represents its storage to the mother as encrypted without
 qualification, and never as end-to-end encrypted.
 
@@ -923,7 +949,8 @@ banal-but-correlated values, and an arguable timestamp row. Deciding them indivi
 three reasons. Encrypting costs this product **nothing measurable**: all three of the reference
 implementation's query shapes are local, and the vendor states the flag "does not affect the data in the
 persistent store", so local predicates, sorting, indexing and relationship traversal are untouched — the
-usual argument against encrypting is scoped to server-side queries this app never issues. The banal fields
+usual argument against encrypting is scoped to server-side queries this app never issues — and, per
+`DATA-ENC-3`, could not issue if it wanted to. The banal fields
 are not banal *here*: the record type names are permanently plaintext (`DATA-ENC-6`) and they say what this
 store is, so a plaintext meal type on a record whose type name is an eczema diary is a correlation, not a
 neutral value. And a blanket rule is **one decision instead of eleven**, each of which would otherwise be

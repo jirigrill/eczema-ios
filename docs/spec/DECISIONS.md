@@ -83,7 +83,9 @@ the schema moves, and it had already gone stale in three rows while the decision
 blanket rule cannot go stale. It also costs nothing measurable: every query this app issues is local,
 and the encryption declaration does not affect the local store, so local predicates, sorting,
 indexing and relationship traversal are untouched. The usual argument against encrypting fields is
-about server-side queries, which this app never issues. And the "banal" fields are not banal here —
+about server-side queries, which this app never issues — and cannot: `CKQuery` is unusable against the
+mirrored schema (#747), and a corpus-wide sweep of ~658 rules found none that assumed otherwise (#761).
+And the "banal" fields are not banal here —
 record *type names* are permanently plaintext and they say what this store is, so a plaintext meal
 type on a record type named for an eczema diary is a correlation rather than a neutral value.
 
