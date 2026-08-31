@@ -491,8 +491,8 @@ written at the same moment as the bytes, and are never recomputed afterwards.
 
 **The separation is not about asset promotion, and the reason it was originally proposed was wrong.**
 The platform maps a large value to an external asset **automatically, by size at the moment of
-serialization** — above roughly 750 KB for one value, or whenever the whole record exceeds 1 MB — and
-that behavior is not something a schema opts into. That threshold carries a consequence beyond storage
+serialization** (`DATA-PHOTO-9`), and that behavior is not something a schema opts into. That threshold
+carries a consequence beyond storage
 layout: crossing it also **silently voids a field's encryption declaration** (`DATA-LOCK-4`, §10.2), which
 is why the figure matters to confidentiality and not only to field budgeting. Two live reasons survive. First, a record type is
 limited to 256 fields, and the platform generates a *second* field for every variable-length attribute
@@ -503,6 +503,33 @@ a later release may freely change, while the record shape is permanent, and putt
 record would couple a revisable decision to an irrevocable one. [#684](https://github.com/jirigrill/eczema-helper/issues/684)
 deferred the pipeline precisely so those constants could be measured on a device later — that deferral
 is only safe if the shape does not depend on them.
+
+**`DATA-PHOTO-9` (fact, measured)** — A single mirrored `Data` field is promoted to an external asset
+between **699 500 and 699 600 bytes**. A record whose fields sum past roughly **1 MB** has fields
+promoted even when **no single field is near that boundary** — and it is the **record total that binds
+first** for a photo record, not the field. Which field is promoted to bring the record under the limit is
+**not predictable from the schema**, so nothing may assume a particular field stayed inline.
+
+Measured on a real private container from a physical device
+([#765](https://github.com/jirigrill/eczema-helper/issues/765)); see *Provenance* below. This **replaces
+the approximate "~750 KB"** this section carried from
+[#679](https://github.com/jirigrill/eczema-helper/issues/679), which fenced every figure it held as
+non-primary. The measured boundary is roughly **50 KB lower** than that figure, so the approximation
+erred toward believing *more* fits inline than does.
+
+Three details an implementer should not have to rediscover. **The boundary is not a round number in
+either base:** 699 392 bytes (= 683 KiB) was written as a rung precisely so a binary constant could not
+hide inside a decimal-looking answer, and it arrived inline, which excludes both 683 KiB and 700 000 as
+the constant. **A range is the honest form:** the serialized payload carries the record's other fields
+too, so the byte count that trips the limit is not identical to the field's own length, and a single
+number would imply an accuracy the method cannot support. **The two limits are not two independent
+thresholds to check in order** — the record-total behavior is the general case, and the single-field
+figure is what that same accounting produces for a record holding one large field.
+
+Two consequences for this schema, neither of which changes it. `DATA-PHOTO-2`'s separation of bytes from
+metadata already keeps a photo's record at one large field, which is the shape the field figure
+describes. And `DATA-ENC-5` (§10.3) is why none of this is a confidentiality question any more: the app
+encrypts the bytes itself before storing them, so promotion moves ciphertext.
 
 **Why three metadata fields exist for a feature the app does not have.** She has no export
 ([#683](https://github.com/jirigrill/eczema-helper/issues/683)), the photos consume **her own** iCloud
@@ -897,7 +924,8 @@ compose: past the threshold the declaration is silently ignored.
 
 This was the one unclosed risk in the pairing above, and it is now **measured and closed adversely**
 ([#748](https://github.com/jirigrill/eczema-helper/issues/748)). One model with a single field declared
-`@Attribute(.allowsCloudEncryption)`, two rows straddling §5.2's ~750 KB single-value threshold, written
+`@Attribute(.allowsCloudEncryption)`, two rows straddling §5.2's single-value promotion boundary
+(`DATA-PHOTO-9`), written
 to a real private container from a physical device; the raw `CKRecord` was read back from the server.
 Bytes were incompressible random data, so the serializer could not shrink the large row under the
 threshold and produce a false reassurance.
@@ -1080,6 +1108,27 @@ excluded from the table above because the table's subject is promotion; it is na
 working from the table does not conclude the key can be revisited after release one. Same deadline as
 [#762](https://github.com/jirigrill/eczema-helper/issues/762)'s encode targets.
 
+**What the measured boundary means for those encode targets.** `DATA-PHOTO-9` was measured partly as an
+input to them ([#765](https://github.com/jirigrill/eczema-helper/issues/765)), so the answer belongs here
+rather than only in the probe: **it does not move them, and it is not a target the build should aim at.**
+Three reasons, and the third is the one that matters.
+
+First, the boundary is **lower than the figure #762 was working against** — between 699 500 and 699 600
+bytes, not ~750 KB — so any encoded size chosen to sit "just under the threshold" against the old number
+would have crossed it.
+
+Second, and decisively: for a photo record the **record total binds first**, and promotion is therefore not
+a property of the encoded size alone. A build cannot keep a photo inline by choosing a per-image byte
+budget, because whether its field is promoted depends on the rest of the record. Treating the field figure
+as a design target would be reasoning from the case that does not govern.
+
+Third, promotion **no longer costs anything to be wrong about**. `DATA-ENC-5` means the asset carries
+ciphertext, and #762's own measurement showed that encryption adds a flat 28 bytes at any size — so
+app-side encryption cannot push a photo across the boundary, and crossing it now changes only storage
+layout. The encode targets should be chosen on fidelity and on the mother's 5 GB allowance, which is what
+#762 deferred them to the build for. The threshold is a fact about the platform to be aware of, not a
+constraint to encode against.
+
 ---
 ## 11. What sits on the phone
 
@@ -1176,6 +1225,40 @@ stand.
 establishes the class the framework *assigns*, not that the kernel *enforces* it; and it ran without
 mirroring enabled. Neither was the doubtful part — the doubt was whether SwiftData inherits the Core Data
 default at all, and it does — but a device run with `cloudKitDatabase:` set would close both.
+
+`DATA-PHOTO-9` is measured because the vendor documents no promotion figure at all; the "~750 KB" it
+replaces came from [#679](https://github.com/jirigrill/eczema-helper/issues/679), which fenced every figure
+it held as non-primary. The probe is `eczema-ios-spikes/probe-asset-threshold-765/`, run against the
+**development** environment of the real private container from a **physical** iPhone 15 Pro (iOS 26.x,
+Xcode 27.0), reading the raw `CKRecord` back from the server. Full findings and raw logs:
+`probe-asset-threshold-765/findings/RESULTS.md`.
+
+Method notes that matter to anyone re-measuring, because two of them changed the answer:
+
+- **The verdict is read from the field *name*.** A promoted field is renamed (`CD_bytes` →
+  `CD_bytes_ckAsset`), which is invisible client-side, so promotion is identified by that rename being
+  present rather than by absence from `encryptedValues` — a field that merely failed to write would also
+  be absent.
+- **One `save()` per row, not one per ladder.** Written in a single transaction the ladder is
+  **non-monotone**: 600 000 bytes promoted in one run and stayed inline in two others. The promotion
+  budget is shared across whatever is written together, so a row's verdict depends on its co-written
+  neighbours, and averaging those rungs would have produced a confident figure about 100 KB off. Every
+  figure in `DATA-PHOTO-9` comes from separated saves, where all three ladders are monotone at every rung.
+- **Incompressible random bytes throughout**, so the serializer cannot shrink a row under the boundary and
+  make it read as the rung below; each row also stores its own size in a plain `Int`, so the server dump
+  is self-labelling and no row can be misattributed — necessary because a promoted field's bytes are not
+  in the record.
+- **The record-total finding rests on a two-field row**, not on inference: two `.allowsCloudEncryption`
+  fields of 600 000 bytes each — both *below* the field boundary, summing past 1 MB — had **exactly one**
+  promoted in 6 of 6 runs while the other stayed inline and encrypted. Equal sizes, opposite outcomes, one
+  record. A 200 KB/200 KB control stayed fully inline and encrypted in all 6, ruling out the two-field
+  shape itself. Which field lost was `bytesB` five times and `bytesA` once, which is why the rule forbids
+  assuming a particular field survives.
+
+**One limit, stated rather than papered over:** the probe locates the boundary to a 100-byte window but
+cannot see the serializer's own accounting, so the exact constant — and whether it counts the field alone
+or the field plus its record's other fields — is not established. Nothing in this spec depends on the
+difference; `DATA-PHOTO-9` is stated as a range for that reason.
 
 ### 11.2 The photo key
 
@@ -1276,7 +1359,7 @@ signed in on the device" (WWDC21 session 10086, *What's new in CloudKit*,
 Keychain dependency — it puts the photo key in the same place the rest of the store's confidentiality
 already rests, and the photographs keep the one advantage `DATA-ENC-5` bought them: reading them needs the
 key material *and* the ciphertext, where `DATA-LOCK-4` would otherwise have handed the server plaintext
-outright once an image crossed ~750 KB.
+outright once an image crossed the promotion boundary (`DATA-PHOTO-9`).
 
 **A caution against over-reading that.** Platform Security does say CloudKit service keys "are synchronized
 between a user's devices even if the user chooses not to use iCloud Keychain to sync their passwords,
@@ -1294,8 +1377,8 @@ fifth silent-loss path is real, narrower than the default it replaces, and outsi
 recorded as `DECISIONS.md` §9 rather than left to be re-derived.
 
 **The alternative that was considered and rejected.** The photo key could have been stored as an
-**encrypted CloudKit field** instead of in the keychain — a 32-byte value never approaches §5.2's ~750 KB
-promotion threshold, so `DATA-LOCK-4` never fires on it, and the key would then inherit precisely the
+**encrypted CloudKit field** instead of in the keychain — a 32-byte value never approaches §5.2's
+promotion boundary (`DATA-PHOTO-9`), so `DATA-LOCK-4` never fires on it, and the key would then inherit precisely the
 durability and recovery paths of the CloudKit key hierarchy, keychain excluded. It is the better option on
 recovery, and it is rejected on purpose: it collapses the photographs to the *same* protection as every
 other field, which is what `DATA-ENC-5` exists to exceed. A key held in the same encrypted-field mechanism
@@ -1546,12 +1629,16 @@ not in reach, but the inheritance is real and `DATA-LOCK-4` is what it would run
 **13.2 — Are externally stored assets covered by field encryption? ✅ ANSWERED: no.**
 Measured on a real container from a physical device and recorded as `DATA-LOCK-4` in §10.2
 ([#748](https://github.com/jirigrill/eczema-helper/issues/748)). A field declared
-`@Attribute(.allowsCloudEncryption)` arrives encrypted below §5.2's ~750 KB threshold and, above it, is
+`@Attribute(.allowsCloudEncryption)` arrives encrypted below §5.2's promotion boundary (`DATA-PHOTO-9`,
+now measured) and, above it, is
 renamed to a `_ckAsset` field and carries **no** encrypted value — silently, with no error. So a photo is
 encrypted while small and unencrypted once it grows: the confidentiality of an image varies with its size.
 The **remedy is now settled too** — `DATA-ENC-5`, §10.3: the app encrypts the bytes before storing them, so
 the asset carries ciphertext and the declaration's behavior stops mattering for photographs. Nothing about
-this question remains open.
+this question remains open. **The boundary it refers to is now measured too** — `DATA-PHOTO-9`, §5.2
+([#765](https://github.com/jirigrill/eczema-helper/issues/765)) — which found that the *record total*, not
+the field, is what binds first for a photo record, and that the figure this section formerly carried as
+"~750 KB" was about 50 KB too high.
 
 **13.3 — The optional-or-defaulted rule for attributes has no primary source.**
 `DATA-ARRIVE-9` states it and `DATA-ARRIVE-10` tests for it, on the strength of
