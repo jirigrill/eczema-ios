@@ -469,6 +469,11 @@ screen the mother would most reasonably trust — in an app with no export
 ([#683](https://github.com/jirigrill/eczema-helper/issues/683)) where that assertion is the last line
 of defence.
 
+> **⚠ Divergence 8.** *PWA:* nothing — the app has no sync of any kind, so it reports no sync state and
+> the question never arose. *iOS:* the silence is a numbered prohibition rather than an absence. *Why:*
+> once sync exists, a healthy-state indicator is the first thing an implementer adds, and no API can
+> honestly support one. Settled by [#723](https://github.com/jirigrill/eczema-helper/issues/723).
+
 **`SET-SYNC-2` (MUST)** — A sync failure is judged only from an event that has **ended**. An event
 whose end date is absent is in flight and is never a verdict.
 
@@ -557,6 +562,12 @@ design, and until it is fixed the outer error is `NSCocoaErrorDomain 134410` —
 documents for fatal setup failure** — so a code cannot even distinguish "her iCloud is full" from
 "mirroring never initialised". Apple's only workaround is a probe write via raw CloudKit followed by a
 delete, which DTS itself calls *"far from ideal"*; it is not specified here.
+
+> **⚠ Divergence 9.** *PWA:* nothing — no sync, so no failure copy and no error taxonomy. *iOS:* quota
+> is named as a **likely** cause and no rule branches on an error code. *Why:* forced by the platform,
+> not chosen — the quota error is unreachable through the mirroring API, and the outer code is the same
+> one Apple documents for fatal setup failure, so a confident message would be a guess presented as a
+> diagnosis.
 
 **`SET-SYNC-9` (MUST)** — A failed upload never means a lost record. Copy says **not yet copied to
 iCloud**, never *not saved*.

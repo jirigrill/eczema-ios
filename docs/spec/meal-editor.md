@@ -131,8 +131,9 @@ date** and **instant** are also shared, and the distinction matters here: a meal
 never recomputed (`DATA-MEAL-3`).
 
 **On the reference document's words.** It called the draft a *working meal*, a picked food
-*confirmed*, and the remembered choice a *cache*. Those names describe the TypeScript and are kept in
-§10's mapping table so the two documents can be read together, but they are not this section's
+*confirmed*, and the remembered choice a *cache*. Those names describe the TypeScript and are recorded
+here — draft, picked, remembered choice — so the two documents can be read together, but they are not
+this section's
 vocabulary: *confirmed* invites a confirmation dialog that does not exist, and *cache* names an
 implementation technique rather than the thing she experiences, which is the app remembering what she
 chose.
@@ -255,20 +256,29 @@ the family is released: back to *picked* if that is what it was, otherwise to no
 **its remembered choice is not updated**. Held foods are released exactly as in `MEAL-FOOD-8`.
 
 **`MEAL-FOOD-10` (MUST)** — **Unpick.** A picked food she taps to remove from the meal returns to
-not-in-the-meal and **keeps its remembered choice**, so re-picking it restores the amount and
-preparation it had.
+not-in-the-meal and **its remembered choice is cleared**, so re-picking it starts from the default
+portion (`MEAL-AMT-2`) rather than restoring the amount and preparation it had.
 
-> **The cache asymmetry, and it is the most error-prone rule in this section.** Two verbs return a
-> food to not-in-the-meal with opposite memory semantics: abandoning an unfinished pick
-> (`MEAL-FOOD-9`) remembers nothing, so re-picking starts from the default; unpicking a finished food
-> (`MEAL-FOOD-10`) remembers everything, so re-picking restores it. An implementation that treats
-> them as one operation gets this wrong in one direction or the other. They are two rules because
-> they answer two different questions: *she changed her mind about the amount* versus *she changed
-> her mind about the food*.
+> **Both verbs that remove a food forget, and that is deliberate.** Abandoning an unfinished pick
+> (`MEAL-FOOD-9`) and unpicking a finished one (`MEAL-FOOD-10`) both return the food to
+> not-in-the-meal remembering nothing, so re-picking either starts from the default. Only
+> `MEAL-FOOD-8` — finishing a pick — writes a remembered choice. A remembered amount on a food she
+> removed is a guess about an intention she reversed, and re-offering it silently re-asserts a number
+> she rejected. The one thing that survives removal is nothing: `MEAL-FOOD-13`'s remove is the same
+> answer by a third route.
+
+> **⚠ Divergence 3.** *PWA:* `deselectFood` returns the food to *idle* and leaves its cached amount
+> and preparation intact (`working-meal.ts:196-201`), so re-picking restores them
+> (`startEditing:113`). *iOS:* unpicking clears the remembered choice. *Why:* coherence default — the
+> PWA's own two removal verbs disagree, and a remembered amount on a food she removed re-asserts a
+> number she rejected. Adjudicated as §13 Q1 under
+> [#753](https://github.com/jirigrill/eczema-helper/issues/753)'s coherence default, not the owner's
+> answer, and confirmed by owner ruling on
+> [#772](https://github.com/jirigrill/eczema-helper/issues/772). Class: **defect fixed**.
 
 **`MEAL-FOOD-11` (MUST)** — Unpicking **releases held foods too**, on `MEAL-FOOD-8`'s rule.
 
-> **⚠ Divergence 3.** *PWA:* `deselectFood` is the one exit from a food's active state that does
+> **⚠ Divergence 14.** *PWA:* `deselectFood` is the one exit from a food's active state that does
 > **not** release locks (reference §2.1, its open question 6). *iOS:* it releases them like every
 > other exit. *Why:* coherence default — four transitions release, one does not, and nothing records
 > why. The asymmetry is currently *sound but unreachable*: unpick is only reachable when nothing is
@@ -548,8 +558,23 @@ supports it — at least five foods and an authored source structure — and **f
 catch-all group rendered last (`CAT-SRC-5`).
 
 **`MEAL-GRID-13` (MUST)** — Group order is the family's authored order (`CAT-SRC-3`), which is
-editorial rather than alphabetical, and food order within a group is the catalog's authored order.
-Nothing on this screen re-sorts either.
+editorial rather than alphabetical. Food order **within** a group is **alphabetical by the food's
+displayed name**, collated for the display locale. Nothing on this screen re-sorts the groups.
+
+> **⚠ Divergence 15.** *PWA:* foods are sorted alphabetically by resolved name in both the flat and
+> the grouped rendering (`FamilyDrillIn.svelte:49,62,67`), pinned group by group by 10 tests, while
+> the surrounding code comment claims only the groups keep their curated order. *iOS:* the same —
+> alphabetical within the group. *Why:* owner's call on
+> [#772](https://github.com/jirigrill/eczema-helper/issues/772). This rule previously required the
+> catalog's authored order for foods too, which contradicted the reference and every test pinning it;
+> the sweep found the contradiction and the owner ruled for alphabetical. A family's foods are a set
+> she scans by name, not a sequence anyone authored a meaning into — unlike the groups, whose order
+> is editorial and is preserved. Class: **owner's call**.
+>
+> **Collation is a display concern, not a data one.** The reference collates for Czech
+> (`localeCompare(…, 'cs')`); the port collates for its own display locale, so the order of two foods
+> may differ between the reference and the port without either being wrong. The catalog stores no
+> ordering for foods and none is inferred from row position (`CAT-SHAPE-5`).
 
 **`MEAL-GRID-14` (MUST NOT)** — A group that would render with no foods in it is rendered at all. The
 catalog does not author empty groups (`CAT-SRC-8`), and the renderer does not invent them.
@@ -841,6 +866,33 @@ afterwards.
 **`MEAL-UNDO-12` (MUST)** — The buffer is **in memory** and does not survive the app being killed. It is
 a second chance at the last action, not a journal.
 
+**`MEAL-UNDO-13` (MUST)** — The **offer** and the **buffer** have different lifetimes. Dismissing the
+offer, or letting it time out, hides the offer and **does not discard the buffer**. The offer's
+disappearance is never a destructive commit.
+
+**`MEAL-UNDO-14` (MUST)** — The buffer is discarded exactly when one of these happens: a newer buffered
+action replaces it (`MEAL-UNDO-6`), it is consumed by a restore (`MEAL-UNDO-7`), it is invalidated by a
+hand edit to its slot (`MEAL-UNDO-11`), she leaves the screen the offer was made on, or the app
+terminates (`MEAL-UNDO-12`). Nothing else discards it, and no timer does.
+
+**`MEAL-UNDO-15` (SHOULD)** — The offer's own visible duration is a presentation choice and is
+deliberately not fixed here (§13), but it is long enough to satisfy `MEAL-A11Y-14` — reachable by focus
+after the announcement it follows has finished.
+
+> **⚠ Divergence 16.** *PWA:* the buffer's lifetime **is** the toast's. `Toast.svelte:7` auto-dismisses
+> at 5,000 ms and `+layout.svelte:76` calls `clearBuffer()` on close unless undo fired, so letting the
+> banner lapse — or dismissing it by hand — discards a dirty draft and makes a delete permanent. *iOS:*
+> the buffer outlives the offer and dies only on `MEAL-UNDO-14`'s list. *Why:* owner's call on
+> [#772](https://github.com/jirigrill/eczema-helper/issues/772). This is the product's **only** recovery
+> path — there is no trash behind a delete (`SET-DELETE-9`) — and tying it to a five-second banner makes
+> a VoiceOver user structurally less able to recover a meal than a sighted one, because the
+> announcement must finish before the control can be reached. iOS also has no system snackbar to
+> inherit the convention from: `UndoManager` scopes undo to an editing context, never to a view's
+> visibility, and Apple's own destructive-action pattern buys time rather than a banner (Undo Send's
+> fixed window, Recently Deleted's thirty days). Cost accepted: undo stays available briefly with no
+> visible offer, which is mildly surprising to anyone who shakes to undo after the banner has gone.
+> Class: **owner's call**.
+
 ### 8.3 The forward exit
 
 **`MEAL-EXIT-5` (MUST)** — When the selected actor's meal is **saved and clean** and a swap autosaved
@@ -1037,6 +1089,62 @@ offer stays reachable. Reduce Motion is about motion; `MEAL-A11Y-14` is not.
 ---
 ## 10. What this section does not contain
 
+### 10.1 Prohibitions
+
+These are rules, not routing. Each names a surface the reference implementation does **not** have and
+an implementer would reasonably add, so each would be a silent addition rather than a decision. The
+scope list in §10.2 answers a different question — *which document owns this*.
+
+**`MEAL-ABSENT-1` (MUST NOT)** — There is no search, filter, or type-ahead over foods. The catalog is
+reached by family and by picking, and by nothing else.
+
+The PWA has no search field (`src/routes/meal/+page.svelte` — its only `searchParams` use is reading
+the meal type from the URL), and `catalog.md` `CAT-ABSENT-4` already deletes the `aliases` field that
+existed to serve one. A search box is the single most obvious "improvement" to a grid of families, and
+it changes what the screen is: `MEAL-GRID-*` makes the family the unit of navigation because the family
+scope is load-bearing (§2.3). Reintroducing search re-raises a decision already taken.
+
+**`MEAL-ABSENT-2` (MUST NOT)** — No meal carries a **time of day**, and no editor offers one — not a
+time picker, not a defaulted timestamp, not an "as of" line.
+
+[INV-3](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-3): meals are day-granular.
+`MEAL-ENTRY-2` states it as a property of the visit; this states it as a prohibition on the surface,
+because a time field is what an implementer adds when two meals land in one slot. `DATA-ID-2` is the
+answer to that case instead.
+
+**`MEAL-ABSENT-3` (MUST NOT)** — No photograph is attached to a meal, and no camera or library control
+appears on this screen. Photographs belong to skin observations alone
+([`skin-observation.md`](skin-observation.md) §5).
+
+**`MEAL-ABSENT-4` (MUST NOT)** — There is no recents list, no favourites, no frequently-used tier, and
+no suggestion of what to pick — including anything derived from what she logged before.
+
+Two reasons, and the second is the load-bearing one. The *Dříve zadané* surface was removed from the
+PWA by [#662](https://github.com/jirigrill/eczema-helper/issues/662) along with custom foods, so it is
+already gone. But a frequency-ordered tier is also a claim the app must not make: it ranks foods using
+her own record, which is the shape of a derived insight
+([INV-11](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-11)), and on an
+elimination diet a prominent food reads as an endorsement of it. `MEAL-GRID-13`'s alphabetical order is
+the whole ordering story.
+
+**`MEAL-ABSENT-5` (MUST NOT)** — No food, family, or amount carries a warning, a hazard mark, a
+severity tint, or any indication that a choice is risky. Nothing on this screen frames a food as a
+suspect or a cause.
+
+`DECISIONS.md` §7 removed the hazard axis product-wide; this is its statement on the screen where the
+temptation is greatest, since the editor is the one place the mother is choosing a food and an
+implementer has an allergen record in hand while rendering it.
+
+**`MEAL-ABSENT-6` (MUST NOT)** — A food tile carries no swipe, long-press, or context-menu affordance.
+Everything a food can do, it does through the states in §2.
+
+The reference has none (no swipe, long-press or context handler exists in `FoodTile.svelte` or the meal
+route), and `DAY-MEAL-10` already forbids the same on the day view's rows — verified there as an
+absence check. A hidden gesture is also unreachable by VoiceOver unless separately exposed, so adding
+one silently creates the accessibility gap §9a is written to prevent.
+
+### 10.2 Owned elsewhere
+
 - **Platform types and storage.** Field types, identity, migrations and sync are
   [`persistence-model.md`](persistence-model.md)'s; this section cites `DATA-*` and never restates it.
 - **Layout and visual design.** No sizes, colours, spacing or component names — §9a specifies what must
@@ -1073,10 +1181,22 @@ offer stays reachable. Reduce Motion is about motion; `MEAL-A11Y-14` is not.
 | 11 | §4.3 | The drill-in is view state, not a history entry | defect fixed (drift source) |
 | 12 | §6 | A swap finishes the food being picked before writing, rather than dropping it | defect fixed |
 | 13 | §6.1 | The post-autosave state is not a silently unavailable save | settled by [#690](https://github.com/jirigrill/eczema-helper/issues/690) (presentation deferred) |
+| 14 | §2.2 | Un-picking releases held foods, like every other exit from a food's active state | defect fixed (latent) |
+| 15 | §4.3 | Foods are ordered alphabetically within their group, matching the reference | owner's call — [#772](https://github.com/jirigrill/eczema-helper/issues/772) |
+| 16 | §8 | An undo offer's disappearance hides the offer without discarding the buffer | owner's call — [#772](https://github.com/jirigrill/eczema-helper/issues/772) |
+| 17 | §10.1 | Six absences become numbered prohibitions (`MEAL-ABSENT-1`..`-6`) rather than features that merely do not exist | settled by [#772](https://github.com/jirigrill/eczema-helper/issues/772) |
 
-Eleven of the thirteen are **defects fixed**, which is the honest measure of this area: it is the app's
+Twelve of the seventeen are **defects fixed**, which is the honest measure of this area: it is the app's
 most-iterated screen, and iteration left it incoherent in ways only a full read surfaces. Two —
-Divergences 7 and 12 — are **data loss** in the reference.
+Divergences 7 and 12 — are **data loss** in the reference. Divergences 3 and 14 were **one index row
+until [#772](https://github.com/jirigrill/eczema-helper/issues/772)**, which found the row describing
+the cleared amount while the inline block beside it described the lock release: two changes sharing
+one slot, so the amount change had no entry of its own.
+
+**Divergence 17 is not a change in behaviour**, and is listed because a reviewer checking for drift
+needs to find it: `MEAL-ABSENT-1`..`-6` all describe what the reference already does — nothing — and
+the port matches it. What changed is that six absences now have ids, so each reaches the verification
+table as a check rather than existing only as the fact that nobody built the feature.
 
 
 ---
@@ -1094,12 +1214,14 @@ is exactly why the *nothing verifies* list below matters: it is short, and every
 | `MEAL-DIRT-1..9` (§3.3) | `src/lib/domain/meal-dirtiness.test.ts` (174 lines) | **translate**, minus the display name (Divergence 6) |
 | `MEAL-DIRT-10..13` (§3.4) | partially — the compose-only behaviour is pinned, i.e. the defect is pinned | **re-derive** — the existing assertion encodes Divergence 7's wrong side |
 | `MEAL-VISIT-*`, `MEAL-GRID-*`, `MEAL-CTA-*` (§4) | `src/routes/meal/page.test.ts` (997 lines) | **re-derive** — DOM-level, and Divergences 8–11 change the model |
+| `MEAL-GRID-12`, `-13` (§4.3 ordering) | `src/lib/components/FamilyDrillIn.test.ts` — 10 tests pinning per-group food sequences, plus one pinning authored group order | **translate** the *shape* of the assertion, **re-derive** the sequences — the reference collates for Czech and the port collates for its own locale (Divergence 15) |
 | `MEAL-AMT-*` (§5.1) | `src/lib/domain/preparation-rules.test.ts` | **translate** |
 | `MEAL-ACTOR-*` (§5.2) | `page.test.ts` eligibility and snap cases | **translate** as logic, **re-derive** the presentation |
 | `MEAL-SWAP-*` (§6) | `src/lib/stores/meal-editor.test.ts` (908 lines) + `page.test.ts` | **translate**, minus the mid-pick drop (Divergence 12) |
 | `MEAL-FIN-*`, `MEAL-DEL-*` (§7) | `meal-editor.test.ts` finalize and empty-delete cases | **translate** |
 | `MEAL-UNDO-*` (§8.2) | `src/lib/stores/discard-buffer.test.ts` | **translate** as behaviour; the buffer's *shape* is a PWA type |
 | `MEAL-COPY-*` (§9) | `working-meal.test.ts` `copyMealInto` cases + `page.test.ts` picker cases | **translate** |
+| `MEAL-ABSENT-1`..`-6` (§10.1) | almost nothing by design; the nearest is `FoodTile.test.ts`, which drives tap only, and `MealCard.test.ts:130`, the day view's equivalent gesture check | **re-derive** as absence checks. Three are worth writing and three are not: `-1` (no search field on the screen), `-4` (no tier of foods is ordered by anything but name — the guard against a frequency list arriving as a courtesy) and `-6` (a food tile exposes exactly one action). `-2`, `-3` and `-5` are already guarded by rules with tests elsewhere (`MEAL-ENTRY-2`, the photo rules in `skin-observation.md`, `CAT-DERIVE-*`) and need no second assertion here. |
 | Dexie transaction and `liveQuery` assertions | `src/lib/adapters/dexie-meal-repository.test.ts` | **do not translate** — asserts a storage guarantee iOS does not have |
 
 ### Rules nothing verifies today
@@ -1137,7 +1259,7 @@ are the divergences — they are the steps that prove the port did something.
 4. Find a food with **no** preparations offered (37 of the reference's foods). It shows **no preparation
    control at all** — not an empty one. — `MEAL-AMT-5`
 5. Un-pick a picked food, then pick it again. Its amount is back to the **default**, not the amount you
-   had set. — `MEAL-FOOD-9`, **⚠ fails on the PWA** (Divergence 3)
+   had set. — `MEAL-FOOD-10`, **⚠ fails on the PWA** (Divergence 3)
 6. Back out of the family to the grid. Now use the **system back gesture** from the grid — you leave the
    screen, and you are offered to take the work back. Take it: the same foods are there, including one you
    left mid-pick. — `MEAL-GRID-15`, `MEAL-EXIT-2`, `MEAL-UNDO-1`, `MEAL-UNDO-3`
@@ -1212,7 +1334,7 @@ kind of question the owner may overturn cheaply, because none of them changes wh
 
 | # | Question | Adjudication | Rule |
 | --- | --- | --- | --- |
-| 1 | Does un-picking a food keep its amount for a later re-pick? | **No.** A remembered amount on a food she removed is a guess about an intention she reversed. | `MEAL-FOOD-9` |
+| 1 | Does un-picking a food keep its amount for a later re-pick? | **No.** A remembered amount on a food she removed is a guess about an intention she reversed. | `MEAL-FOOD-10` |
 | 2 | May two foods in one family be mid-pick at once? | **No.** Starting one finishes the other. | `MEAL-FOOD-7` |
 | 3 | Does tapping outside a food-edit row confirm or cancel? | **Confirm**, in both the grid and the drill-in. The PWA does both, and confirm is the answer that cannot lose the amount she just set. | `MEAL-GRID-11` |
 | 4 | Is the drill-in a navigation destination? | **No** — view state. | `MEAL-GRID-1` |

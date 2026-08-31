@@ -632,7 +632,7 @@ The five questions the template requires an answer on, answered for this section
 | 1 | **VoiceOver label and trait** — the catalog specifies no interactive element. Food labels and preparation labels are the strings it owns (`CAT-A11Y-2`, `-3`); the controls that carry them belong to `meal-editor.md`, which specifies their traits. |
 | 2 | **Dynamic Type** — food and preparation labels are authored copy and **must never be truncated to the point of ambiguity**: `CAT-MEMBER-4` granularity means `oat milk` and `oat` are different records, so a label clipped to "oat…" is a wrong identification, not a cosmetic loss. Labels must therefore be free to wrap. The catalog authors no length limit and no abbreviated variant for either. |
 | 3 | **Colour alone** — nothing in this section conveys meaning by colour. `CAT-DERIVE-1` explicitly forbids the one case that would have (a colour derived from allergens), so there is no second channel to specify. |
-| 4 | **Focus order and grouping** — the catalog specifies **order** (`CAT-SRC-3`, `CAT-PREP-2`) and requires that focus order follow authored order, because that order is curated and carries meaning. Grouping of the surfaces that render it is `meal-editor.md`'s. |
+| 4 | **Focus order and grouping** — the catalog specifies **order** for source groups (`CAT-SRC-3`) and preparations (`CAT-PREP-2`), and requires that focus order follow it, because that order is curated and carries meaning. Foods carry no authored order: they are rendered alphabetically within their group and focus follows the rendered order (`MEAL-GRID-13`). Grouping of the surfaces that render any of it is `meal-editor.md`'s. |
 | 5 | **Reduce Motion** — not applicable. This section specifies no animation or transition, so there is nothing to suppress. |
 
 ---
@@ -805,8 +805,9 @@ there*. That is the honest shape of a section whose largest rule group is a proh
 
 1. Open the food picker from any meal slot. Count the family tiles: there are **thirteen**
    (`CAT-SHAPE-7`).
-2. Open `Dairy`. The foods are clustered under headed groups (`Cow`, `Sheep`, `Goat`, `Plant`), in that
-   order — not alphabetically (`CAT-SRC-3`, `CAT-SRC-4`).
+2. Open `Dairy`. The foods are clustered under headed groups (`Cow`, `Sheep`, `Goat`, `Plant`), and the
+   **groups** appear in that order — editorial, not alphabetical (`CAT-SRC-3`, `CAT-SRC-4`). The foods
+   *within* each group are alphabetical (`MEAL-GRID-13`).
 3. In that same list, find the plant milks. **Soy milk is here, under Dairy** — not under Legumes —
    and nothing on its tile mentions soy (`CAT-SHAPE-4`, `CAT-DERIVE-1`).
 4. Open `Eggs`. Three foods, **no group headers at all** — it is under the five-food threshold

@@ -21,12 +21,13 @@ owns them. Area-local terms stay in each section's own §1 Vocabulary table.
 
 ## Read the shaping decisions first
 
-[`DECISIONS.md`](DECISIONS.md) states, in eleven entries and without requiring a single link, the
+[`DECISIONS.md`](DECISIONS.md) states, in thirteen entries and without requiring a single link, the
 decisions that shape the whole product: sync is mandatory, every encryptable field is encrypted,
 nothing is exported, refusing consent is terminal, nothing is derived, photographs still reach the
 camera roll, there is no hazard axis, the PWA's existing records are abandoned, the photograph key
-rides in iCloud Keychain, the app is silent while sync is healthy, and sync failures are logged with no
-way to read the log. Each says what it cost and what undoing it would take.
+rides in iCloud Keychain, the app is silent while sync is healthy, sync failures are logged with no
+way to read the log, an undo offer can vanish while the undo still works, and the add control no longer
+says what has already been logged. Each says what it cost and what undoing it would take.
 
 It is **not** authoritative on behavior — the rules are. Read it to understand why a section reads the
 way it does, and before proposing a change that a rule appears to invite.

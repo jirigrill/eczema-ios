@@ -123,9 +123,13 @@ carrying an uninterpretable date.
 
 > **⚠ Divergence 1.** *PWA:* the date parameter is read raw and written straight onto the
 > record, so a malformed value produces a row invisible to every date query and to
-> date-ordering — while the day view, given the same malformed value, validates and redirects.
-> *iOS:* validate at both entry points identically. *Why:* two rules for one concept, and the
-> incoherent one silently corrupts data. Coherence default applies.
+> date-ordering. The day view, given the same value, does redirect — but its guard is
+> **shape-only**: `isIsoDate` is a `^\d{4}-\d{2}-\d{2}$` regex (`src/lib/utils/date.ts:39-48`),
+> so `2026-02-31` passes it (pinned by `date.test.ts:188`) and reaches `resolveDay` as a valid
+> day. Neither entry point checks that the date *exists*. *iOS:* validate at both entry points
+> identically, and validate the **calendar date**, not its shape. *Why:* two rules for one
+> concept, and the incoherent one silently corrupts data; the shape check is the weaker half of
+> a rule this section states as calendar validity. Coherence default applies.
 
 **`SKIN-ENTRY-3` (MUST)** — In edit mode, an observation id that names no existing observation
 returns the mother to the destination without opening the editor. She is never shown an empty
@@ -794,6 +798,12 @@ for the record to survive.
 app restart, a discard by the system, or backgrounding long enough to be reclaimed. Once it is
 gone, a hard-deleted observation is unrecoverable.
 
+**`SKIN-DEL-11a` (MUST)** — The **offer** and the **undoable action** have different lifetimes, on
+`MEAL-UNDO-13`'s rule: dismissing the offer, or letting it time out, hides the offer and does not
+discard the action. The action is discarded when a newer one replaces it, when a restore consumes it
+(`SKIN-DEL-10`), when she leaves the screen the offer was made on, or when `SKIN-DEL-11` takes it.
+No timer discards it.
+
 **`SKIN-DEL-12` (MUST)** — Copy about undo promises no more than this. It is honest about being
 available *right after* deleting, and never implies a recoverable history.
 
@@ -801,7 +811,9 @@ Worth stating plainly, because it is the sharpest edge in the product: **v1 has 
 CloudKit is sync, not backup ([#683](https://github.com/jirigrill/eczema-helper/issues/683)) — a
 delete propagates to every device, and neither the mother nor the developer can retrieve it. The
 in-memory undo is the *only* recovery path for an accidental delete, and it is measured in
-seconds. This was decided knowingly, against the recommendation, and the exposure was accepted.
+seconds — but not in the *five* seconds the reference allowed, which is what `SKIN-DEL-11a` and
+`MEAL-UNDO-13` change. This was decided knowingly, against the recommendation, and the exposure was
+accepted.
 
 ---
 ## 9. How the observation appears elsewhere
@@ -951,7 +963,7 @@ reviewer reads to check the port did not drift by accident.
 
 | # | § | What changes | Class |
 | --- | --- | --- | --- |
-| 1 | §1.1 | Malformed date validated at both entry points, not just the day view | Defect fixed |
+| 1 | §1.1 | Calendar-date validation at both entry points; the day view's guard is shape-only and the editor has none | Defect fixed |
 | 2 | §2.1 | `capturedAt` per photo, from capture metadata where available | Promise kept + platform capability |
 | 3 | §4.2 | Photo-read failure surfaced; delete disabled while photo state unknown | Defect fixed (data loss) |
 | 4 | §5.2 | Cross-device atomic arrival lost; idempotent orphan sweep replaces it | Forced by platform |
@@ -967,8 +979,10 @@ reviewer reads to check the port did not drift by accident.
 | 14 | §1.1 | Existence decided by awaiting the read, not a 500 ms timer | Defect fixed (silent false negative) |
 | 15 | §5.1 | Camera offered first; library one tap away | Owner's call — inverts the PWA's order |
 | 16 | §5.5 | A paging, zoomable photo viewer replaces the single-photo lightbox | Resolved by [#740](https://github.com/jirigrill/eczema-helper/issues/740) |
+| 17 | §8.5 | An undo offer's disappearance hides the offer without discarding the undoable action | Owner's call — [#772](https://github.com/jirigrill/eczema-helper/issues/772) |
+| 18 | Appendix A | Five absences become numbered prohibitions (`SKIN-ABSENT-1`..`-5`) rather than features that merely do not exist | Settled by [#772](https://github.com/jirigrill/eczema-helper/issues/772) |
 
-Nine of the sixteen are the coherence default from
+Nine of the seventeen are the coherence default from
 [#690](https://github.com/jirigrill/eczema-helper/issues/690) doing its work: in each case the
 reference implementation did two different things and this document picks one. None of them was
 kept as a wart, so no named reasons are needed — which is itself the finding.
@@ -987,6 +1001,18 @@ and **never said what tapping a thumbnail does**, so this was an unspecified ref
 rather than a question anyone had asked. It closed here because
 [#740](https://github.com/jirigrill/eczema-helper/issues/740) settled the day view's half and the two
 surfaces share one component; splitting them would have invited them to diverge for no reason.
+
+Divergence 17 is the same shape as 16 — an unspecified reference behavior rather than a question
+anyone had asked — found by [#772](https://github.com/jirigrill/eczema-helper/issues/772)'s coverage
+sweep. §8 specified what the undo offer restores, what consumes it and what it cannot survive, and
+never said what the offer's own *disappearance* does to the action behind it. The reference's answer
+was that it destroys it. The rule now lives in `meal-editor.md` (`MEAL-UNDO-13`, `-14`) because both
+screens share one buffer concept, and `SKIN-DEL-11a` cites it rather than restating it.
+
+**Divergence 18 changes no behaviour**, and is listed so a reviewer checking for drift finds it: the
+reference has none of the five surfaces `SKIN-ABSENT-1`..`-5` forbid, and neither does the port. What
+changed is that the absences now have ids and reach §11 as checks, instead of existing only as the fact
+that nobody built them.
 
 ---
 
@@ -1007,11 +1033,17 @@ repo at `582f662`.
 | §5.2 atomicity | `dexie-skin-observation-repository` tests | **Do not translate** — asserts a transaction iOS does not have. Replace with `SKIN-PHOTO-9`/`-10` tests. |
 | §9 day view | `src/routes/day/[date]/page.test.ts`, `SkinObservationCard` | Partly; §9 gets its own section. |
 | §5.5 the photo viewer | `SkinPhotoCard.test.ts:159-208` and the gallery's own lightbox tests — open, `×` close, backdrop close | **Do not translate.** All three pin the single-photo lightbox Divergence 16 replaces; the backdrop-close test in particular asserts a mechanism (`SKIN-PHOTO-27` swaps it for a swipe) that no longer exists. Re-derive entirely. |
+| Appendix A `SKIN-ABSENT-1`..`-5` | nothing asserts any of them; the nearest is the `accept="image/*"` attribute itself (`src/routes/skin/+page.svelte:545`) | **Re-derive** as absence checks. Two are worth writing: `-2` (no field on this screen records a treatment, cream or bath) and `-3` (no field, prompt or announcement asks for or infers a cause), because both are the additions a well-meaning implementer makes and both reverse `DECISIONS.md` §5. `-1` is carried by the picker's media type, and `-4` is already asserted via `SKIN-VIEW-5`'s guards. `-5` needs no test — it is the absence of a whole subsystem. |
 | §9a accessibility | `SKIN-INT-7`/`-8`/`-9` have no test; `page.test.ts` queries by accessible role and label throughout, which exercises labels **incidentally** without asserting any of them | **Re-derive, all of it.** The label-driven queries are the closest thing to coverage and they are not coverage: a test that finds a button by its name fails if the name changes, but never fails if the name is wrong, missing a value, or leaking something `SKIN-A11Y-15` forbids. |
 
 **Rules nothing verifies today.** Worth stating, because these are where a port inherits
 ambiguity if it assumes test coverage equals specification:
 
+- **`SKIN-ENTRY-2`** — nothing tests calendar validity anywhere. `date.test.ts:188` asserts the
+  *opposite* for the day view's guard (`expect(isIsoDate('2026-02-31')).toBe(true)`), documenting the
+  shape-only check as intended, and the skin editor never validates at all. Divergence 1 is therefore
+  a **re-derive**, and the assertion worth writing first is that `2026-02-31` is rejected — the case
+  both halves of the reference accept.
 - **`SKIN-UNDO-7`** — the system-back-gesture path has no test at all; the reference
   implementation's "exactly one write per departure" claim rests on an untested assumption.
 - **`SKIN-DEL-7`** — delete-while-dirty is undocumented and untested.
@@ -1194,7 +1226,51 @@ creates it is now a MUST NOT and a later reader will otherwise read the mismatch
 
 ---
 
-## Appendix: what this section deliberately does not contain
+## Appendix A: what this screen must not grow
+
+These are prohibitions with ids, not features nobody built. Each names a surface an implementer would
+reasonably add to a screen about a rash, and each would be a silent addition rather than a decision.
+Appendix B answers the different question of which document owns what.
+
+**`SKIN-ABSENT-1` (MUST NOT)** — No video is captured, and no photo control offers one. The record
+holds still photographs alone.
+
+The reference's file input is `accept="image/*"` (`src/routes/skin/+page.svelte:545`). Video is the
+obvious extension for a rash that moves — scratching, a flare's spread — and it breaks three rules at
+once rather than one: `SKIN-PHOTO-16`'s round-trip guarantee, the per-photo `capturedAt` in §2.1, and
+the encrypted-asset budget the persistence model sizes for images.
+
+**`SKIN-ABSENT-2` (MUST NOT)** — Nothing on this screen offers a treatment, a cream, a medication, an
+emollient log, a bath record, or any intervention field.
+
+The nearest miss in the whole product. An observation screen is where a mother is already looking at
+the skin, and *what did you put on it* feels like the same act of recording — but a treatment field
+plus a severity field is a before-and-after, which is the derived claim
+[INV-11](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-11) and `DECISIONS.md` §5
+forbid the app from making. It is also the field most likely to be read as advice. If interventions are
+ever recorded, they are a separate record type argued on its own, not a text box added here.
+
+**`SKIN-ABSENT-3` (MUST NOT)** — No region, level, or observation carries a suspected cause, a trigger,
+a food reference, or a link to a meal. The note is free text and is not parsed for one.
+
+`DATA-ABSENT-1` forbids the field and `SKIN-INT-14` forbids the framing; this states it on the surface,
+because a "what do you think caused this?" prompt is the single most natural thing to add beneath a
+severity picker, and it would make the app the thing
+[INV-5](https://github.com/jirigrill/eczema-helper/blob/main/CONTEXT.md#inv-5) says it is not.
+
+**`SKIN-ABSENT-4` (MUST NOT)** — No total, average, count of affected regions, or day-level figure is
+computed or shown — not on this screen, not in its save confirmation, and not in any announcement.
+
+`SKIN-VIEW-5` states the display half and Divergence 13 records the decision; the prohibition is
+repeated here because this is the one screen holding all nine levels at once, which is exactly where a
+sum is cheapest to compute and most misleading to read.
+
+**`SKIN-ABSENT-5` (MUST NOT)** — There is no reminder, no schedule, no streak, and no prompt to observe.
+The app never asks her to open this screen.
+
+---
+
+## Appendix B: what this section deliberately does not contain
 
 Recorded so a reader does not mistake an omission for a gap:
 
