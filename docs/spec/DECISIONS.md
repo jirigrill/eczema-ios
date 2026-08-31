@@ -243,6 +243,40 @@ owner, not in a refactor.
 - **Argued in:** raised and resolved on the map — see the Decisions-so-far entry on camera-roll
   sharing in [#672](https://github.com/jirigrill/eczema-helper/issues/672).
 
+## 7. There is no hazard axis, so an infant feeding hazard cannot be shown
+
+v1 has **no hazard field** on any record type — not on a food, not on an allergen, not anywhere. A
+food's record shape carries its identity, its family and its `allergenIds`, and nothing that marks it
+as unsafe at an age. "No honey under 12 months" is therefore not something the app declines to
+display; it is something the app **has no way to represent**.
+
+**Why it is worth recording rather than leaving as an absence.** The allergen half of this question is
+already closed as a rule — `CAT-DERIVE-1`…`-5` forbid displaying a food's allergen ids, an allergen's
+name, or anything derived from either. The hazard half was closed by *nothing*, and the two look
+identical from inside the code: both are simply not shown. An implementer who notices that `honey` has
+no age warning has no way to tell whether that is a decision, an oversight, or a field someone forgot
+to populate. Worse, the natural repair is wrong twice over: adding a hazard field and rendering it
+would breach §5's recording-not-advising boundary, and `honey` reaching a screen today would surface
+as an **allergen**, not a hazard, because the allergen axis is the only one that exists.
+
+**What it cost.** Real infant hazards — honey, whole nuts, cow's milk as a main drink under one year —
+are genuinely useful information that this app will not carry, in a product used by a parent feeding a
+newborn. The mitigation is that the app never claims to be a feeding guide: first-run copy calls it a
+**diary**, and §5 is what keeps that honest.
+
+**To undo.** Adding the field is easy; displaying it is the hard part, and it is not a schema decision.
+The first surface that renders a hazard makes this a §5 question — it is the app telling her something
+about a food rather than recording what she fed — and it would need the copy, the review and the caveat
+in the same release. Note the asymmetry with allergens: `CAT-DERIVE-*` prohibits display and names the
+ids to cite when reversing it; here there is no rule to reverse, so this entry is the citation.
+
+- **Rules:** none — this is an absence, which is why it is recorded here. The nearest rules are
+  `CAT-DERIVE-1`…`-5` in [`catalog.md`](catalog.md), which close the **allergen** half of the same
+  question, and §5's boundary above.
+- **Argued in:** carried as fog on the map ([#672](https://github.com/jirigrill/eczema-helper/issues/672),
+  *"the hazard half, untouched by #734: v1 still has no hazard axis"*), recorded here so the absence
+  reads as a choice.
+
 ---
 
 ## What is deliberately not in this file
