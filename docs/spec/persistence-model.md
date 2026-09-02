@@ -1215,7 +1215,8 @@ no web URL exists for this passage:
 > `NSFileProtectionCompleteUntilFirstUserAuthentication` for all applications built on or after iOS5. The
 > default value for all older applications is `NSFileProtectionNone`.
 
-The probe is `eczema-ios-spikes/probe-fileprotection-752/`. It builds a SwiftData store with no CloudKit
+The probe is [`probe-fileprotection-752/`](https://github.com/jirigrill/eczema-ios-spikes/tree/main/probe-fileprotection-752).
+It builds a SwiftData store with no CloudKit
 container, reads all three files by both documented routes, and **writes a control file with an explicitly
 set class first** — data protection is not enforced on the simulator, so without the control a `nil`
 reading could not be distinguished from an unprotected file. The control round-tripped, so the readings
@@ -1228,10 +1229,11 @@ default at all, and it does — but a device run with `cloudKitDatabase:` set wo
 
 `DATA-PHOTO-9` is measured because the vendor documents no promotion figure at all; the "~750 KB" it
 replaces came from [#679](https://github.com/jirigrill/eczema-helper/issues/679), which fenced every figure
-it held as non-primary. The probe is `eczema-ios-spikes/probe-asset-threshold-765/`, run against the
+it held as non-primary. The probe is
+[`probe-asset-threshold-765/`](https://github.com/jirigrill/eczema-ios-spikes/tree/main/probe-asset-threshold-765), run against the
 **development** environment of the real private container from a **physical** iPhone 15 Pro (iOS 26.x,
 Xcode 27.0), reading the raw `CKRecord` back from the server. Full findings and raw logs:
-`probe-asset-threshold-765/findings/RESULTS.md`.
+[`probe-asset-threshold-765/findings/RESULTS.md`](https://github.com/jirigrill/eczema-ios-spikes/blob/main/probe-asset-threshold-765/findings/RESULTS.md).
 
 Method notes that matter to anyone re-measuring, because two of them changed the answer:
 
@@ -1496,7 +1498,7 @@ For a port translating the existing tests rather than writing fresh ones. Paths 
 | §7.2 `DATA-ARRIVE-10` | **none** | New, and the cheapest test in the suite: load the real schema with mirroring enabled and assert it opens. |
 | §8 outside the store | `settings.svelte.ts` tests | **Do not translate.** They test a store row that no longer exists; the singleton moves out entirely. |
 | §9 history, §10 promotion | **none, and none possible** | Nothing to translate, and mostly nothing testable — see below. |
-| §11 `DATA-FILE-1`, `-2` | **none in either repo, but already measured** — `eczema-ios-spikes/probe-fileprotection-752/` | **Re-derive as a Swift test**, and it is nearly free: open the container, read `fileProtectionKey` off the store and both sidecars, assert `completeUntilFirstUserAuthentication`. Two constraints or the test lies. It must use the **`URL`** route (`DATA-FILE-8`) — `attributesOfItem` returns `nil` and an assertion against it would pass vacuously; and it must assert a **control** file whose class the test sets itself, because data protection is unenforced on the simulator, so without a control a green run proves nothing. |
+| §11 `DATA-FILE-1`, `-2` | **none in either repo, but already measured** — [`eczema-ios-spikes/probe-fileprotection-752/`](https://github.com/jirigrill/eczema-ios-spikes/tree/main/probe-fileprotection-752) | **Re-derive as a Swift test**, and it is nearly free: open the container, read `fileProtectionKey` off the store and both sidecars, assert `completeUntilFirstUserAuthentication`. Two constraints or the test lies. It must use the **`URL`** route (`DATA-FILE-8`) — `attributesOfItem` returns `nil` and an assertion against it would pass vacuously; and it must assert a **control** file whose class the test sets itself, because data protection is unenforced on the simulator, so without a control a green run proves nothing. |
 | §11.2 `DATA-KEY-1`..`-5` | **none — the reference implementation holds no key** | **Re-derive as a Swift test**, and read the attributes back rather than trusting the write: query the item with `kSecReturnAttributes` and assert `kSecAttrAccessible == kSecAttrAccessibleAfterFirstUnlock` **and** `kSecAttrSynchronizable == true`. Asserting only that a key can be fetched would pass under every class this section refuses. `DATA-KEY-5`'s stability is the second test: generate, read, call the generation path again, assert the same bytes come back. |
 | §11.2 `DATA-KEY-6`, `-7` | **none** | **Re-derive**, and this is the one rule here with a *user-visible* failure, so it is worth more than an attribute check: write a photo, remove the key, and assert the record renders in the permanent state and **not** in `SKIN-PHOTO-9`'s transient one. The two states are indistinguishable in the data, so a test that only asserts "no crash" would pass while the app told her to wait for a photograph that is gone. |
 | §11 `DATA-FILE-3`..`-7` | **none, and none wanted** | Prohibitions on code that does not exist. A test asserting the app never calls `setResourceValue(_:forKey:)` is a lint rule, not a behavior test. |
