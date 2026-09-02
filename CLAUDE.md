@@ -79,7 +79,7 @@ The owner has **no iOS experience**, and reads Swift but is not an iOS reviewer 
 
 1. **Spec-derived tests are the durable layer.** Every spec rule should fall out as a test.
 2. **UI automation with per-step screenshots is the evidence layer** — for mechanical claims, e.g. a CTA label chain.
-3. **The simulator build must be required for merge** — it is the only automated proof a change compiles against the real iOS SDK. The `app` job runs it; no branch protection is configured yet, so nothing enforces it.
+3. **The simulator build is required for merge** — it is the only automated proof a change compiles against the real iOS SDK. The `app` job runs it, and branch protection on `main` enforces it.
 4. **A manual acceptance pass judging feel is a required layer**, alongside — not instead of — code review.
 
 UI automation must never be the *only* gate: it leans on private frameworks and has broken across an Xcode major before. Losing it must degrade to unit tests, not to nothing.
@@ -91,7 +91,9 @@ UI automation must never be the *only* gate: it leans on private frameworks and 
 `.github/workflows/ci.yml` runs two jobs, on `pull_request` and on `push` to `main`, with `permissions: contents: read` and **no secrets in the repo at all** (which structurally rules out fork-PR secret exposure):
 
 1. `packages` — `swift test` on the SwiftPM packages.
-2. `app` — asserts the project format, then builds for the iOS Simulator with `CODE_SIGNING_ALLOWED=NO`. **Must be required for merge — branch protection is still not configured.**
+2. `app` — asserts the project format, then builds for the iOS Simulator with `CODE_SIGNING_ALLOWED=NO`.
+
+**Branch protection on `main` requires both jobs**, with `strict` (the branch must be up to date before merging). Force pushes and branch deletion are blocked; linear history is **not** required, so merge commits stay allowed. `enforce_admins` is off, so the owner keeps an override — treat using it as a decision, not a shortcut.
 
 **The runner image is `xcode-27`** — macOS 26 with Xcode 27.0 as default, which is what gives machine/CI parity. The plain `macos-26` image carries only Xcode 26.0.1–26.6 (measured 2026-09-02) and cannot. `xcode-27` is a **preview** image ([actions/runner-images#14404](https://github.com/actions/runner-images/issues/14404)): it may queue longer and be less stable. **Never move to a `-large`/`-xlarge` runner**, `xcode-27-xlarge` included: standard runners are free and unlimited on public repos, larger ones are always billed, public repo or not.
 
