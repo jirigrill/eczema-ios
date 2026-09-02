@@ -1,13 +1,16 @@
 # macOS
 .DS_Store
 
-# Xcode / SwiftPM — the project itself lands later; these never belong in git
+# Xcode / SwiftPM — these never belong in git
 xcuserdata/
 *.xcuserstate
 DerivedData/
 build/
 .build/
 *.xcworkspace/xcuserdata/
+.swiftpm/
+# Xcode generates this on first open; it holds only local state.
+*.xcodeproj/project.xcworkspace/
 
 # Secrets. This repo is public: no credentials, team ids, or provisioning
 # profiles are ever committed. See CLAUDE.md.

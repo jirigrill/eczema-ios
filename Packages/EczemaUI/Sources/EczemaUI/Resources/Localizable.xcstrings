@@ -1,0 +1,30 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "root.placeholder.description" : {
+      "comment" : "Scaffolding placeholder. Delete once the first real screen lands.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The app is scaffolded. No screens have been built yet."
+          }
+        }
+      }
+    },
+    "root.placeholder.title" : {
+      "comment" : "Scaffolding placeholder. Delete once the first real screen lands.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing here yet"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# No secrets exist in this repo at all, which is what structurally rules out fork-PR
+# secret exposure. Nothing added here may come to need one.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # `macos-latest` currently maps to macOS 15, not 26 — pin explicitly.
+  # Never move either job to a `-large`/`-xlarge` runner: standard runners are free and
+  # unlimited on public repos, larger ones are always billed, public repo or not.
+  packages:
+    name: packages
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install just
+        run: brew install just
+      - name: Select Xcode
+        run: .github/scripts/select-xcode.sh
+      - run: swift --version
+      - name: swift test
+        run: just test
+
+  app:
+    name: app
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install just
+        run: brew install just
+      - name: Select Xcode
+        run: .github/scripts/select-xcode.sh
+
+      # Cheapest gate first: a broken project format fails in under a second.
+      - name: Assert project format
+        run: just verify-project
+
+      # The only automated proof a change compiles against the real iOS SDK, and the job
+      # that must be required for merge. `CODE_SIGNING_ALLOWED=NO` is what lets it run
+      # with no signing identity — see docs/setup/signing-and-container.md.
+      - name: Build for the iOS Simulator
+        run: just build

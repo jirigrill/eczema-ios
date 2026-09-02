@@ -14,9 +14,9 @@ The app does not analyse the record, rank foods, score risk, suggest what to rem
 
 ## Status
 
-**Docs only.** There is no Xcode project yet and no Swift in this repo.
+**Scaffolded, with no behavior.** The Xcode project builds for the iOS Simulator and the package tests run, but nothing is implemented — no domain models, no schema, no screens.
 
-The behavior spec is being written here first, in `docs/spec/`. The Xcode project lands once Apple Developer Program enrolment completes ([#676](https://github.com/jirigrill/eczema-helper/issues/676)); the spec deliberately does not wait on that payment.
+The behavior spec is being written first, in `docs/spec/`, and deliberately does not wait on the Apple Developer Program enrolment ([#676](https://github.com/jirigrill/eczema-helper/issues/676)).
 
 ## Where the planning lives
 
