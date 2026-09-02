@@ -2,9 +2,8 @@
 
 import PackageDescription
 
-// Parity with Config/Base.xcconfig. Swift 6 language mode — and with it complete strict
-// concurrency — already comes from the 6.2 tools version; this adds the one upcoming
-// feature that does not.
+// Applied to every target here and in EczemaUI. Manifests cannot share code, so this line
+// is repeated there verbatim; the reasoning lives in ../README.md § Strict settings only.
 let strictSettings: [SwiftSetting] = [.enableUpcomingFeature("ExistentialAny")]
 
 // macOS is declared alongside iOS so `swift test` runs this package on the host without

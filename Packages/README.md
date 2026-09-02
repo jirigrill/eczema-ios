@@ -39,6 +39,20 @@ reason and no other — if a view there ever needs `#if os(iOS)` to compile, rea
 the signal that the logic under it belongs in `EczemaCore`, not as an invitation to
 start supporting macOS.
 
+### Strict settings
+
+Every target in both packages is built with `strictSettings`. Swift 6 language mode — and
+with it complete strict concurrency — already comes from `swift-tools-version: 6.2`, so
+the list holds only the one thing that does not follow from the tools version:
+`ExistentialAny`.
+
+SwiftPM manifests cannot share code, so the declaration is repeated verbatim in both
+`Package.swift` files. That repetition is the mechanism's, not a choice — but keep the
+reasoning here only, so the two copies cannot drift into disagreeing about why they exist.
+The app target gets the same settings a different way, through `Config/Base.xcconfig`;
+`SWIFT_VERSION = 6.0` there is the language mode, which matches. Nothing enforces that
+these three places agree, so **a new target starts by copying `strictSettings`.**
+
 ### No protocol seams
 
 There are none, deliberately. Whether protocol DI is warranted *within* a package is

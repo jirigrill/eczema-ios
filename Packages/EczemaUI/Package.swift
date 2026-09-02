@@ -2,7 +2,8 @@
 
 import PackageDescription
 
-// Parity with Config/Base.xcconfig; see EczemaCore/Package.swift.
+// Repeated verbatim from EczemaCore/Package.swift because manifests cannot share code;
+// the reasoning lives in ../README.md § Strict settings only.
 let strictSettings: [SwiftSetting] = [.enableUpcomingFeature("ExistentialAny")]
 
 // macOS is declared only so `swift test` can build this package on the host; iOS is the

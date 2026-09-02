@@ -49,7 +49,8 @@ SwiftUI · SwiftData · CloudKit private database · Swift Testing / XCTest · `
 A **thin committed `Eczema.xcodeproj`** (`objectVersion = 100`) with filesystem-synchronized groups; all real code in local SwiftPM packages ([#699](https://github.com/jirigrill/eczema-helper/issues/699)). No project generator — XcodeGen cannot read Xcode 26+'s `objectVersion = 100`, and Tuist is more apparatus than this needs.
 
 ```
-App/          the app target's synchronized group — one file, and it should stay that way
+App/          the app target's synchronized group — EczemaApp.swift plus Assets.xcassets,
+              and one Swift file is all it should ever hold
 Config/       Base/Debug/Release .xcconfig + entitlements; the one static exception
 Packages/     EczemaCore (Domain, Catalog, Persistence) and EczemaUI — see Packages/README.md
 ```
@@ -97,9 +98,9 @@ UI automation must never be the *only* gate: it leans on private frameworks and 
 
 **The runner image is `xcode-27`** — macOS 26 with Xcode 27.0 as default, which is what gives machine/CI parity. The plain `macos-26` image carries only Xcode 26.0.1–26.6 (measured 2026-09-02) and cannot. `xcode-27` is a **preview** image ([actions/runner-images#14404](https://github.com/actions/runner-images/issues/14404)): it may queue longer and be less stable. **Never move to a `-large`/`-xlarge` runner**, `xcode-27-xlarge` included: standard runners are free and unlimited on public repos, larger ones are always billed, public repo or not.
 
-`.github/scripts/select-xcode.sh` selects Xcode 27 and **warns loudly, rather than failing, when the runner image has no 27.** If that warning ever appears, read a green `app` job as weaker evidence: it means the build did not run against the pinned SDK, which is the whole reason 27 is pinned.
+Both jobs get their toolchain from the composite action `.github/actions/toolchain` — `just` plus Xcode 27, held once rather than repeated per job. It **fails the job** if the active Xcode is not 27, and deliberately offers no fallback: with `runs-on: xcode-27` pinned, either the image carries Xcode 27 or the job never starts, so a fallback could only ever hide a green check built against the wrong SDK. Moving off that image is a deliberate edit to both places.
 
-One measured consequence of running an older toolchain, kept because the fallback can still hit it: SwiftPM 6.3.3 (Xcode 26.6) *copies* a `.xcstrings` resource where Xcode 27 *compiles* it, so a localized key resolves to itself under `swift test`. Do not write a host test that asserts rendered localized text — that encodes a toolchain version rather than a property of the code.
+One measured consequence of running an older toolchain, which is why no host test may depend on the newer one: SwiftPM 6.3.3 (Xcode 26.6) *copies* a `.xcstrings` resource where Xcode 27 *compiles* it, so a localized key resolves to itself under `swift test`. Do not write a host test that asserts rendered localized text — that encodes a toolchain version rather than a property of the code.
 
 The format assertions live in `just verify-project`. They are what keeps the project agent-editable:
 

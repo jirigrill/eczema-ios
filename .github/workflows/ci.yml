@@ -18,8 +18,9 @@ jobs:
   # `xcode-27` is macOS 26 with Xcode 27.0 as the default — the machine/CI parity the
   # pinned toolchain exists for. The plain `macos-26` image carries only Xcode 26.0.1–26.6,
   # so it cannot give it. `xcode-27` is a preview image (actions/runner-images#14404):
-  # it may queue longer and may be less stable. If it has to be abandoned, fall back to
-  # `macos-26` and expect select-xcode.sh to start warning again — do not pretend parity.
+  # it may queue longer and may be less stable. If it has to be abandoned, changing this
+  # pin is a deliberate edit — `.github/actions/toolchain` then fails rather than quietly
+  # building against another SDK.
   #
   # Never move either job to a `-large`/`-xlarge` runner (including `xcode-27-xlarge`):
   # standard runners are free and unlimited on public repos, larger ones are always
@@ -29,10 +30,7 @@ jobs:
     runs-on: xcode-27
     steps:
       - uses: actions/checkout@v4
-      - name: Install just
-        run: brew install just
-      - name: Select Xcode
-        run: .github/scripts/select-xcode.sh
+      - uses: ./.github/actions/toolchain
       - run: swift --version
       - name: swift test
         run: just test
@@ -42,10 +40,7 @@ jobs:
     runs-on: xcode-27
     steps:
       - uses: actions/checkout@v4
-      - name: Install just
-        run: brew install just
-      - name: Select Xcode
-        run: .github/scripts/select-xcode.sh
+      - uses: ./.github/actions/toolchain
 
       # Cheapest gate first: a broken project format fails in under a second.
       - name: Assert project format

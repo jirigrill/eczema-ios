@@ -195,6 +195,32 @@ DETECTED_TEAM="A4MJZ465YY"
 RECORD="docs/setup/signing-and-container.md"
 ENV_FILE="${ENV_FILE:-$HOME/.eczema-ios-signing.env}"
 
+REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+SECRETS_XCCONFIG="${SECRETS_XCCONFIG:-$REPO_ROOT/Config/Secrets.xcconfig}"
+
+# write_secrets_xcconfig TEAM_ID — emit the gitignored xcconfig the local build reads.
+#
+# Config/Base.xcconfig ends in `#include? "Secrets.xcconfig"` and carries no Team ID,
+# because this repo is public. Signing locally therefore needs this one file, and a human
+# following prose to create it is a setup step this wizard is supposed to own.
+write_secrets_xcconfig() {
+  local team="$1"
+  if ! grep -q '^Secrets\.xcconfig$' "$REPO_ROOT/.gitignore" 2>/dev/null; then
+    SKIPPED+=("write $SECRETS_XCCONFIG by hand — .gitignore no longer covers it, and it must never be committed")
+    warn "refusing to write Secrets.xcconfig — .gitignore does not list it"
+    return
+  fi
+  mkdir -p "$(dirname "$SECRETS_XCCONFIG")"
+  cat > "$SECRETS_XCCONFIG" <<EOF
+// Written by scripts/signing-setup.sh. Gitignored — never commit this file.
+// Config/Base.xcconfig includes it optionally, so CI (CODE_SIGNING_ALLOWED=NO)
+// builds fine on a clean checkout without it.
+DEVELOPMENT_TEAM = $team
+EOF
+  WRITTEN_ENV+=("DEVELOPMENT_TEAM → Config/Secrets.xcconfig")
+  printf '  %s✓ wrote%s DEVELOPMENT_TEAM → %s\n' "$GREEN" "$RESET" "$SECRETS_XCCONFIG"
+}
+
 banner "Apple signing identity + CloudKit container — $BUNDLE_ID"
 
 # ── 1 ─────────────────────────────────────────────────────────────────────
@@ -211,6 +237,7 @@ step "Sign in (2FA). The Membership details panel shows your Team ID."
 ask APPLE_TEAM_ID "Team ID [detected $DETECTED_TEAM]:"
 [[ -z "$APPLE_TEAM_ID" ]] && APPLE_TEAM_ID="$DETECTED_TEAM"
 write_env APPLE_TEAM_ID "$APPLE_TEAM_ID"
+write_secrets_xcconfig "$APPLE_TEAM_ID"
 
 # ── 2 ─────────────────────────────────────────────────────────────────────
 stage "Register the physical device"
