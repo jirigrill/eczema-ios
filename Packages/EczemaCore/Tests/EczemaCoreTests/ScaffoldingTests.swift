@@ -12,9 +12,9 @@ import Testing
 /// verification layer and they land with the rules they encode — the schema and the
 /// domain models are still on a spec deadline that has not closed.
 @Suite struct Scaffolding {
-    @Test func everyCoreTargetImports() {
-        // The import list above is the assertion: this fails to compile if a target is
-        // renamed, dropped from the manifest, or stops building.
-        #expect(Bool(true))
-    }
+    /// The assertion is the import list above and the fact that this body runs at all:
+    /// the suite fails to compile if a target is renamed, dropped from the manifest or
+    /// stops building, and fails to run if the test binary does not link. There is
+    /// nothing to `#expect` yet because there is no behavior yet.
+    @Test func coreTargetsBuildAndLink() {}
 }

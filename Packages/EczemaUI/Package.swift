@@ -2,10 +2,12 @@
 
 import PackageDescription
 
-// macOS is declared only so `swift test` can build this package on the host. iOS is the
-// only platform this app ships to. If a view here ever needs `#if os(iOS)` to compile,
-// read that as the signal that the logic under it belongs in EczemaCore — not as an
-// invitation to start supporting macOS.
+// Parity with Config/Base.xcconfig; see EczemaCore/Package.swift.
+let strictSettings: [SwiftSetting] = [.enableUpcomingFeature("ExistentialAny")]
+
+// macOS is declared only so `swift test` can build this package on the host; iOS is the
+// only platform this app ships to. See ../README.md for why the split is drawn here and
+// what a `#if os(iOS)` in this target would mean.
 let package = Package(
     name: "EczemaUI",
     defaultLocalization: "en",
@@ -24,8 +26,9 @@ let package = Package(
                 .product(name: "EczemaCatalog", package: "EczemaCore"),
                 .product(name: "EczemaPersistence", package: "EczemaCore"),
             ],
-            resources: [.process("Resources")]
+            resources: [.process("Resources")],
+            swiftSettings: strictSettings
         ),
-        .testTarget(name: "EczemaUITests", dependencies: ["EczemaUI"]),
+        .testTarget(name: "EczemaUITests", dependencies: ["EczemaUI"], swiftSettings: strictSettings),
     ]
 )

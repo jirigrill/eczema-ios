@@ -46,10 +46,15 @@ INFOPLIST_KEY_UIBackgroundModes = remote-notification
 
 // MARK: - Signing
 
-// No Team ID in this repo, ever. `DEVELOPMENT_TEAM` comes from a gitignored
-// Config/Secrets.xcconfig written by scripts/signing-setup.sh. The include is optional so
-// CI — which builds with CODE_SIGNING_ALLOWED=NO and never needs an identity — still works
-// on a clean checkout.
+// No Team ID in this repo, ever.
+//
+// To sign locally, create `Config/Secrets.xcconfig` (gitignored) containing a single
+// `DEVELOPMENT_TEAM = ...` line. Nothing writes it for you: `scripts/signing-setup.sh`
+// records the Team ID in `$HOME/.eczema-ios-signing.env`, and teaching it to emit this
+// file is still to do.
+//
+// The include is optional so CI — which builds with CODE_SIGNING_ALLOWED=NO and never
+// needs an identity — still works on a clean checkout.
 CODE_SIGN_STYLE = Automatic
 CODE_SIGN_ENTITLEMENTS = Config/Eczema.entitlements
 

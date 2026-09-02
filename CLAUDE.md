@@ -64,8 +64,10 @@ Two structural constraints that must hold: avoid per-file exclusions and multi-t
 just build           # build the app for the iOS Simulator
 just test            # swift test on the packages — no simulator boot, this is the fast loop
 just verify-project  # assert the pbxproj is still filesystem-synchronized
-just check           # all three, cheapest first. What CI runs.
+just check           # all three, cheapest first. Run this before pushing.
 ```
+
+CI runs the same recipes, but split across its two jobs rather than calling `just check`.
 
 Run `just` for the full recipe list.
 
@@ -86,7 +88,7 @@ UI automation must never be the *only* gate: it leans on private frameworks and 
 
 ## CI
 
-`.github/workflows/ci.yml` runs two jobs on `pull_request`, with `permissions: contents: read` and **no secrets in the repo at all** (which structurally rules out fork-PR secret exposure):
+`.github/workflows/ci.yml` runs two jobs, on `pull_request` and on `push` to `main`, with `permissions: contents: read` and **no secrets in the repo at all** (which structurally rules out fork-PR secret exposure):
 
 1. `packages` — `swift test` on the SwiftPM packages.
 2. `app` — asserts the project format, then builds for the iOS Simulator with `CODE_SIGNING_ALLOWED=NO`. **Must be required for merge — branch protection is still not configured.**
@@ -106,7 +108,7 @@ grep -c fileSystemSynchronized          # must be > 0
 
 **XcodeBuildMCP, pinned to `2.7.0`** — not `@latest`, which has shipped a breaking schema bump; unannounced breakage in a loop nobody can code-review is a bad failure mode. Upgrade deliberately.
 
-`.mcp.json` pins it and enables exactly the `simulator` and `ui-automation` workflows (~6k context), sets `XCODEBUILDMCP_CONFIGURATION=Debug`, and opts telemetry out with `XCODEBUILDMCP_SENTRY_DISABLED=true`. Keep all four when changing that file.
+`.mcp.json` pins it and enables exactly the `simulator` and `ui-automation` workflows (~6k context), sets `XCODEBUILDMCP_CONFIGURATION=Debug`, and opts telemetry out with `XCODEBUILDMCP_SENTRY_DISABLED=true`. It also presets `XCODEBUILDMCP_PROJECT_PATH` and `XCODEBUILDMCP_SCHEME` so tool calls need not repeat them. The pin, the two workflows, the `Debug` configuration and the telemetry opt-out must all survive any edit to that file.
 
 ## This repo is public
 
