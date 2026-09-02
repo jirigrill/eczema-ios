@@ -97,6 +97,8 @@ UI automation must never be the *only* gate: it leans on private frameworks and 
 
 `.github/scripts/select-xcode.sh` selects Xcode 27 and **warns loudly, rather than failing, when the runner image has no beta.** Read a green `app` job as weaker evidence while that warning is present: it means the build did not run against the pinned SDK, which is the whole reason 27 is pinned.
 
+**Measured 2026-09-02: `macos-26` carries Xcode 26.6 / Swift 6.3.3 and no Xcode 27**, so that warning currently fires on every run. Machine/CI parity does not hold today. One consequence is already known: SwiftPM 6.3.3 *copies* a `.xcstrings` resource where Xcode 27 *compiles* it, so a localized key resolves to itself under `swift test` on CI. Do not write a host test that asserts rendered localized text — that encodes a toolchain version. Recheck once the image ships 27.
+
 The format assertions live in `just verify-project`. They are what keeps the project agent-editable:
 
 ```bash
