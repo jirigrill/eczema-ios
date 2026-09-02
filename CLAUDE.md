@@ -93,11 +93,11 @@ UI automation must never be the *only* gate: it leans on private frameworks and 
 1. `packages` — `swift test` on the SwiftPM packages.
 2. `app` — asserts the project format, then builds for the iOS Simulator with `CODE_SIGNING_ALLOWED=NO`. **Must be required for merge — branch protection is still not configured.**
 
-**The runner image is pinned to `macos-26`.** `macos-latest` currently maps to macOS 15. **Never move to a `-large`/`-xlarge` runner:** standard runners are free and unlimited on public repos, larger ones are always billed, public repo or not.
+**The runner image is `xcode-27`** — macOS 26 with Xcode 27.0 as default, which is what gives machine/CI parity. The plain `macos-26` image carries only Xcode 26.0.1–26.6 (measured 2026-09-02) and cannot. `xcode-27` is a **preview** image ([actions/runner-images#14404](https://github.com/actions/runner-images/issues/14404)): it may queue longer and be less stable. **Never move to a `-large`/`-xlarge` runner**, `xcode-27-xlarge` included: standard runners are free and unlimited on public repos, larger ones are always billed, public repo or not.
 
-`.github/scripts/select-xcode.sh` selects Xcode 27 and **warns loudly, rather than failing, when the runner image has no beta.** Read a green `app` job as weaker evidence while that warning is present: it means the build did not run against the pinned SDK, which is the whole reason 27 is pinned.
+`.github/scripts/select-xcode.sh` selects Xcode 27 and **warns loudly, rather than failing, when the runner image has no 27.** If that warning ever appears, read a green `app` job as weaker evidence: it means the build did not run against the pinned SDK, which is the whole reason 27 is pinned.
 
-**Measured 2026-09-02: `macos-26` carries Xcode 26.6 / Swift 6.3.3 and no Xcode 27**, so that warning currently fires on every run. Machine/CI parity does not hold today. One consequence is already known: SwiftPM 6.3.3 *copies* a `.xcstrings` resource where Xcode 27 *compiles* it, so a localized key resolves to itself under `swift test` on CI. Do not write a host test that asserts rendered localized text — that encodes a toolchain version. Recheck once the image ships 27.
+One measured consequence of running an older toolchain, kept because the fallback can still hit it: SwiftPM 6.3.3 (Xcode 26.6) *copies* a `.xcstrings` resource where Xcode 27 *compiles* it, so a localized key resolves to itself under `swift test`. Do not write a host test that asserts rendered localized text — that encodes a toolchain version rather than a property of the code.
 
 The format assertions live in `just verify-project`. They are what keeps the project agent-editable:
 

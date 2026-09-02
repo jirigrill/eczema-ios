@@ -15,12 +15,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # `macos-latest` currently maps to macOS 15, not 26 — pin explicitly.
-  # Never move either job to a `-large`/`-xlarge` runner: standard runners are free and
-  # unlimited on public repos, larger ones are always billed, public repo or not.
+  # `xcode-27` is macOS 26 with Xcode 27.0 as the default — the machine/CI parity the
+  # pinned toolchain exists for. The plain `macos-26` image carries only Xcode 26.0.1–26.6,
+  # so it cannot give it. `xcode-27` is a preview image (actions/runner-images#14404):
+  # it may queue longer and may be less stable. If it has to be abandoned, fall back to
+  # `macos-26` and expect select-xcode.sh to start warning again — do not pretend parity.
+  #
+  # Never move either job to a `-large`/`-xlarge` runner (including `xcode-27-xlarge`):
+  # standard runners are free and unlimited on public repos, larger ones are always
+  # billed, public repo or not.
   packages:
     name: packages
-    runs-on: macos-26
+    runs-on: xcode-27
     steps:
       - uses: actions/checkout@v4
       - name: Install just
@@ -33,7 +39,7 @@ jobs:
 
   app:
     name: app
-    runs-on: macos-26
+    runs-on: xcode-27
     steps:
       - uses: actions/checkout@v4
       - name: Install just
