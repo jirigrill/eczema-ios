@@ -1,0 +1,218 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 100;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		EC0000000000000000000018 /* EczemaUI in Frameworks */ = {isa = PBXBuildFile; productRef = EC0000000000000000000017 /* EczemaUI */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		EC0000000000000000000007 /* Eczema.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Eczema.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EC0000000000000000000011 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
+		EC0000000000000000000012 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		EC0000000000000000000013 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
+		EC0000000000000000000014 /* Eczema.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Eczema.entitlements; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		EC0000000000000000000005 /* App */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = App; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		EC0000000000000000000009 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EC0000000000000000000018 /* EczemaUI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		EC0000000000000000000002 = {
+			isa = PBXGroup;
+			children = (
+				EC0000000000000000000005 /* App */,
+				EC0000000000000000000004 /* Config */,
+				EC0000000000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		EC0000000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				EC0000000000000000000007 /* Eczema.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		EC0000000000000000000004 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				EC0000000000000000000011 /* Base.xcconfig */,
+				EC0000000000000000000012 /* Debug.xcconfig */,
+				EC0000000000000000000013 /* Release.xcconfig */,
+				EC0000000000000000000014 /* Eczema.entitlements */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		EC0000000000000000000006 /* Eczema */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EC000000000000000000000C /* Build configuration list for PBXNativeTarget "Eczema" */;
+			buildPhases = (
+				EC0000000000000000000008 /* Sources */,
+				EC0000000000000000000009 /* Frameworks */,
+				EC000000000000000000000A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				EC0000000000000000000005 /* App */,
+			);
+			name = Eczema;
+			packageProductDependencies = (
+				EC0000000000000000000017 /* EczemaUI */,
+			);
+			productName = Eczema;
+			productReference = EC0000000000000000000007 /* Eczema.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		EC0000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2700;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					EC0000000000000000000006 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+				};
+			};
+			buildConfigurationList = EC000000000000000000000B /* Build configuration list for PBXProject "Eczema" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = EC0000000000000000000002;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				EC0000000000000000000015 /* XCLocalSwiftPackageReference "Packages/EczemaCore" */,
+				EC0000000000000000000016 /* XCLocalSwiftPackageReference "Packages/EczemaUI" */,
+			);
+			preferredProjectObjectVersion = 100;
+			productRefGroup = EC0000000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				EC0000000000000000000006 /* Eczema */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		EC000000000000000000000A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		EC0000000000000000000008 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		EC000000000000000000000D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = EC0000000000000000000012 /* Debug.xcconfig */;
+			buildSettings = {
+			};
+			name = Debug;
+		};
+		EC000000000000000000000E /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = EC0000000000000000000013 /* Release.xcconfig */;
+			buildSettings = {
+			};
+			name = Release;
+		};
+		EC000000000000000000000F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Debug;
+		};
+		EC0000000000000000000010 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		EC000000000000000000000B /* Build configuration list for PBXProject "Eczema" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EC000000000000000000000D /* Debug */,
+				EC000000000000000000000E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		EC000000000000000000000C /* Build configuration list for PBXNativeTarget "Eczema" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EC000000000000000000000F /* Debug */,
+				EC0000000000000000000010 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		EC0000000000000000000015 /* XCLocalSwiftPackageReference "Packages/EczemaCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/EczemaCore;
+		};
+		EC0000000000000000000016 /* XCLocalSwiftPackageReference "Packages/EczemaUI" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/EczemaUI;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		EC0000000000000000000017 /* EczemaUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = EczemaUI;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = EC0000000000000000000001 /* Project object */;
+}

@@ -1,0 +1,69 @@
+// Settings shared by every configuration.
+//
+// `Config/` is the one deliberate exception to filesystem-synchronized groups: these
+// files are referenced statically by the project because a build configuration has to
+// name them. Nothing else belongs here — anything that can be synced, should be.
+
+// MARK: - Platform
+
+// iOS 26 is the floor and the compiler is the only thing that catches a violation.
+// The Xcode 27 SDK exposes iOS 27 APIs; an unguarded call to one is a compile error
+// caught here and nowhere else. Do not raise this to reach an API.
+IPHONEOS_DEPLOYMENT_TARGET = 26.0
+SDKROOT = iphoneos
+TARGETED_DEVICE_FAMILY = 1
+
+// MARK: - Swift
+
+SWIFT_VERSION = 6.0
+SWIFT_STRICT_CONCURRENCY = complete
+SWIFT_UPCOMING_FEATURE_EXISTENTIAL_ANY = YES
+SWIFT_EMIT_LOC_STRINGS = YES
+
+// MARK: - Identity
+
+// Copied from docs/setup/signing-and-container.md, which records what is registered on
+// the Apple Developer account. Do not re-derive these; the CloudKit container can never
+// be renamed or deleted.
+PRODUCT_NAME = $(TARGET_NAME)
+PRODUCT_BUNDLE_IDENTIFIER = jirigrill.eczema
+MARKETING_VERSION = 0.1.0
+CURRENT_PROJECT_VERSION = 1
+
+ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon
+ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor
+
+// MARK: - Info.plist
+
+// Generated rather than committed. A committed Info.plist inside the synchronized `App/`
+// group would need a per-file membership exception to stop it being treated as a
+// resource, and exceptions are exactly what re-introduce file enumeration in the pbxproj.
+GENERATE_INFOPLIST_FILE = YES
+INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES
+INFOPLIST_KEY_UILaunchScreen_Generation = YES
+// Required by #714: mirroring arrives on silent pushes.
+INFOPLIST_KEY_UIBackgroundModes = remote-notification
+
+// MARK: - Signing
+
+// No Team ID in this repo, ever.
+//
+// To sign locally, run `scripts/signing-setup.sh`. It writes the Team ID into
+// `Config/Secrets.xcconfig` (gitignored), which the include below picks up. It refuses
+// to write that file — and says so in its closing summary — if `.gitignore` has stopped
+// covering it, or if the file already holds edits the wizard did not make.
+//
+// The include is optional so CI — which builds with CODE_SIGNING_ALLOWED=NO and never
+// needs an identity — still works on a clean checkout.
+CODE_SIGN_STYLE = Automatic
+CODE_SIGN_ENTITLEMENTS = Config/Eczema.entitlements
+
+// MARK: - Hygiene
+
+ENABLE_USER_SCRIPT_SANDBOXING = YES
+ALWAYS_SEARCH_USER_PATHS = NO
+ENABLE_MODULE_VERIFIER = YES
+CLANG_ENABLE_OBJC_WEAK = YES
+GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR
+
+#include? "Secrets.xcconfig"

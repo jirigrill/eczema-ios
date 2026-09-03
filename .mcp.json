@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "XcodeBuildMCP": {
+      "command": "npx",
+      "args": ["-y", "xcodebuildmcp@2.7.0"],
+      "env": {
+        "XCODEBUILDMCP_SENTRY_DISABLED": "true",
+        "XCODEBUILDMCP_ENABLED_WORKFLOWS": "simulator,ui-automation",
+        "XCODEBUILDMCP_CONFIGURATION": "Debug",
+        "XCODEBUILDMCP_PROJECT_PATH": "Eczema.xcodeproj",
+        "XCODEBUILDMCP_SCHEME": "Eczema"
+      }
+    }
+  }
+}

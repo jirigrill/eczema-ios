@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# No secrets exist in this repo at all, which is what structurally rules out fork-PR
+# secret exposure. Nothing added here may come to need one.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # `xcode-27` is macOS 26 with Xcode 27.0 as the default — the machine/CI parity the
+  # pinned toolchain exists for. The plain `macos-26` image carries only Xcode 26.0.1–26.6,
+  # so it cannot give it. `xcode-27` is a preview image (actions/runner-images#14404):
+  # it may queue longer and may be less stable. If it has to be abandoned, changing this
+  # pin is a deliberate edit — `.github/actions/toolchain` then fails rather than quietly
+  # building against another SDK.
+  #
+  # Never move either job to a `-large`/`-xlarge` runner (including `xcode-27-xlarge`):
+  # standard runners are free and unlimited on public repos, larger ones are always
+  # billed, public repo or not.
+  # Style and lint. Fastest of the three jobs and the one most likely to fail, so it runs
+  # alongside the others rather than gating them — a lint failure should not hide a build
+  # failure, and vice versa.
+  #
+  # `just lint` is read-only: it reports and fails, never edits. The autofix path is
+  # `just fmt`, which is a local command deliberately absent from CI — a workflow that
+  # commits formatting back would need write permission, and `contents: read` above is
+  # what keeps this repo's CI unable to push anything anywhere.
+  lint:
+    name: lint
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/toolchain
+
+      # SwiftLint and SwiftFormat are version-pinned in the Justfile and fetched by
+      # `just tools`, which `just lint` depends on. Both assert their own pin, so a moved
+      # release tag fails here rather than silently changing what "green" means.
+      - name: swiftformat --lint, swiftlint --strict
+        run: just lint
+
+  packages:
+    name: packages
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/toolchain
+      - run: swift --version
+      - name: swift test
+        run: just test
+
+  app:
+    name: app
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/toolchain
+
+      # Cheapest gate first: a broken project format fails in under a second.
+      - name: Assert project format
+        run: just verify-project
+
+      # The only automated proof a change compiles against the real iOS SDK, and the job
+      # that must be required for merge. `CODE_SIGNING_ALLOWED=NO` is what lets it run
+      # with no signing identity — see docs/setup/signing-and-container.md.
+      - name: Build for the iOS Simulator
+        run: just build

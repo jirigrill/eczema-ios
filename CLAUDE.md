@@ -6,7 +6,7 @@ Guidance for AI agents working in this repository.
 
 A native iOS app for recording a breastfed infant's atopic eczema — meals eaten and per-region skin observations with photos. English-language, single child, one user (the mother), her phone plus her iCloud account.
 
-**Status: docs only.** No Xcode project, no Swift, no CI, no `justfile` — `git ls-files` shows `CLAUDE.md`, `README.md`, `.gitignore` and `docs/`, nothing else. The behavior spec is being authored in `docs/spec/` ahead of the Apple Developer Program enrolment, so the spec does not wait on a payment.
+**Status: scaffolded, no behavior.** The project builds and the test loop runs; nothing is implemented. `git ls-files` shows the `Eczema.xcodeproj`, `App/`, `Config/`, `Packages/`, `Justfile`, `.github/` and `.mcp.json` alongside the docs. Every package target is empty on purpose — no domain models, no SwiftData schema, no views. The behavior spec is being authored in `docs/spec/` ahead of the Apple Developer Program enrolment, so the spec does not wait on a payment.
 
 **Tense rule for this file, because it will keep describing not-yet-built things.** Present indicative is reserved for what a `git ls-files` would show. Anything decided but unbuilt is written in the imperative or with **must** — never as an accomplished fact. Stating a safeguard already exists is what stops the next agent creating it.
 
@@ -34,37 +34,51 @@ The PWA lives at [`jirigrill/eczema-helper`](https://github.com/jirigrill/eczema
 
 ## Tech Stack
 
-The chosen stack, none of it yet wired up: SwiftUI · SwiftData · CloudKit private database · Swift Testing / XCTest · `just` as the sole command interface.
+SwiftUI · SwiftData · CloudKit private database · Swift Testing / XCTest · `just` as the sole command interface. The project and the `just` interface are wired up; SwiftData and CloudKit are chosen but not yet used by any code.
 
 **Xcode 27.0 (beta until ~2026-09-14 GM). Install exactly one Xcode** — with 26 and 27 co-installed, XcodeBuildMCP opens the beta-only Device Hub even when `DEVELOPER_DIR` selects stable.
 
 ### iOS 26 is the floor, and the compiler is the only thing that catches a violation
 
-Set `IPHONEOS_DEPLOYMENT_TARGET = 26.0` in the first commit that creates the project — nothing sets it today. iOS 26 is on 79% of all devices; an iOS 27 floor would ship to almost nobody.
+`IPHONEOS_DEPLOYMENT_TARGET = 26.0` is set in `Config/Base.xcconfig`, and the packages declare `.iOS(.v26)`. Never raise either to reach an API. iOS 26 is on 79% of all devices; an iOS 27 floor would ship to almost nobody.
 
 **The Xcode 27 SDK exposes iOS 27 APIs.** An unguarded iOS 27 call is a compile error, occasionally a runtime crash — and it is the single most likely mistake an agent will make here, because it is a platform error the owner is not positioned to catch in review. Never reach for an API newer than iOS 26 without an availability guard. Build before you claim a change works.
 
 ## Project Structure
 
-**None of this exists yet** — it is the decided shape for the scaffolding work ([#699](https://github.com/jirigrill/eczema-helper/issues/699)), not a description of the tree.
+A **thin committed `Eczema.xcodeproj`** (`objectVersion = 100`) with filesystem-synchronized groups; all real code in local SwiftPM packages ([#699](https://github.com/jirigrill/eczema-helper/issues/699)). No project generator — XcodeGen cannot read Xcode 26+'s `objectVersion = 100`, and Tuist is more apparatus than this needs.
 
-Build a **thin committed `.xcodeproj` with filesystem-synchronized groups; all real code in local SwiftPM packages.** No project generator (XcodeGen cannot read Xcode 26+'s `objectVersion = 100`; Tuist is more apparatus than this needs).
+```
+App/          the app target's synchronized group — EczemaApp.swift plus Assets.xcassets,
+              and one Swift file is all it should ever hold
+Config/       Base/Debug/Release .xcconfig + entitlements; the one static exception
+Packages/     EczemaCore (Domain, Catalog, Persistence) and EczemaUI — see Packages/README.md
+```
 
 **Keep the app shell thin — permanently.** It is what makes both the editor path and the package test loop work; logic in a fat app target would make the effectively-unmaintained `xcode-build-server` a hard dependency.
 
-Two structural constraints to hold while scaffolding: avoid per-file exclusions and multi-target folder sharing. Both re-introduce explicit file enumeration in the `pbxproj` and defeat the point of synchronized groups. One small static exception for `Config/*.xcconfig` is fine (no `Config/` directory exists yet).
+Two structural constraints that must hold: avoid per-file exclusions and multi-target folder sharing. Both re-introduce explicit file enumeration in the `pbxproj` and defeat the point of synchronized groups — `just verify-project` asserts this and CI runs it. `Config/` is the one small static exception, because a build configuration has to name its `.xcconfig`. This is also why the app's `Info.plist` is generated (`GENERATE_INFOPLIST_FILE = YES`) and the entitlements live in `Config/` rather than `App/`: either one sitting inside the synchronized group would need a per-file membership exception.
 
 ## Commands
 
-There is **no `justfile` yet** — none of these recipes run today. They land with the Xcode project, and these are the names to use when they do:
-
 ```bash
-just build     # build for the iOS Simulator
-just check     # build + type check
-just test      # swift test on the packages
+just build           # build the app for the iOS Simulator
+just test            # swift test on the packages — no simulator boot, this is the fast loop
+just verify-project  # assert the pbxproj is still filesystem-synchronized
+just lint            # swiftformat --lint + swiftlint --strict. Read-only; never edits
+just fmt             # apply formatting and every mechanical lint fix. Edits files
+just check           # all four, cheapest first. Run this before pushing.
 ```
 
-Run `just` for the full recipe list once it exists.
+Run `just fmt` rather than hand-fixing what `just lint` reports; it fixes layout and leaves the judgment calls. Both tools are **version-pinned in the `Justfile`** and fetched into `.tools/` (gitignored) by `just tools`, which asserts each pin held. Never `brew install` either one — a linter that gains a rule between runs turns an unrelated pull request red for something nobody wrote.
+
+**SwiftFormat owns layout; SwiftLint owns what is allowed.** Rules where they would overlap are disabled in `.swiftlint.yml`, so the two can never disagree about a line. `.editorconfig` exists so an editor agrees with SwiftFormat before it ever runs. `force_unwrapping`, `force_try` and `force_cast` are **errors**, not warnings: there is no crash reporting and no backend, so a crash on her phone is invisible here, and a crash mid-write is exactly what loses a record.
+
+`scripts/hooks/pre-commit` formats and lints staged Swift files. It is **opt-in per clone** — `just install-hooks` — because `.git/hooks/` cannot be committed. It is a convenience, never a gate; CI runs the same pinned tools over the whole tree, so `git commit --no-verify` cannot let a lint failure reach `main`.
+
+CI runs the same recipes, but split across its three jobs rather than calling `just check`.
+
+Run `just` for the full recipe list.
 
 **Never pipe agent-facing build output through `xcbeautify`.** It is regex-based and fails *silently* — lines quietly stop being recognized, so you read a truncated failure as a pass and report success on a broken build. Read raw `xcodebuild` output or the `.xcresult`. `xcbeautify` is for human eyes only.
 
@@ -74,7 +88,7 @@ The owner has **no iOS experience**, and reads Swift but is not an iOS reviewer 
 
 1. **Spec-derived tests are the durable layer.** Every spec rule should fall out as a test.
 2. **UI automation with per-step screenshots is the evidence layer** — for mechanical claims, e.g. a CTA label chain.
-3. **The simulator build must be required for merge** once CI exists — it is the only automated proof a change compiles against the real iOS SDK. No branch protection is configured yet.
+3. **The simulator build is required for merge** — it is the only automated proof a change compiles against the real iOS SDK. The `app` job runs it, and branch protection on `main` enforces it.
 4. **A manual acceptance pass judging feel is a required layer**, alongside — not instead of — code review.
 
 UI automation must never be the *only* gate: it leans on private frameworks and has broken across an Xcode major before. Losing it must degrade to unit tests, not to nothing.
@@ -83,14 +97,23 @@ UI automation must never be the *only* gate: it leans on private frameworks and 
 
 ## CI
 
-Two jobs on `pull_request` — neither exists yet; there is no workflow file. Scaffold them with `permissions: contents: read`, and **no secrets in the repo at all** (which structurally rules out fork-PR secret exposure):
+`.github/workflows/ci.yml` runs three jobs, on `pull_request` and on `push` to `main`, with `permissions: contents: read` and **no secrets in the repo at all** (which structurally rules out fork-PR secret exposure):
 
-1. `packages` — `swift test` on the SwiftPM packages.
-2. `app` — build for the iOS Simulator with `CODE_SIGNING_ALLOWED=NO`. **Required for merge.**
+1. `lint` — `swiftformat --lint` and `swiftlint --strict`.
+2. `packages` — `swift test` on the SwiftPM packages. **This is the test job; do not add a fourth one for tests.**
+3. `app` — asserts the project format, then builds for the iOS Simulator with `CODE_SIGNING_ALLOWED=NO`.
 
-**Pin the runner image.** `macos-latest` currently maps to macOS 15, not 26 — start on `macos-26`. **Never use a `-large`/`-xlarge` runner:** standard runners are free and unlimited on public repos, larger ones are always billed, public repo or not.
+All three run in parallel, deliberately: a lint failure must not hide a build failure, or the reverse. `just lint` is read-only in CI — the autofix path (`just fmt`) is local only, because a workflow that committed formatting back would need write permission, and `contents: read` is what keeps this CI unable to push anything anywhere.
 
-**Once the project exists**, assert its format rather than assuming it — these are acceptance checks for the scaffolding work and for CI thereafter. They do not pass today, because there is no `project.pbxproj` to read:
+**Branch protection on `main` requires `app` and `packages`**, with `strict` (the branch must be up to date before merging). Force pushes and branch deletion are blocked; linear history is **not** required, so merge commits stay allowed. `enforce_admins` is off, so the owner keeps an override — treat using it as a decision, not a shortcut.
+
+**The runner image is `xcode-27`** — macOS 26 with Xcode 27.0 as default, which is what gives machine/CI parity. The plain `macos-26` image carries only Xcode 26.0.1–26.6 (measured 2026-09-02) and cannot. `xcode-27` is a **preview** image ([actions/runner-images#14404](https://github.com/actions/runner-images/issues/14404)): it may queue longer and be less stable. **Never move to a `-large`/`-xlarge` runner**, `xcode-27-xlarge` included: standard runners are free and unlimited on public repos, larger ones are always billed, public repo or not.
+
+Every job gets its toolchain from the composite action `.github/actions/toolchain` — `just` plus Xcode 27, held once rather than repeated per job. Both are **pinned and asserted**: `just` is installed from a versioned release tarball (not `brew install just`, which takes whatever the tap currently holds), and the job **fails** if the active Xcode is not 27. Neither has a fallback, deliberately — a fallback could only ever hide a green check built against the wrong toolchain. **Moving off the image is a deliberate edit in three places:** `runs-on:` in all three jobs of `.github/workflows/ci.yml`, `want=` in the action, and this paragraph.
+
+One measured consequence of running an older toolchain, which is why no host test may depend on the newer one: SwiftPM 6.3.3 (Xcode 26.6) *copies* a `.xcstrings` resource where Xcode 27 *compiles* it, so a localized key resolves to itself under `swift test`. Do not write a host test that asserts rendered localized text — that encodes a toolchain version rather than a property of the code.
+
+The format assertions live in `just verify-project`. They are what keeps the project agent-editable:
 
 ```bash
 grep -c 'in Sources' project.pbxproj    # must be 0
@@ -101,7 +124,7 @@ grep -c fileSystemSynchronized          # must be > 0
 
 **XcodeBuildMCP, pinned to `2.7.0`** — not `@latest`, which has shipped a breaking schema bump; unannounced breakage in a loop nobody can code-review is a bad failure mode. Upgrade deliberately.
 
-Enable exactly the `simulator` and `ui-automation` workflows (~6k context). Set `configuration: 'Debug'` explicitly. **The committed config must opt telemetry out** as hygiene — no such config exists yet, so this is a scaffolding requirement, not a safeguard already in place.
+`.mcp.json` pins it and enables exactly the `simulator` and `ui-automation` workflows (~6k context), sets `XCODEBUILDMCP_CONFIGURATION=Debug`, and opts telemetry out with `XCODEBUILDMCP_SENTRY_DISABLED=true`. It also presets `XCODEBUILDMCP_PROJECT_PATH` and `XCODEBUILDMCP_SCHEME` so tool calls need not repeat them. The pin, the two workflows, the `Debug` configuration and the telemetry opt-out must all survive any edit to that file.
 
 ## This repo is public
 

@@ -4,7 +4,7 @@ Documentation for the native iOS eczema-recording app.
 
 ## Overview
 
-This directory holds the app's own documentation. Right now that is almost entirely **the behavior spec** in `spec/` — the artifact this project is being planned around, written before any Swift.
+This directory holds the app's own documentation. It is almost entirely **the behavior spec** in `spec/` — the artifact this project is being planned around. The repo is now scaffolded (Xcode project, local SwiftPM packages, `Justfile`, CI), but no behavior is implemented, so the spec still leads the Swift rather than describing it.
 
 Docs here describe what exists or what the app must do. Anything forward-looking — open questions, decisions not yet made — lives on the [Wayfinder map](https://github.com/jirigrill/eczema-helper/issues/672), not here.
 
@@ -12,6 +12,8 @@ Docs here describe what exists or what the app must do. Anything forward-looking
 
 - `spec/` — platform-neutral behavior specifications. One document per behavior area, each written so tests fall out of it. This is the primary deliverable of the current phase.
 - `setup/` — what exists on the Apple Developer account, recorded so build work copies rather than re-derives it. Identifiers and capabilities only; [#699](https://github.com/jirigrill/eczema-helper/issues/699) keeps secrets out of the repo entirely.
+
+The build surface lives outside this directory: `Eczema.xcodeproj` and `App/` (the thin shell), `Config/` (xcconfigs and entitlements), `Packages/` (all real code — see [`../Packages/README.md`](../Packages/README.md) for the split), `Justfile`, and `.github/`.
 
 ## What lives in the frozen PWA repo instead
 
