@@ -52,11 +52,11 @@ test:
 # Everything a pull request must pass, in the order that fails cheapest first.
 check: verify-project lint test build
 
-# Fetch the pinned SwiftLint and SwiftFormat into `.tools/`, and assert the pins held.
-#
 # A moved release tag would otherwise pass silently, which is the whole failure mode the
 # pinning exists to prevent. Both are no-ops once the binaries are present at the right
 # version, so `just lint` stays fast after the first run.
+#
+# Fetch the pinned SwiftLint and SwiftFormat into `.tools/`, and assert the pins held.
 tools:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -117,10 +117,10 @@ lint: tools
     echo "==> swiftlint"
     {{tools_dir}}/swiftlint lint --strict --quiet
 
-# Apply formatting and every lint fix that can be applied mechanically. Edits files.
-#
 # Run this rather than hand-fixing what `just lint` reports. `swiftformat` runs first
 # because SwiftLint's autocorrect can leave layout that the formatter then rewrites.
+#
+# Apply formatting and every lint fix that can be applied mechanically. Edits files.
 fmt: tools
     #!/usr/bin/env bash
     set -euo pipefail
@@ -130,8 +130,10 @@ fmt: tools
     {{tools_dir}}/swiftlint lint --fix --quiet
     echo "OK: formatted. Re-run 'just lint' to see what needs a human."
 
-# Install the pre-commit hook. Opt-in per clone: hooks are not committable, and a hook
-# that appears without being asked for is a hook people delete.
+# Opt-in per clone: hooks are not committable, and a hook that appears without being
+# asked for is a hook people delete.
+#
+# Install the pre-commit hook.
 install-hooks:
     #!/usr/bin/env bash
     set -euo pipefail
