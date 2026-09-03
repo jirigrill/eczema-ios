@@ -6,33 +6,58 @@ description: >-
 runs:
   using: composite
   steps:
+    # Pinned, like Xcode and XcodeBuildMCP. `just` is the sole command interface, so an
+    # unannounced change to it lands in every job at once with nobody reviewing the diff.
+    # Installed from the release tarball rather than `brew install just`, which always
+    # takes whatever is current in the tap.
     - name: Install just
       shell: bash
-      run: brew install just
+      env:
+        JUST_VERSION: 1.55.1
+      run: |
+        set -euo pipefail
+        case "$(uname -m)" in
+            arm64) target=aarch64-apple-darwin ;;
+            x86_64) target=x86_64-apple-darwin ;;
+            *) echo "::error::unsupported runner architecture $(uname -m)"; exit 1 ;;
+        esac
+
+        tarball="just-${JUST_VERSION}-${target}.tar.gz"
+        curl --fail --location --silent --show-error \
+            "https://github.com/casey/just/releases/download/${JUST_VERSION}/${tarball}" \
+            --output "$RUNNER_TEMP/$tarball"
+
+        mkdir -p "$RUNNER_TEMP/just"
+        tar -xzf "$RUNNER_TEMP/$tarball" -C "$RUNNER_TEMP/just" just
+        echo "$RUNNER_TEMP/just" >> "$GITHUB_PATH"
+
+        # Assert the pin held, so a moved tag cannot pass silently.
+        active=$("$RUNNER_TEMP/just/just" --version | awk '{print $2}')
+        if [[ "$active" != "$JUST_VERSION" ]]; then
+            echo "::error title=just pin did not hold::Expected ${JUST_VERSION}, got ${active}."
+            exit 1
+        fi
+        echo "just $active"
 
     # Xcode 27.0 is the pinned toolchain and the reason is machine/CI parity: the SDK
     # decides which iOS 27 APIs compile, and an unguarded one is the single most likely
     # mistake to reach this repo. Building against a different SDK than the owner's
     # machine is how that mistake gets through green CI.
     #
-    # This fails rather than falling back. A fallback would be unreachable anyway: the
-    # jobs pin `runs-on: xcode-27`, so either the image exists and carries Xcode 27, or
-    # the job never starts. If that image is ever withdrawn, changing the pin is a
-    # deliberate edit — not something a warning should let slide into a green check.
-    - name: Select Xcode 27
+    # This asserts rather than selects. The `xcode-27` image carries Xcode 27.0 as its
+    # default, so there is nothing to switch to: either the active Xcode is already 27, or
+    # the runner is not the image the jobs pin and no amount of switching makes a pass here
+    # mean what it claims. If that image is ever withdrawn, changing the pin is a
+    # deliberate edit — not something a fallback should let slide into a green check.
+    - name: Assert Xcode 27
       shell: bash
       run: |
         set -euo pipefail
         want=27
 
-        candidate=$(ls -d /Applications/Xcode_${want}*.app 2>/dev/null | sort -V | tail -1 || true)
-        if [[ -n "$candidate" ]]; then
-            sudo xcode-select -switch "$candidate"
-        fi
-
         active=$(xcodebuild -version | head -1 | awk '{print $2}')
         if [[ "${active%%.*}" != "$want" ]]; then
-            echo "::error title=Xcode ${want} not on this runner::Active Xcode is ${active}. This runner cannot give machine/CI parity; a pass here would prove less than it looks. Change the pinned image and toolchain deliberately, or use a runner that carries Xcode ${want}."
+            echo "::error title=Xcode ${want} not on this runner::Active Xcode is ${active}. This runner cannot give machine/CI parity; a pass here would prove less than it looks. Change the pinned image and toolchain deliberately, or use a runner that carries Xcode ${want} by default."
             exit 1
         fi
 

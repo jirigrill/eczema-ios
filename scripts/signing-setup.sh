@@ -25,6 +25,7 @@ TOTAL_STAGES=0
 _STAGE_INDEX=0
 ENV_FILE="${ENV_FILE:-.env}"
 WRITTEN_ENV=()    # KEYs written to ENV_FILE this run
+WRITTEN_FILE=()   # values written to a file other than ENV_FILE, as "WHAT → WHERE"
 WRITTEN_SECRET=() # secret NAMEs set this run
 SKIPPED=()        # things we couldn't do (e.g. gh missing)
 
@@ -171,6 +172,7 @@ finish() {
   _clear
   printf '\n%s%s  ✓ Setup complete%s\n' "$BOLD" "$GREEN" "$RESET"
   (( ${#WRITTEN_ENV[@]} ))    && note "wrote ${#WRITTEN_ENV[@]} value(s) to $ENV_FILE: ${WRITTEN_ENV[*]}"
+  (( ${#WRITTEN_FILE[@]} ))   && note "wrote ${#WRITTEN_FILE[@]} value(s) to other files: ${WRITTEN_FILE[*]}"
   (( ${#WRITTEN_SECRET[@]} )) && note "set ${#WRITTEN_SECRET[@]} GitHub secret(s): ${WRITTEN_SECRET[*]}"
   if (( ${#SKIPPED[@]} )); then
     printf '\n'; warn "still to do by hand:"
@@ -196,7 +198,7 @@ RECORD="docs/setup/signing-and-container.md"
 ENV_FILE="${ENV_FILE:-$HOME/.eczema-ios-signing.env}"
 
 REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-SECRETS_XCCONFIG="${SECRETS_XCCONFIG:-$REPO_ROOT/Config/Secrets.xcconfig}"
+SECRETS_XCCONFIG="$REPO_ROOT/Config/Secrets.xcconfig"
 
 # write_secrets_xcconfig TEAM_ID — emit the gitignored xcconfig the local build reads.
 #
@@ -210,14 +212,26 @@ write_secrets_xcconfig() {
     warn "refusing to write Secrets.xcconfig — .gitignore does not list it"
     return
   fi
+
+  # Never clobber hand-added local settings. The file is gitignored, so anything else in
+  # it exists only on this machine and cannot be recovered from git.
+  if [[ -e "$SECRETS_XCCONFIG" ]] && ! grep -q '^// Written by scripts/signing-setup\.sh\.' "$SECRETS_XCCONFIG"; then
+    SKIPPED+=("set DEVELOPMENT_TEAM = $team in $SECRETS_XCCONFIG — it already exists and this wizard did not write it")
+    warn "leaving Secrets.xcconfig alone — it holds edits this wizard did not make"
+    return
+  fi
+
   mkdir -p "$(dirname "$SECRETS_XCCONFIG")"
   cat > "$SECRETS_XCCONFIG" <<EOF
 // Written by scripts/signing-setup.sh. Gitignored — never commit this file.
 // Config/Base.xcconfig includes it optionally, so CI (CODE_SIGNING_ALLOWED=NO)
 // builds fine on a clean checkout without it.
+//
+// Re-running the wizard rewrites this file. It will not touch it if this header
+// is gone, so keep the header if you add settings below.
 DEVELOPMENT_TEAM = $team
 EOF
-  WRITTEN_ENV+=("DEVELOPMENT_TEAM → Config/Secrets.xcconfig")
+  WRITTEN_FILE+=("DEVELOPMENT_TEAM → Config/Secrets.xcconfig")
   printf '  %s✓ wrote%s DEVELOPMENT_TEAM → %s\n' "$GREEN" "$RESET" "$SECRETS_XCCONFIG"
 }
 
