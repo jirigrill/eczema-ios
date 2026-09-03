@@ -55,10 +55,16 @@ runs:
         set -euo pipefail
         want=27
 
-        active=$(xcodebuild -version | head -1 | awk '{print $2}')
+        # Capture whole, then parse in the shell. Piping into `head -1` makes head exit
+        # after one line, and xcodebuild takes SIGPIPE and aborts (134) rather than
+        # tolerating it — a race that fails this step under `pipefail` for reasons that
+        # have nothing to do with which Xcode is active.
+        version_output=$(xcodebuild -version)
+        active=$(awk 'NR == 1 { print $2 }' <<<"$version_output")
+
         if [[ "${active%%.*}" != "$want" ]]; then
             echo "::error title=Xcode ${want} not on this runner::Active Xcode is ${active}. This runner cannot give machine/CI parity; a pass here would prove less than it looks. Change the pinned image and toolchain deliberately, or use a runner that carries Xcode ${want} by default."
             exit 1
         fi
 
-        xcodebuild -version
+        printf '%s\n' "$version_output"
