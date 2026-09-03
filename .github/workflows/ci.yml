@@ -25,6 +25,27 @@ jobs:
   # Never move either job to a `-large`/`-xlarge` runner (including `xcode-27-xlarge`):
   # standard runners are free and unlimited on public repos, larger ones are always
   # billed, public repo or not.
+  # Style and lint. Fastest of the three jobs and the one most likely to fail, so it runs
+  # alongside the others rather than gating them — a lint failure should not hide a build
+  # failure, and vice versa.
+  #
+  # `just lint` is read-only: it reports and fails, never edits. The autofix path is
+  # `just fmt`, which is a local command deliberately absent from CI — a workflow that
+  # commits formatting back would need write permission, and `contents: read` above is
+  # what keeps this repo's CI unable to push anything anywhere.
+  lint:
+    name: lint
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/toolchain
+
+      # SwiftLint and SwiftFormat are version-pinned in the Justfile and fetched by
+      # `just tools`, which `just lint` depends on. Both assert their own pin, so a moved
+      # release tag fails here rather than silently changing what "green" means.
+      - name: swiftformat --lint, swiftlint --strict
+        run: just lint
+
   packages:
     name: packages
     runs-on: xcode-27

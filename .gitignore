@@ -12,6 +12,10 @@ build/
 # Xcode generates this on first open; it holds only local state.
 *.xcodeproj/project.xcworkspace/
 
+# Pinned SwiftLint and SwiftFormat binaries, fetched by `just tools`. Versions are pinned
+# in the Justfile and in CI; the binaries themselves are a local cache.
+.tools/
+
 # Secrets. This repo is public: no credentials, team ids, or provisioning
 # profiles are ever committed. See CLAUDE.md.
 *.p8

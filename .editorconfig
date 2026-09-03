@@ -1,0 +1,33 @@
+# Editor defaults, applied by Xcode 16+ and by every other editor that reads this file.
+#
+# This is the only style config that is not a tool pin: it is what stops a stray editor
+# from reformatting a file on save in a way SwiftFormat then has to undo. SwiftFormat is
+# the authority on Swift layout; this file exists so an editor agrees with it before
+# SwiftFormat ever runs.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# Two spaces, matching the YAML in .github/ and the JSON that Xcode itself writes into
+# Assets.xcassets and .xcstrings.
+[*.{yml,yaml,json,xcstrings}]
+indent_size = 2
+
+# Tab-indented by Apple's tooling. Xcode rewrites these files wholesale, so fighting it
+# here would only produce churn in diffs nobody authored by hand.
+[*.{entitlements,plist,pbxproj,xcscheme}]
+indent_style = tab
+
+# Markdown: trailing whitespace is a hard line break, so trimming it changes rendering.
+[*.md]
+trim_trailing_whitespace = false
+
+[Justfile]
+indent_size = 4

@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+#
+# Pre-commit hook: format and lint the Swift files this commit touches.
+#
+# Installed by `just install-hooks`, which copies it into the git common dir. It is not
+# installed automatically and it is opt-in per clone: `.git/hooks/` cannot be committed,
+# and a hook that appears without being asked for is a hook people delete.
+#
+# This hook is a convenience, never a gate. CI is the gate — it runs the same pinned tools
+# over the whole tree, so a skipped hook cannot let a lint failure reach `main`. That is
+# why `git commit --no-verify` is a documented escape and not a workaround.
+
+set -euo pipefail
+
+repo_root=$(git rev-parse --show-toplevel)
+cd "$repo_root"
+
+# Staged Swift files only — Added, Copied, Modified. Deleted paths are excluded, since
+# formatting a file that no longer exists fails.
+#
+# -z with a NUL-delimited read, because a path may contain a space.
+staged=()
+while IFS= read -r -d '' path; do
+    staged+=("$path")
+done < <(git diff --cached --name-only --diff-filter=ACM -z -- '*.swift')
+
+if [[ ${#staged[@]} -eq 0 ]]; then
+    exit 0
+fi
+
+# Package manifests are declarative and SwiftPM dictates their shape; .swiftlint.yml
+# excludes them, so skip them here too rather than reporting a file the linter ignores.
+files=()
+for path in "${staged[@]}"; do
+    case "$path" in
+        */Package.swift | Package.swift) continue ;;
+        .build/* | */.build/*) continue ;;
+    esac
+    files+=("$path")
+done
+
+if [[ ${#files[@]} -eq 0 ]]; then
+    exit 0
+fi
+
+swiftformat=".tools/swiftformat"
+swiftlint=".tools/swiftlint"
+
+# The tools are pinned and downloaded by `just tools`. Do not fetch them from a hook: a
+# commit should not silently pull a binary off the network.
+if [[ ! -x "$swiftformat" || ! -x "$swiftlint" ]]; then
+    echo "pre-commit: the pinned tools are missing. Run 'just tools' once, then commit again." >&2
+    echo "pre-commit: or skip this hook with 'git commit --no-verify'." >&2
+    exit 1
+fi
+
+# Format in place, then re-stage. A formatter that only complains makes every commit a
+# two-step dance; one that fixes and re-stages does not.
+#
+# Only the paths already staged are re-added, so an unrelated unstaged edit in the same
+# file is never swept into this commit. A file staged as a hunk (`git add -p`) is the one
+# case where this could stage more of that file than intended — the formatter's own change
+# to it. That is a narrow, visible trade for a hook that fixes rather than nags.
+"$swiftformat" "${files[@]}" --quiet
+git add -- "${files[@]}"
+
+# Lint after formatting, and only report. --strict makes every warning an error, matching
+# CI: a hook that is more permissive than the gate it stands in front of teaches people
+# the hook means nothing.
+if ! "$swiftlint" lint --strict --quiet -- "${files[@]}"; then
+    echo >&2
+    echo "pre-commit: SwiftLint failed. Try 'just fmt' for the mechanical fixes." >&2
+    echo "pre-commit: commit anyway with 'git commit --no-verify'." >&2
+    exit 1
+fi
