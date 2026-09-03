@@ -1,0 +1,143 @@
+# SwiftLint decides what is allowed; SwiftFormat decides layout. Rules that only restate a
+# SwiftFormat decision are disabled below, so the two tools cannot disagree about a line.
+#
+# Pinned to 0.65.1 in the Justfile and in CI. An unpinned linter that gains a rule turns an
+# unrelated pull request red for something nobody wrote.
+
+included:
+  - App
+  - Packages/EczemaCore/Sources
+  - Packages/EczemaCore/Tests
+  - Packages/EczemaUI/Sources
+  - Packages/EczemaUI/Tests
+
+excluded:
+  - .build
+  - Packages/EczemaCore/.build
+  - Packages/EczemaUI/.build
+  # Manifests are declarative and SwiftPM dictates their shape.
+  - Packages/EczemaCore/Package.swift
+  - Packages/EczemaUI/Package.swift
+
+# MARK: - Disabled from the default set
+
+disabled_rules:
+  # SwiftFormat owns every one of these. Leaving them on means two tools reporting the
+  # same line with different opinions about the fix.
+  - trailing_comma
+  - opening_brace
+  - statement_position
+  - vertical_whitespace
+  - comma
+  - colon
+  - trailing_whitespace
+  # `todo` fails the build on a `// TODO:`. This repo is scaffolding ahead of a spec and
+  # marking unfinished work is correct here; the linter is the wrong place to police it.
+  - todo
+
+# MARK: - Enabled beyond the default set
+
+opt_in_rules:
+  - array_init
+  - closure_end_indentation
+  - closure_spacing
+  - collection_alignment
+  - contains_over_filter_count
+  - contains_over_first_not_nil
+  - empty_collection_literal
+  - empty_count
+  - empty_string
+  - explicit_init
+  - fallthrough
+  - first_where
+  - flatmap_over_map_reduce
+  - identical_operands
+  - joined_default_parameter
+  - last_where
+  - legacy_multiple
+  - literal_expression_end_indentation
+  - modifier_order
+  - multiline_arguments
+  - operator_usage_whitespace
+  - overridden_super_call
+  - prefer_self_in_static_references
+  - private_action
+  - private_outlet
+  - redundant_nil_coalescing
+  - redundant_type_annotation
+  - sorted_first_last
+  - toggle_bool
+  - unavailable_function
+  - unneeded_parentheses_in_closure_argument
+  - yoda_condition
+
+  # The two that matter most in a repo about an infant's health data.
+  #
+  # `force_unwrapping` and `force_try` are crashes waiting for the one input nobody
+  # thought about. The owner has no iOS experience and cannot be relied on to catch a
+  # `!` in review, and there is no crash reporting and no backend — a crash on her
+  # phone is invisible here. CloudKit is sync, not backup, so a crash mid-write is
+  # exactly the failure that loses a record.
+  - force_unwrapping
+
+# MARK: - Configuration
+
+# Only `swiftlint analyze` runs these, and that needs a compilation log from a full build.
+# `just lint` deliberately does not: it must stay fast enough to run on every commit, and
+# CI already proves the build separately. Listing them here documents the intent and keeps
+# `--strict` from failing on a "should be in analyzer_rules" warning.
+analyzer_rules:
+  - unused_declaration
+  - unused_import
+
+line_length:
+  warning: 110
+  error: 140
+  ignores_comments: true
+  ignores_urls: true
+
+# Defaults assume UIKit view controllers. These are SwiftUI views and small domain types;
+# a limit that never fires is not a limit.
+type_body_length:
+  warning: 250
+  error: 400
+
+file_length:
+  warning: 450
+  error: 700
+  ignore_comment_only_lines: true
+
+function_body_length:
+  warning: 50
+  error: 100
+
+# `id`, `to`, `at` are legitimate domain names. Two characters is the floor.
+identifier_name:
+  min_length:
+    warning: 2
+    error: 1
+  excluded:
+    - id
+    - to
+    - at
+    - on
+
+# Spec terms are the vocabulary here, and some are long: `SkinObservation`,
+# `MealEditorState`. Do not force an abbreviation the glossary does not use.
+type_name:
+  min_length: 3
+  max_length:
+    warning: 45
+    error: 60
+
+nesting:
+  type_level:
+    warning: 2
+
+# Match the compiler settings in Config/Base.xcconfig: warnings that are build failures
+# there should not be mere warnings here.
+force_cast: error
+force_try: error
+force_unwrapping: error
+
+reporter: xcode

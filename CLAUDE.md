@@ -65,10 +65,18 @@ Two structural constraints that must hold: avoid per-file exclusions and multi-t
 just build           # build the app for the iOS Simulator
 just test            # swift test on the packages — no simulator boot, this is the fast loop
 just verify-project  # assert the pbxproj is still filesystem-synchronized
-just check           # all three, cheapest first. Run this before pushing.
+just lint            # swiftformat --lint + swiftlint --strict. Read-only; never edits
+just fmt             # apply formatting and every mechanical lint fix. Edits files
+just check           # all four, cheapest first. Run this before pushing.
 ```
 
-CI runs the same recipes, but split across its two jobs rather than calling `just check`.
+Run `just fmt` rather than hand-fixing what `just lint` reports; it fixes layout and leaves the judgment calls. Both tools are **version-pinned in the `Justfile`** and fetched into `.tools/` (gitignored) by `just tools`, which asserts each pin held. Never `brew install` either one — a linter that gains a rule between runs turns an unrelated pull request red for something nobody wrote.
+
+**SwiftFormat owns layout; SwiftLint owns what is allowed.** Rules where they would overlap are disabled in `.swiftlint.yml`, so the two can never disagree about a line. `.editorconfig` exists so an editor agrees with SwiftFormat before it ever runs. `force_unwrapping`, `force_try` and `force_cast` are **errors**, not warnings: there is no crash reporting and no backend, so a crash on her phone is invisible here, and a crash mid-write is exactly what loses a record.
+
+`scripts/hooks/pre-commit` formats and lints staged Swift files. It is **opt-in per clone** — `just install-hooks` — because `.git/hooks/` cannot be committed. It is a convenience, never a gate; CI runs the same pinned tools over the whole tree, so `git commit --no-verify` cannot let a lint failure reach `main`.
+
+CI runs the same recipes, but split across its three jobs rather than calling `just check`.
 
 Run `just` for the full recipe list.
 
@@ -89,16 +97,19 @@ UI automation must never be the *only* gate: it leans on private frameworks and 
 
 ## CI
 
-`.github/workflows/ci.yml` runs two jobs, on `pull_request` and on `push` to `main`, with `permissions: contents: read` and **no secrets in the repo at all** (which structurally rules out fork-PR secret exposure):
+`.github/workflows/ci.yml` runs three jobs, on `pull_request` and on `push` to `main`, with `permissions: contents: read` and **no secrets in the repo at all** (which structurally rules out fork-PR secret exposure):
 
-1. `packages` — `swift test` on the SwiftPM packages.
-2. `app` — asserts the project format, then builds for the iOS Simulator with `CODE_SIGNING_ALLOWED=NO`.
+1. `lint` — `swiftformat --lint` and `swiftlint --strict`.
+2. `packages` — `swift test` on the SwiftPM packages. **This is the test job; do not add a fourth one for tests.**
+3. `app` — asserts the project format, then builds for the iOS Simulator with `CODE_SIGNING_ALLOWED=NO`.
 
-**Branch protection on `main` requires both jobs**, with `strict` (the branch must be up to date before merging). Force pushes and branch deletion are blocked; linear history is **not** required, so merge commits stay allowed. `enforce_admins` is off, so the owner keeps an override — treat using it as a decision, not a shortcut.
+All three run in parallel, deliberately: a lint failure must not hide a build failure, or the reverse. `just lint` is read-only in CI — the autofix path (`just fmt`) is local only, because a workflow that committed formatting back would need write permission, and `contents: read` is what keeps this CI unable to push anything anywhere.
+
+**Branch protection on `main` requires `app` and `packages`**, with `strict` (the branch must be up to date before merging). Force pushes and branch deletion are blocked; linear history is **not** required, so merge commits stay allowed. `enforce_admins` is off, so the owner keeps an override — treat using it as a decision, not a shortcut.
 
 **The runner image is `xcode-27`** — macOS 26 with Xcode 27.0 as default, which is what gives machine/CI parity. The plain `macos-26` image carries only Xcode 26.0.1–26.6 (measured 2026-09-02) and cannot. `xcode-27` is a **preview** image ([actions/runner-images#14404](https://github.com/actions/runner-images/issues/14404)): it may queue longer and be less stable. **Never move to a `-large`/`-xlarge` runner**, `xcode-27-xlarge` included: standard runners are free and unlimited on public repos, larger ones are always billed, public repo or not.
 
-Both jobs get their toolchain from the composite action `.github/actions/toolchain` — `just` plus Xcode 27, held once rather than repeated per job. Both are **pinned and asserted**: `just` is installed from a versioned release tarball (not `brew install just`, which takes whatever the tap currently holds), and the job **fails** if the active Xcode is not 27. Neither has a fallback, deliberately — a fallback could only ever hide a green check built against the wrong toolchain. **Moving off the image is a deliberate edit in three places:** `runs-on:` in both jobs of `.github/workflows/ci.yml`, `want=` in the action, and this paragraph.
+Every job gets its toolchain from the composite action `.github/actions/toolchain` — `just` plus Xcode 27, held once rather than repeated per job. Both are **pinned and asserted**: `just` is installed from a versioned release tarball (not `brew install just`, which takes whatever the tap currently holds), and the job **fails** if the active Xcode is not 27. Neither has a fallback, deliberately — a fallback could only ever hide a green check built against the wrong toolchain. **Moving off the image is a deliberate edit in three places:** `runs-on:` in all three jobs of `.github/workflows/ci.yml`, `want=` in the action, and this paragraph.
 
 One measured consequence of running an older toolchain, which is why no host test may depend on the newer one: SwiftPM 6.3.3 (Xcode 26.6) *copies* a `.xcstrings` resource where Xcode 27 *compiles* it, so a localized key resolves to itself under `swift test`. Do not write a host test that asserts rendered localized text — that encodes a toolchain version rather than a property of the code.
 

@@ -1,0 +1,70 @@
+# SwiftFormat decides layout; SwiftLint decides what is allowed. Keeping the two jobs
+# separate is what stops them fighting over the same lines — see the disabled rules in
+# .swiftlint.yml.
+#
+# Pinned to 0.63.0 in the Justfile and in CI. A formatter that changes its mind between
+# runs turns every unrelated pull request into a whitespace diff.
+
+--swiftversion 6.0
+
+# MARK: - Rules held off the default set
+
+# `self.` is inserted only where the compiler requires it. The default (`remove`) is the
+# same policy stated explicitly, so this pin exists to survive a change of default.
+--self remove
+
+# Do not reorder or regroup imports beyond alphabetising. `sortedImports` is on by default
+# and is fine; `--importgrouping` splitting testable imports out is not, because the test
+# suites lead with `import Testing` followed by their `@testable` block and that reads in
+# the order the file is about.
+--importgrouping alphabetized
+
+# Type bodies here are short and the blank-line-after-opening-brace rule adds noise to
+# four-line scaffolding types.
+--typeblanklines remove
+
+# Wrap only when a line actually exceeds the limit, and keep the closing paren attached to
+# the last argument rather than on a line of its own.
+--maxwidth 110
+--wraparguments before-first
+--wrapparameters before-first
+--wrapcollections before-first
+--closingparen balanced
+
+# Trailing commas in collection literals: keep them, so adding an element is a one-line diff.
+--commas always
+
+# MARK: - Enabled beyond the default set
+
+--enable isEmpty
+--enable blankLinesBetweenScopes
+--enable redundantParens
+--enable trailingClosures
+--enable wrapMultilineStatementBraces
+
+# MARK: - Disabled
+
+# Rewrites `// MARK: -` headers and the long explanatory comments this repo leans on for
+# reasoning. Those comments are the point; do not let a formatter reflow them.
+--disable wrapSingleLineComments
+
+# Would strip the `/// ...` doc comments on scaffolding types that currently have no body.
+--disable redundantType
+
+# Both test suites lead with `import Testing`, then a blank line, then their `@testable`
+# block. That grouping says "this is a test file, and here is what it reaches into" — it
+# is the order the file is about, and `sortImports` wants to merge the two groups.
+--disable sortImports
+--disable blankLinesBetweenImports
+
+# `@Suite` is redundant on a type whose name is enough for Swift Testing to find it, and
+# the rule is right about that. It is disabled because the attribute is written explicitly
+# in both suites today: adopting a formatter should not silently rewrite committed code on
+# the same commit that introduces the formatter. Drop this line in a later change if the
+# implicit form is preferred — that is a style decision, not a lint fix.
+--disable redundantSwiftTestingSuite
+
+# `Package.swift` is excluded rather than reformatted: SwiftPM dictates its shape, and
+# `docComments` reads the `let strictSettings` comments as API documentation when they are
+# deliberately regular comments explaining a duplication SwiftPM forces.
+--exclude .build,Packages/*/.build,Eczema.xcodeproj,Packages/EczemaCore/Package.swift,Packages/EczemaUI/Package.swift
