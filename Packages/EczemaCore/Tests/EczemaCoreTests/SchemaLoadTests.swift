@@ -114,10 +114,13 @@ enum SchemaLoadProbeRunner {
             breachable without any compile-time warning. Check the schema against all four \
             (docs/spec/persistence-model.md, DATA-ARRIVE-9):
 
-              1. no @Attribute(.unique) anywhere;
-              2. every relationship optional or defaulted — including to-many;
-              3. every relationship has its inverse present;
-              4. every attribute optional or defaulted.
+              1. no uniqueness constraint;
+              2. no refusing delete rule — rejected local-only too, so it cannot be
+                 escaped by unmirroring the type that carries it;
+              3. no required relationship — every one optional or defaulted, to-many
+                 included;
+              4. no attribute that is neither optional nor defaulted. This one is
+                 observed behavior only, not vendor-documented (DATA-ARRIVE-9's note).
 
             The stderr transcript below usually names the entity and property. Read it first — \
             it is the only diagnostic the platform gives.
