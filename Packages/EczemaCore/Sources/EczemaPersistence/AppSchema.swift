@@ -16,7 +16,18 @@ public enum AppSchema {
     public static let models: [any PersistentModel.Type] = []
 
     /// The CloudKit container the private database is mirrored into. It is a public
-    /// identifier, not a credential — the same string is in `Config/Eczema.entitlements`.
+    /// identifier, not a credential — the same string is in `Config/Eczema.entitlements`,
+    /// and it ships inside the code signature of every build regardless.
+    ///
+    /// **Naming it here is deliberate, and `.automatic` is not an option.** `.automatic`
+    /// reads the container from the entitlements, which looks like the tidier choice — one
+    /// authoritative home for the string. Measured, it silently disables mirroring wherever
+    /// there is no entitlement to read: with `.automatic` in place, both deliberately invalid
+    /// fixtures *loaded without complaint*, and a schema breaching a documented mirroring
+    /// constraint was accepted. That turns `DATA-ARRIVE-10` into decoration — the worst
+    /// available outcome, a guard that reports safety it never checked. The duplication with
+    /// the entitlement is the lesser cost, and `SchemaLoadProbeItself` is what would catch
+    /// the two drifting apart.
     public static let cloudKitContainerIdentifier = "iCloud.jirigrill.eczema"
 
     public static var schema: Schema {
