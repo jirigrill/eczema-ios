@@ -1,4 +1,3 @@
-import Foundation
 import Testing
 
 @testable import EczemaPersistence
@@ -6,16 +5,15 @@ import Testing
 
 /// `DATA-ARRIVE-10` — the real schema loads with CloudKit mirroring enabled.
 ///
-/// The failure this guards is total and undiagnosable: a schema that breaches one of
-/// mirroring's constraints throws `SwiftDataError error 1` at container initialisation, so the
-/// app does not launch and the error names neither the model nor the property. There is no
-/// compile-time check for any of the constraints. Validation happens before any network
-/// contact, so this needs no account, no container and no connection.
+/// The failure this guards is total and undiagnosable: a schema breaching one of mirroring's
+/// constraints throws `SwiftDataError error 1` at container initialisation, so the app does not
+/// launch, and the error names neither the model nor the property. No constraint is checked at
+/// compile time. Validation precedes any network contact, so this needs no account, container or
+/// connection.
 ///
-/// The load runs in a child process, and `SchemaLoadProbe/main.swift` records the measurement
-/// that forces it to. Two suites here rather than one: `SchemaLoad` is the guard, and
-/// `SchemaLoadProbeItself` proves the guard can fail — a test that cannot fail reports safety
-/// that was never checked.
+/// The load runs in a child process for a measured reason recorded in `SchemaLoadProbe/main.swift`.
+/// Two suites rather than one: `SchemaLoad` is the guard, and `SchemaLoadProbeItself` proves the
+/// guard can fail — a test that cannot fail reports safety that was never checked.
 @Suite struct SchemaLoad {
     @Test func realSchemaLoadsWithMirroringEnabled() throws {
         let result = try SchemaLoadProbeRunner.run(mode: .app)
@@ -25,33 +23,42 @@ import Testing
             break
 
         case .empty:
-            // Not a pass and not a failure of the schema: `AppSchema.models` is still empty
-            // while the models are on a spec deadline. Recorded as a known issue so the run
-            // states out loud that it verified nothing — a silent green here is exactly the
-            // "test over three of four models" failure this test exists to avoid.
+            // Neither a pass nor a schema failure: `AppSchema.models` is empty while the models are
+            // on a spec deadline. Recorded so the run states out loud that it verified nothing — a
+            // silent green here is the "test over three of four models" failure this test exists to
+            // avoid. It clears itself when the first @Model is added; no change is needed here.
             withKnownIssue("AppSchema.models is empty — no schema was verified") {
-                Issue.record(
-                    """
-                    AppSchema.models holds no models yet, so nothing was loaded and \
-                    DATA-ARRIVE-10 is not yet being enforced. This stops being a known issue \
-                    the moment the first @Model is added to \
-                    Sources/EczemaPersistence/AppSchema.swift — no change is needed here.
-                    """
-                )
+                Issue.record("DATA-ARRIVE-10 is not yet being enforced: there is nothing to load.")
             }
 
         case .failed, .usage, .none:
-            Issue.record(Comment(rawValue: result.diagnosis(loading: "the app's real schema")))
+            Issue.record(Comment(rawValue: result.diagnosis))
         }
+    }
+
+    /// `DATA-SCOPE-1` — the store holds exactly four record types. Loading "the schema" is only
+    /// worth anything if the schema is the whole schema; a hand-assembled list that has drifted to
+    /// three passes the load and still fails to launch the app. Dormant while the list is empty, and
+    /// self-activating on the first `@Model` alongside the guard above.
+    @Test func schemaHoldsEveryRecordTypeOrNoneYet() {
+        #expect(
+            AppSchema.models.isEmpty || AppSchema.models.count == 4,
+            """
+            AppSchema.models holds \(AppSchema.models.count) model(s). DATA-SCOPE-1 requires \
+            exactly four — meal, meal item, skin observation, skin photo — so this list has either \
+            dropped one, in which case SchemaLoad is verifying a schema the app does not use, or \
+            gained a record type the spec does not allow.
+            """
+        )
     }
 }
 
 @Suite struct SchemaLoadProbeItself {
-    /// One fixture per limb of `DATA-ARRIVE-9`, each breaching exactly that limb and nothing else.
-    /// If any of them stops failing, the probe has stopped detecting that class of violation and
-    /// `realSchemaLoadsWithMirroringEnabled` has become decoration for it. The issue's acceptance
-    /// asked for one deliberate breach "then revert"; keeping all four permanently is a deliberate
-    /// step past that, since the reverted version only ever proves the guard worked once.
+    /// One fixture per limb of `DATA-ARRIVE-9`, each breaching exactly that limb. If any stops
+    /// failing, the probe has stopped detecting that class of violation and
+    /// `realSchemaLoadsWithMirroringEnabled` is decoration for it. #28's acceptance asked for one
+    /// deliberate breach "then revert"; keeping all four permanently is a deliberate step past that,
+    /// since the reverted version only ever proves the guard worked once.
     @Test(arguments: ProbeMode.fixtures)
     func deliberatelyInvalidSchemaIsRejected(mode: ProbeMode) throws {
         let result = try SchemaLoadProbeRunner.run(mode: mode)
@@ -60,9 +67,9 @@ import Testing
             result.report == .failed,
             """
             The probe accepted a schema that must be rejected under CloudKit mirroring \
-            (\(mode.rawValue)). Either mirroring is not actually enabled in the probe's \
-            ModelConfiguration, or the constraint has changed. Until this fails as expected, \
-            SchemaLoad proves nothing.
+            (\(mode.rawValue)). Either mirroring is no longer enabled by \
+            AppSchema.configuration — which every mode here shares with the app — or the \
+            constraint has changed. Until this fails as expected, SchemaLoad proves nothing.
 
             \(result.transcript)
             """
@@ -76,217 +83,3 @@ import Testing
         #expect(result.report == .usage, "\n\(result.transcript)")
     }
 }
-
-// MARK: - Running the probe
-
-/// Builds the `.app` wrapper the probe needs and runs it.
-enum SchemaLoadProbeRunner {
-    struct Result {
-        /// `nil` is unrecognised: the exit code and the stdout marker do not name the same report,
-        /// which means the probe died somewhere other than `finish`. See `ProbeReport.read`.
-        var report: ProbeReport?
-        var exitCode: Int32
-        var standardOutput: String
-        var standardError: String
-
-        /// stderr matters more than the thrown error here: `SwiftDataError error 1` carries no
-        /// explanation, and CoreData logs the text naming the offending entity and property to
-        /// stderr instead.
-        var transcript: String {
-            var lines = ["exit code: \(exitCode)", "stdout:", standardOutput]
-            if !standardError.isEmpty {
-                lines.append(contentsOf: ["stderr:", standardError])
-            }
-            return lines.joined(separator: "\n")
-        }
-
-        /// The one place in this file where the wording matters more than the assertion — which is
-        /// why it must not name a schema failure that did not happen. `.usage` and unrecognised say
-        /// the harness malfunctioned; reporting either as a bad schema would send the reader after
-        /// a defect that is not in the schema, and is exactly the false attribution
-        /// `ProbeReport.read` exists to make visible.
-        func diagnosis(loading subject: String) -> String {
-            switch report {
-            case .failed: schemaFailureDiagnosis(loading: subject)
-            case .ok, .empty, .usage, .none: harnessFailureDiagnosis(loading: subject)
-            }
-        }
-
-        private func harnessFailureDiagnosis(loading subject: String) -> String {
-            """
-            The schema-load probe did not return a verdict on \(subject), so DATA-ARRIVE-10 was \
-            not checked on this run. **This says nothing about the schema** — the probe itself \
-            did not report properly.
-
-            Either it was invoked wrongly (SCHEMA-PROBE-USAGE), or its exit code and its stdout \
-            marker disagree, which means it died somewhere other than its own exit path — a \
-            crash or a signal. Fix the harness, then read the schema verdict.
-
-            \(transcript)
-            """
-        }
-
-        private func schemaFailureDiagnosis(loading subject: String) -> String {
-            """
-            The SwiftData schema failed to load with CloudKit mirroring enabled, loading \
-            \(subject).
-
-            This is a launch-time total failure: the app will not start, and the error names \
-            neither the offending model nor the offending property. Every constraint below is \
-            breachable without any compile-time warning. Check the schema against all four \
-            (docs/spec/persistence-model.md, DATA-ARRIVE-9):
-
-              1. no uniqueness constraint;
-              2. no refusing delete rule — rejected local-only too, so it cannot be
-                 escaped by unmirroring the type that carries it;
-              3. no required relationship — every one optional or defaulted, to-many
-                 included;
-              4. no attribute that is neither optional nor defaulted. This one is
-                 observed behavior only, not vendor-documented (DATA-ARRIVE-9's note).
-
-            The stderr transcript below usually names the entity and property. Read it first — \
-            it is the only diagnostic the platform gives.
-
-            \(transcript)
-            """
-        }
-    }
-
-    static func run(mode: ProbeMode) throws -> Result {
-        try run(rawMode: mode.rawValue)
-    }
-
-    /// Only `unknownModeIsAUsageErrorRatherThanAVerdict` passes a raw string, and that is the
-    /// point: every other caller goes through `ProbeMode`, so a mode cannot be mistyped anywhere
-    /// the compiler is not watching.
-    static func run(rawMode mode: String) throws -> Result {
-        let scratch = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appending(path: "schema-load-probe-\(UUID().uuidString)")
-        try FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: scratch) }
-
-        let outputURL = scratch.appending(path: "stdout")
-        let errorURL = scratch.appending(path: "stderr")
-
-        let process = Process()
-        process.executableURL = try wrappedProbeExecutableURL(inside: scratch)
-        process.arguments = [mode]
-        // Files rather than pipes, and this is not a style choice: reading one pipe to EOF
-        // blocks until the child exits, and CoreData's mirroring diagnostics on the *other*
-        // stream are large enough to fill its buffer — measured, the child then blocks in
-        // `write` on stderr while the parent blocks reading stdout, and neither ever returns.
-        // Concurrent reads would also work; files are simpler and the transcripts are small.
-        process.standardOutput = try FileHandle(forWritingTo: created(outputURL))
-        process.standardError = try FileHandle(forWritingTo: created(errorURL))
-
-        try process.run()
-        process.waitUntilExit()
-
-        let standardOutput = try text(at: outputURL)
-        return try Result(
-            report: ProbeReport.read(
-                exitCode: process.terminationStatus,
-                lastLine: lastLine(of: standardOutput)
-            ),
-            exitCode: process.terminationStatus,
-            standardOutput: standardOutput,
-            standardError: text(at: errorURL)
-        )
-    }
-
-    private static func created(_ url: URL) throws -> URL {
-        try Data().write(to: url)
-        return url
-    }
-
-    /// Undecodable bytes become a note rather than an error: these transcripts are diagnostics,
-    /// and losing the CoreData stderr text is the one thing that would leave a failure unreadable.
-    private static func text(at url: URL) throws -> String {
-        let data = try Data(contentsOf: url)
-        return String(bytes: data, encoding: .utf8)
-            ?? "<\(data.count) bytes, not valid UTF-8>"
-    }
-
-    /// The probe's marker is the last line, since CoreData may have written to stdout before it.
-    private static func lastLine(of standardOutput: String) -> String {
-        standardOutput
-            .split(separator: "\n", omittingEmptySubsequences: true)
-            .last
-            .map(String.init) ?? ""
-    }
-
-    // MARK: The .app wrapper
-
-    /// The probe binary, inside a minimal `.app` bundle.
-    ///
-    /// A bare SwiftPM executable has no `Bundle.main.bundleIdentifier`, and the mirroring
-    /// teardown path asserts on exactly that — so without this wrapper a *failing* schema
-    /// aborts the probe with SIGABRT and the error is never returned. The wrapper is one plist
-    /// and one symlink, built fresh in the caller's own scratch directory: the tests here run in
-    /// parallel, and a single shared wrapper path had them racing to create the same symlink.
-    private static func wrappedProbeExecutableURL(inside scratch: URL) throws -> URL {
-        let productsDirectory = URL(fileURLWithPath: Bundle(for: BundleAnchor.self).bundlePath)
-            .deletingLastPathComponent()
-        let probeBinary = productsDirectory.appending(path: executableName)
-
-        guard FileManager.default.fileExists(atPath: probeBinary.path) else {
-            throw ProbeUnavailable(
-                """
-                The SchemaLoadProbe executable is missing from \(productsDirectory.path). It is \
-                declared as an executableTarget in Packages/EczemaCore/Package.swift and the \
-                test target depends on it, so `swift test` should have built it.
-                """
-            )
-        }
-
-        let app = scratch.appending(path: "\(executableName).app")
-        let macOS = app.appending(path: "Contents/MacOS")
-        try FileManager.default.createDirectory(at: macOS, withIntermediateDirectories: true)
-
-        try Data(infoPlist.utf8).write(to: app.appending(path: "Contents/Info.plist"))
-
-        // A symlink rather than a copy, so the wrapper cannot go stale against a rebuilt binary.
-        let wrapped = macOS.appending(path: executableName)
-        try FileManager.default.createSymbolicLink(at: wrapped, withDestinationURL: probeBinary)
-
-        return wrapped
-    }
-
-    private static let executableName = "SchemaLoadProbe"
-
-    /// `CFBundleIdentifier` is the only key that matters — it is what PushKit asserts on, and any
-    /// non-nil string satisfies it. It is deliberately unrelated to both the app's identifier and
-    /// the CloudKit container's: this bundle is a test harness, it reaches no container, and a
-    /// name derived from either would suggest it does.
-    private static let bundleIdentifier = "test.eczema.SchemaLoadProbe"
-
-    private static let infoPlist = """
-    <?xml version="1.0" encoding="UTF-8"?>
-    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" \
-    "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-    <plist version="1.0">
-    <dict>
-        <key>CFBundleIdentifier</key>
-        <string>\(bundleIdentifier)</string>
-        <key>CFBundleExecutable</key>
-        <string>\(executableName)</string>
-        <key>CFBundleName</key>
-        <string>\(executableName)</string>
-        <key>CFBundlePackageType</key>
-        <string>APPL</string>
-    </dict>
-    </plist>
-    """
-
-    struct ProbeUnavailable: Error, CustomStringConvertible {
-        var description: String
-        init(_ description: String) {
-            self.description = description
-        }
-    }
-}
-
-/// Objective-C class purely so `Bundle(for:)` can locate the test bundle, and through it the
-/// build directory the probe was written to. SwiftPM offers no `Bundle.module` to a test target
-/// without resources, and the environment carries no build path.
-private final class BundleAnchor: NSObject {}

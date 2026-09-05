@@ -6,44 +6,39 @@ import SwiftData
 /// `DATA-ARRIVE-10`'s test and the schema loaded on her phone cannot be two different
 /// things. A test over a hand-assembled list of models is a test of the list.
 public enum AppSchema {
-    /// Every model type the store holds — `DATA-SCOPE-1`: meal, meal item, skin
-    /// observation, skin photo, and nothing else.
+    /// Every model type the store holds — `DATA-SCOPE-1`'s four and nothing else: meal, meal item,
+    /// skin observation, skin photo.
     ///
-    /// **Empty on purpose.** The schema is additive-only once the CloudKit schema is
-    /// promoted, so the first `@Model` written here is close to irreversible and waits on
-    /// `docs/spec/persistence-model.md`'s deadlines. Add each model to this list as it
-    /// lands; `SchemaLoad` then covers it with no further wiring.
+    /// **Empty on purpose.** The schema is additive-only once the CloudKit schema is promoted, so
+    /// the first `@Model` here is close to irreversible and waits on
+    /// `docs/spec/persistence-model.md`'s deadlines. Append each model as it lands; `SchemaLoad`
+    /// then covers it with no further wiring.
     public static let models: [any PersistentModel.Type] = []
 
-    /// The CloudKit container the private database is mirrored into. It is an address, not a
-    /// credential — the same string is in `Config/Eczema.entitlements`, it grants access to
-    /// nothing, and it ships inside the code signature of every build regardless.
+    /// The CloudKit container the private database mirrors into.
     ///
-    /// `CLAUDE.md`'s "no container identifiers in committed files. Ever." reads absolutely and
-    /// this contradicts it, as `Config/Eczema.entitlements` and `docs/setup/signing-and-container.md`
-    /// already do. Amending the rule is the owner's call, tracked in
-    /// [#53](https://github.com/jirigrill/eczema-ios/issues/53) — this comment records the breach
-    /// rather than settling it.
+    /// **Named literally because `.automatic` is measurably unsafe here.** `.automatic` reads the
+    /// container from the entitlements — tidier, one home for the string — but where there is no
+    /// entitlement to read it disables mirroring *silently*: with it in place every invalid fixture
+    /// loaded without complaint, so `DATA-ARRIVE-10` passed having validated nothing. A guard that
+    /// reports unchecked safety is the worst outcome available, so the duplication with
+    /// `Config/Eczema.entitlements` is the accepted lesser cost.
     ///
-    /// **Naming it here is deliberate, and `.automatic` is not an option.** `.automatic`
-    /// reads the container from the entitlements, which looks like the tidier choice — one
-    /// authoritative home for the string. Measured, it silently disables mirroring wherever
-    /// there is no entitlement to read: with `.automatic` in place, both deliberately invalid
-    /// fixtures *loaded without complaint*, and a schema breaching a documented mirroring
-    /// constraint was accepted. That turns `DATA-ARRIVE-10` into decoration — the worst
-    /// available outcome, a guard that reports safety it never checked. The duplication with
-    /// the entitlement is the lesser cost, and `SchemaLoadProbeItself` is what would catch
-    /// the two drifting apart.
+    /// **Recorded breach, not a settled question.** `CLAUDE.md`'s "no container identifiers in
+    /// committed files. Ever." reads absolutely, and this contradicts it — as the entitlements and
+    /// `docs/setup/signing-and-container.md` already do. It is an address rather than a credential
+    /// (it grants nothing, and ships in every build's code signature regardless), but amending the
+    /// rule is the owner's call: [#53](https://github.com/jirigrill/eczema-ios/issues/53).
     public static let cloudKitContainerIdentifier = "iCloud.jirigrill.eczema"
 
     public static var schema: Schema {
         Schema(models)
     }
 
-    /// The real configuration, with mirroring enabled. `inMemory` is the only thing the
-    /// schema-load test changes about it, so the test exercises the configuration the app
-    /// ships rather than a lookalike.
-    public static func configuration(inMemory: Bool) -> ModelConfiguration {
+    /// The one place mirroring is switched on, for every caller including the probe's fixtures.
+    /// `schema` and `inMemory` are all a caller may vary, so nothing can exercise a lookalike
+    /// configuration — turn mirroring off here and `SchemaLoadProbeItself` fails immediately.
+    public static func configuration(for schema: Schema, inMemory: Bool) -> ModelConfiguration {
         ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: inMemory,
