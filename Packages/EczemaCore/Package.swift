@@ -25,9 +25,18 @@ let package = Package(
             dependencies: ["EczemaDomain"],
             swiftSettings: strictSettings
         ),
+        // Not a product: nothing outside this package builds it, and the app must never
+        // link it. It exists only so `EczemaCoreTests` has a child process to run the
+        // mirroring-enabled container init in — see Sources/SchemaLoadProbe/main.swift for
+        // why that init cannot happen inside the test process.
+        .executableTarget(
+            name: "SchemaLoadProbe",
+            dependencies: ["EczemaPersistence"],
+            swiftSettings: strictSettings
+        ),
         .testTarget(
             name: "EczemaCoreTests",
-            dependencies: ["EczemaDomain", "EczemaCatalog", "EczemaPersistence"],
+            dependencies: ["EczemaDomain", "EczemaCatalog", "EczemaPersistence", "SchemaLoadProbe"],
             swiftSettings: strictSettings
         ),
     ]
