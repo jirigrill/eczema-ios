@@ -6,7 +6,7 @@ Guidance for AI agents working in this repository.
 
 A native iOS app for recording a breastfed infant's atopic eczema — meals eaten and per-region skin observations with photos. English-language, single child, one user (the mother), her phone plus her iCloud account.
 
-**Status: scaffolded, no behavior.** The project builds and the test loop runs; nothing is implemented. `git ls-files` shows the `Eczema.xcodeproj`, `App/`, `Config/`, `Packages/`, `Justfile`, `.github/` and `.mcp.json` alongside the docs. Every package target is empty on purpose — no domain models, no SwiftData schema, no views. The behavior spec is being authored in `docs/spec/` ahead of the Apple Developer Program enrolment, so the spec does not wait on a payment.
+**Status: scaffolded, no behavior.** The project builds and the test loop runs; nothing is implemented. `git ls-files` shows the `Eczema.xcodeproj`, `App/`, `Config/`, `Packages/`, `Justfile`, `.github/` and `.mcp.json` alongside the docs. No domain models and no views exist yet, on purpose. The one exception is `EczemaPersistence`, which holds `AppSchema` — the schema declaration and its mirrored `ModelConfiguration`, with `AppSchema.models` still empty and guarded by a schema-load test (`DATA-ARRIVE-10`) that reports out loud that it verified nothing until the first `@Model` lands. The behavior spec is being authored in `docs/spec/` ahead of the Apple Developer Program enrolment, so the spec does not wait on a payment.
 
 **Tense rule for this file, because it will keep describing not-yet-built things.** Present indicative is reserved for what a `git ls-files` would show. Anything decided but unbuilt is written in the imperative or with **must** — never as an accomplished fact. Stating a safeguard already exists is what stops the next agent creating it.
 
@@ -52,7 +52,8 @@ A **thin committed `Eczema.xcodeproj`** (`objectVersion = 100`) with filesystem-
 App/          the app target's synchronized group — EczemaApp.swift plus Assets.xcassets,
               and one Swift file is all it should ever hold
 Config/       Base/Debug/Release .xcconfig + entitlements; the one static exception
-Packages/     EczemaCore (Domain, Catalog, Persistence) and EczemaUI — see Packages/README.md
+Packages/     EczemaCore (Domain, Catalog, Persistence, plus the ships-nowhere SchemaLoadProbe)
+              and EczemaUI — see Packages/README.md
 ```
 
 **Keep the app shell thin — permanently.** It is what makes both the editor path and the package test loop work; logic in a fat app target would make the effectively-unmaintained `xcode-build-server` a hard dependency.
