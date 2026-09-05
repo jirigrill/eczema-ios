@@ -15,9 +15,15 @@ public enum AppSchema {
     /// lands; `SchemaLoad` then covers it with no further wiring.
     public static let models: [any PersistentModel.Type] = []
 
-    /// The CloudKit container the private database is mirrored into. It is a public
-    /// identifier, not a credential — the same string is in `Config/Eczema.entitlements`,
-    /// and it ships inside the code signature of every build regardless.
+    /// The CloudKit container the private database is mirrored into. It is an address, not a
+    /// credential — the same string is in `Config/Eczema.entitlements`, it grants access to
+    /// nothing, and it ships inside the code signature of every build regardless.
+    ///
+    /// `CLAUDE.md`'s "no container identifiers in committed files. Ever." reads absolutely and
+    /// this contradicts it, as `Config/Eczema.entitlements` and `docs/setup/signing-and-container.md`
+    /// already do. Amending the rule is the owner's call, tracked in
+    /// [#53](https://github.com/jirigrill/eczema-ios/issues/53) — this comment records the breach
+    /// rather than settling it.
     ///
     /// **Naming it here is deliberate, and `.automatic` is not an option.** `.automatic`
     /// reads the container from the entitlements, which looks like the tidier choice — one

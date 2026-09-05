@@ -12,6 +12,13 @@ local packages, not *which* packages. This is the proposal.
 | `EczemaCore` | `EczemaDomain`, `EczemaCatalog`, `EczemaPersistence` | iOS + host |
 | `EczemaUI` | `EczemaUI` | iOS |
 
+`EczemaCore` holds one further target, `SchemaLoadProbe`, which ships nowhere: it is an
+`executableTarget` and deliberately **not** a product, so nothing outside the package can build
+it and the app cannot link it. It exists because `DATA-ARRIVE-10`'s schema-load test has to run
+the mirroring-enabled `ModelContainer.init` in a *child process* — a failing schema aborts the
+whole test process rather than throwing, and `Sources/SchemaLoadProbe/main.swift` records the
+measurement behind that. Treat it as test apparatus that happens to need its own target.
+
 **The seam is drawn where the verification strategy changes, not per feature.**
 
 Everything in `EczemaCore` is verifiable by `swift test` on the host in seconds, with no
@@ -61,10 +68,12 @@ and the PWA's four ports each ended up with exactly one adapter — a seam the m
 as having been hypothetical there. Introduce one when a second implementation or an
 untestable dependency actually shows up.
 
-## The targets are empty on purpose
+## The targets are still empty of behavior
 
-No domain models, no SwiftData schema, no views. `docs/spec/persistence-model.md` carries
-80 `DATA-*` rules and the schema deadlines, and
+No domain models, no views. `EczemaPersistence` holds `AppSchema` — the one place the schema
+and its mirrored `ModelConfiguration` are declared — but `AppSchema.models` is an empty list, so
+there is no schema yet either; the schema-load test reports that as a known issue rather than a
+pass. `docs/spec/persistence-model.md` carries 80 `DATA-*` rules and the schema deadlines, and
 [#767](https://github.com/jirigrill/eczema-helper/issues/767) collects the owner
 confirmations still outstanding. The schema is **additive-only** once the CloudKit schema
 is promoted, so the first `@Model` written here is close to irreversible.
