@@ -14,11 +14,9 @@
 // `Bundle.main.bundleIdentifier` is a real string. Then a failure is an ordinary caught error
 // and an exit code, and the abort cannot take the test runner with it.
 //
-// The contract with the test is stdout's last line and the exit status:
-//   0 / SCHEMA-LOAD-OK        the schema opened with mirroring enabled
-//   2 / SCHEMA-LOAD-FAILED:   it did not, with the error's description appended
-//   3 / SCHEMA-LOAD-EMPTY     the schema holds no models yet, so there was nothing to load
-//   4 / SCHEMA-PROBE-USAGE:   the probe was invoked wrongly — never a schema verdict
+// The contract with the test — the modes it may ask for, and the exit code and stdout marker it
+// gets back — is `ProbeContract.swift`, which the test target imports. It is stated there once so
+// that neither end can hold a stale copy of it.
 //
 // CoreData writes the *useful* diagnostic ("CloudKit integration does not support unique
 // constraints. The following entities are constrained: …") to stderr, not into the thrown
@@ -29,19 +27,6 @@
 import EczemaPersistence
 import Foundation
 import SwiftData
-
-/// Which schema to load. The fixtures are deliberately invalid under mirroring: they are how
-/// the test proves the probe can fail, so a green run is evidence rather than an assumption.
-enum ProbeMode: String, CaseIterable {
-    /// The real thing — `AppSchema.models`, whatever it currently holds.
-    case app
-
-    /// Breaches `DATA-ARRIVE-9`'s "no uniqueness constraint" limb.
-    case fixtureUniqueAttribute = "fixture-unique-attribute"
-
-    /// Breaches its "no required relationship" limb.
-    case fixtureRequiredRelationship = "fixture-required-relationship"
-}
 
 @Model final class FixtureUnique {
     @Attribute(.unique) var slug: String = ""
@@ -60,24 +45,54 @@ enum ProbeMode: String, CaseIterable {
     init() {}
 }
 
-func finish(_ line: String, code: Int32) -> Never {
-    print(line)
+@Model final class FixtureDenyParent {
+    // Optional to-many, so the only limb this fixture breaches is the delete rule: `.deny` is
+    // rejected local-only as well, which is why it cannot be escaped by unmirroring the type.
+    // Measured message: "The following relationships are configured with unsupported delete
+    // rules: FixtureDenyParent:children - Deny".
+    @Relationship(deleteRule: .deny) var children: [FixtureDenyChild]?
+    init() {}
+}
+
+@Model final class FixtureDenyChild {
+    var parent: FixtureDenyParent?
+    init() {}
+}
+
+@Model final class FixtureRequiredAttribute {
+    // Neither optional nor defaulted. DATA-ARRIVE-9 lists this limb last because it is observed
+    // behavior only — no vendor *document* states it — which is exactly why it needs a fixture.
+    // Measured here, the framework itself attributes it to mirroring: "CloudKit integration
+    // requires that all attributes be optional, or have a default value set. The following
+    // attributes are marked non-optional but do not have a default value: FixtureRequiredAttribute:
+    // slug". That is a runtime message, not a primary source, so DATA-ARRIVE-9's caution stands —
+    // but the limb is now measured in this repo rather than inherited.
+    var slug: String
+    init(slug: String) {
+        self.slug = slug
+    }
+}
+
+func finish(_ report: ProbeReport, detail: String = "") -> Never {
+    print(report.marker + detail)
     fflush(stdout)
     // `exit` would run the same teardown the comment above describes and abort on the way
     // out even in the success case, turning a passing probe into a crashing one.
-    _exit(code)
+    _exit(report.exitCode)
 }
 
 let arguments = CommandLine.arguments.dropFirst()
 guard arguments.count == 1, let mode = ProbeMode(rawValue: arguments[arguments.startIndex]) else {
     let modes = ProbeMode.allCases.map(\.rawValue).joined(separator: ", ")
-    finish("SCHEMA-PROBE-USAGE: expected exactly one mode, one of: \(modes)", code: 4)
+    finish(.usage, detail: " expected exactly one mode, one of: \(modes)")
 }
 
 let models: [any PersistentModel.Type] = switch mode {
 case .app: AppSchema.models
 case .fixtureUniqueAttribute: [FixtureUnique.self]
 case .fixtureRequiredRelationship: [FixtureParent.self, FixtureChild.self]
+case .fixtureRefusingDeleteRule: [FixtureDenyParent.self, FixtureDenyChild.self]
+case .fixtureRequiredAttribute: [FixtureRequiredAttribute.self]
 }
 
 // An empty schema is not a loadable one — the store rejects it with "the configuration named
@@ -85,7 +100,7 @@ case .fixtureRequiredRelationship: [FixtureParent.self, FixtureChild.self]
 // a false alarm for as long as the models are still on a spec deadline. It is reported as its
 // own verdict so the test can say plainly that it verified nothing, rather than pass quietly.
 guard !models.isEmpty else {
-    finish("SCHEMA-LOAD-EMPTY", code: 3)
+    finish(.empty)
 }
 
 do {
@@ -101,7 +116,7 @@ do {
             cloudKitDatabase: .private(AppSchema.cloudKitContainerIdentifier)
         )
     _ = try ModelContainer(for: schema, configurations: configuration)
-    finish("SCHEMA-LOAD-OK", code: 0)
+    finish(.ok)
 } catch {
-    finish("SCHEMA-LOAD-FAILED: \(error)", code: 2)
+    finish(.failed, detail: " \(error)")
 }
